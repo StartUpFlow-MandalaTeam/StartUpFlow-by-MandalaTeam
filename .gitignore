@@ -8,9 +8,16 @@ composer.lock
 config.php
 .env
 
-# Ignora documenti sensibili (Modulo Zero Carta)
-/uploads/documenti/
-/uploads/scontrini/
+# --- Database ---
+# Ignora i dump (es. backup.sql), ma manteniamo lo schema ufficiale
+*.sql
+!database/schema.sql
+
+# Ignora documenti sensibili (Modulo Zero Carta & Spese)
+/uploads*
+# MA permette ai file .gitkeep di essere tracciati (mantiene la struttura delle cartelle vuote su Github)
+!/uploads/documenti/.gitkeep
+!/uploads/scontrini/.gitkeep
 
 # Ignora file temporanei e di sistema
 *.log
