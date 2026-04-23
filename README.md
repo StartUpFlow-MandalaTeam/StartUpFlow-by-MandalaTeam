@@ -31,6 +31,6 @@ Per lavorare in modo ordinato, utilizziamo il **Feature Branch Workflow**. Ogni 
 - **Database**: MySQL (Relazionale).
 
 ## Setup Locale
-1. Clona il repository: `git clone <url-del-tuo-repo>`
+1. Clona il repository: `git clone https://github.com/StartUpFlow-MandalaTeam/StartUpFlow-by-MandalaTeam.git)`
 2. Configura il database MySQL usando lo schema definito in `database/schema.sql`.
-3. Crea il file `config.php` basandoti su `config.example.php` (NON committare le tue credenziali!).
+3. Crea il file `config.php` basandoti su `config.example.php`.
