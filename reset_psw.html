@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Reset Password</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="style.css">
+        <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="form-box">
+                <form action="" name="Formfill" onsubmit="return resetValidation()">
+                    <h2>Reset Password</h2>
+                    <p id="result"></p>
+                    <div class="input-box">
+                        <i class='bx bxs-lock-alt' ></i>
+                        <input type="password" name="Password" placeholder="New Password">
+                    </div>
+                    <div class="input-box">
+                        <i class='bx bxs-lock-alt'></i>
+                        <input type="password" name="CPassword" placeholder="Confirm Password">
+                    </div>
+                    <div class="button">
+                        <input type="submit" class="btn" onclick="validation()" value="Reset Password">
+                    </div>
+                </form>
+            </div>
+            <div class="popup" id="popup">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                <h2>Thank you!</h2>
+                <p>Your password has been successfully changed. Log in with your new password.</p>
+                <a href="login.html"><button onclick="CloseSlide()">OK</button></a>
+            </div>
+        </div>
+        <script src="index.js" defer></script>
+    </body>
+</html>
