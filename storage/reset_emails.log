@@ -1,0 +1,9 @@
+[2026-05-23T20:03:00+02:00] To: abcd@abcd.com
+Link: http://localhost/auth/reset-password.php?token=e6075024b4714be636c042e14afde414de58cd9eb77161aba3bcaf2ce8dd582d
+
+[2026-05-23T20:04:23+02:00] To: abcd@abcd.com
+Link: http://localhost/auth/reset-password.php?token=ef308b8d9619e3819f0772e804018c3f9e63d18fdc660e316ef44c0aa8e86fb5
+
+[2026-05-23T20:06:03+02:00] To: test@mailhog.local
+Link: http://localhost/auth/reset-password.php?token=5148bf200a729114
+

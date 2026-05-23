@@ -1,3 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../includes/auth.php';
+
+$csrfToken = csrfToken();
+?>
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -7,7 +16,7 @@
         <title></title>
         <meta name="description" content="register and login">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="../assets/css/style.css">
         <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
@@ -15,9 +24,15 @@
     <body>
         <div class="container">
             <div class="form-box">
-                <form action="" name="Formfill" onsubmit="return validation()">
+                <form action="process-register.php" method="POST" name="Formfill" onsubmit="return validation()">
                     <h2>Register</h2>
                     <p id="result"></p>
+                    <?php echo csrfInput(); ?>
+                    <?php if (isset($_GET['error']) && $_GET['error'] === 'csrf'): ?>
+                        <script>
+                            alert('Security check failed. Please try again.');
+                        </script>
+                    <?php endif; ?>
                     <div class="input-box">
                         <i class='bx bxs-user'></i>
                         <input type="text" name="Username" placeholder="Username">
@@ -35,9 +50,9 @@
                         <input type="password" name="CPassword" placeholder="Confirm Password">
                     </div>
                     <div class="button">
-                        <input type="submit" class="btn" onclick="validation()" value="Sign up"></div>
+                        <input type="submit" class="btn" value="Sign up"></div>
                     <div class="group">
-                        <span><a href="login.html">Already have an account? Log in here</a></span>
+                        <span><a href="login.php">Already have an account? Log in here</a></span>
                     </div>
                     
                 </form>
@@ -46,9 +61,9 @@
                 <ion-icon name="checkmark-circle-outline"></ion-icon>
                 <h2>Thank you!</h2>
                 <p>You have registered successfully. Thanks!</p>
-                <a href="login.html"><button onclick="CloseSlide()">OK</button></a>
+                <a href="login.php"><button type="button" class="popup-ok">OK</button></a>
             </div>
         </div>
-        <script src="index.js" defer></script>
+        <script src="../assets/js/index.js" defer></script>
     </body>
 </html>
