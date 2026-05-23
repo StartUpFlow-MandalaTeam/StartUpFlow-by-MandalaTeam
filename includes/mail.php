@@ -5,57 +5,110 @@ declare(strict_types=1);
 require_once __DIR__ . '/config.php';
 
 /**
- * Send password reset email.
- * Returns ['sent'=>bool, 'debug_link'=>string|null, 'error'=>string|null]
+ * Minimal SMTP sender for development using MailHog (or any SMTP server).
+ * Does not require PHPMailer. Returns ['sent'=>bool, 'error'=>string|null]
  */
 function sendResetEmail(string $toEmail, string $resetLink, string $toName = ''): array
 {
-    $useSmtp = defined('SMTP_HOST') && SMTP_HOST !== '';
+    $host = SMTP_HOST ?? '127.0.0.1';
+    $port = SMTP_PORT ?? 25;
+    $user = SMTP_USER ?? '';
+    $pass = SMTP_PASS ?? '';
+    $from = SMTP_FROM ?? 'no-reply@local.test';
+    $fromName = SMTP_FROM_NAME ?? APP_NAME ?? 'App';
 
-    // Try PHPMailer if composer autoload exists and SMTP is configured
-    if ($useSmtp && file_exists(__DIR__ . '/../vendor/autoload.php')) {
-        require_once __DIR__ . '/../vendor/autoload.php';
-        if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-            try {
-                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host = SMTP_HOST;
-                $mail->SMTPAuth = SMTP_USER !== '';
-                if (SMTP_USER !== '') {
-                    $mail->Username = SMTP_USER;
-                    $mail->Password = SMTP_PASS;
-                }
-                if (SMTP_SECURE) {
-                    $mail->SMTPSecure = SMTP_SECURE;
-                }
-                $mail->Port = SMTP_PORT;
+    $boundary = 'b_' . bin2hex(random_bytes(8));
+    $date = date('r');
 
-                $mail->setFrom(SMTP_FROM, SMTP_FROM_NAME);
-                $mail->addAddress($toEmail, $toName);
+    $headers = [];
+    $headers[] = 'Date: ' . $date;
+    $headers[] = 'From: ' . sprintf('%s <%s>', $fromName, $from);
+    $headers[] = 'To: ' . sprintf('%s <%s>', $toName ?: $toEmail, $toEmail);
+    $headers[] = 'Subject: Password reset instructions';
+    $headers[] = 'MIME-Version: 1.0';
+    $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
 
-                $mail->isHTML(true);
-                $mail->Subject = 'Password reset instructions';
-                $mail->Body = 'To reset your password click the link: <a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '</a>';
-                $mail->AltBody = $resetLink;
+    $bodyText = $resetLink;
+    $bodyHtml = '<p>To reset your password click the link: <a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '</a></p>';
 
-                $mail->send();
-                return ['sent' => true, 'debug_link' => null, 'error' => null];
-            } catch (\Throwable $e) {
-                error_log('Mail error: ' . $e->getMessage());
-                return ['sent' => false, 'debug_link' => null, 'error' => $e->getMessage()];
-            }
+    $message = [];
+    $message[] = '--' . $boundary;
+    $message[] = 'Content-Type: text/plain; charset=utf-8';
+    $message[] = '';
+    $message[] = $bodyText;
+    $message[] = '';
+    $message[] = '--' . $boundary;
+    $message[] = 'Content-Type: text/html; charset=utf-8';
+    $message[] = '';
+    $message[] = $bodyHtml;
+    $message[] = '';
+    $message[] = '--' . $boundary . '--';
+
+    $data = implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n", $message) . "\r\n";
+
+    $err = null;
+
+    $ctx = stream_context_create([]);
+    $remote = sprintf('%s:%s', $host, $port);
+    $fp = @stream_socket_client($remote, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) {
+        return ['sent' => false, 'error' => sprintf('SMTP connect failed: %s (%s)', $errstr, $errno)];
+    }
+
+    $read = function () use ($fp) {
+        $res = '';
+        while (($line = fgets($fp, 515)) !== false) {
+            $res .= $line;
+            if (substr($line, 3, 1) === ' ') break;
+        }
+        return $res;
+    };
+
+    $write = function ($cmd) use ($fp) {
+        fwrite($fp, $cmd . "\r\n");
+    };
+
+    // Server greeting
+    $greet = $read();
+
+    $write('EHLO localhost');
+    $ehlo = $read();
+
+    if ($user !== '') {
+        // Try AUTH LOGIN
+        $write('AUTH LOGIN');
+        $read();
+        $write(base64_encode($user));
+        $read();
+        $write(base64_encode($pass));
+        $authResp = $read();
+        if (strpos($authResp, '235') === false) {
+            // auth failed but continue to attempt send
         }
     }
 
-    // Dev fallback: append the link to storage/reset_emails.log and return debug_link
-    $storageDir = __DIR__ . '/../storage';
-    if (!is_dir($storageDir)) {
-        @mkdir($storageDir, 0755, true);
+    $write('MAIL FROM:<' . $from . '>');
+    $read();
+
+    $write('RCPT TO:<' . $toEmail . '>');
+    $rcpt = $read();
+    if (strpos($rcpt, '250') === false && strpos($rcpt, '251') === false) {
+        fclose($fp);
+        return ['sent' => false, 'error' => 'SMTP RCPT TO refused: ' . trim($rcpt)];
     }
 
-    $logFile = $storageDir . '/reset_emails.log';
-    $entry = sprintf("[%s] To: %s\nLink: %s\n\n", date('c'), $toEmail, $resetLink);
-    file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+    $write('DATA');
+    $read();
 
-    return ['sent' => true, 'debug_link' => $resetLink, 'error' => null];
+    fwrite($fp, $data . "\r\n.\r\n");
+    $dataResp = $read();
+
+    $write('QUIT');
+    fclose($fp);
+
+    if (strpos($dataResp, '250') === false) {
+        return ['sent' => false, 'error' => 'SMTP DATA not accepted: ' . trim($dataResp)];
+    }
+
+    return ['sent' => true, 'error' => null];
 }

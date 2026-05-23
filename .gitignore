@@ -17,4 +17,5 @@ includes/config.php
 .DS_Store
 
 # Logs
-.log
+*.log
+storage/*.log
