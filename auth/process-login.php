@@ -41,7 +41,7 @@ try {
     $user = $stmt->fetch();
 
     if ($user && (int) $user['is_active'] !== 1) {
-        header('Location: login.php?error=inactive');
+        header('Location: login.php?error=unverified');
         exit;
     }
 
@@ -77,13 +77,20 @@ try {
             }
         }
 
-        header('Location: login.php?error=invalid');
+        header('Location: login.php?error=invalid_credentials');
         exit;
     }
 
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int) $user['id'];
     $_SESSION['username'] = $user['username'];
+
+    if (!empty($_POST['remember_me'])) {
+        clearRememberMeToken();
+        issueRememberMeToken((int) $user['id']);
+    } else {
+        clearRememberMeToken();
+    }
 
     $update = $pdo->prepare('
         UPDATE users

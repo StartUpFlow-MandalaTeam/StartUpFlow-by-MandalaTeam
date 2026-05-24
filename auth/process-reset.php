@@ -4,19 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
-
-function appBaseUrlFromRequest(): string
-{
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
-    $scheme = $isHttps ? 'https' : 'http';
-
-    if (!empty($_SERVER['HTTP_HOST'])) {
-        return $scheme . '://' . $_SERVER['HTTP_HOST'];
-    }
-
-    return rtrim(APP_URL, '/');
-}
+require_once __DIR__ . '/../includes/mail.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: reset-password.php');
@@ -57,7 +45,6 @@ if (!empty($_POST['email'])) {
             $resetLink = appBaseUrlFromRequest() . '/auth/reset-password.php?token=' . $token;
 
             // Try to send/reset via mail helper (will fallback to logging link in dev)
-            require_once __DIR__ . '/../includes/mail.php';
             $res = sendResetEmail($email, $resetLink);
 
             // Always show neutral confirmation. In dev we may expose debug_link.
@@ -84,12 +71,17 @@ $password = $_POST['Password'] ?? '';
 $cpassword = $_POST['CPassword'] ?? '';
 
 if ($token === '' || $password === '' || $cpassword === '') {
-    header('Location: reset-password.php?error=invalid_token');
+    header('Location: reset-password.php?error=empty');
     exit;
 }
 
-if ($password !== $cpassword || strlen($password) < 6) {
-    header('Location: reset-password.php?error=invalid_token');
+if ($password !== $cpassword) {
+    header('Location: reset-password.php?error=password_mismatch');
+    exit;
+}
+
+if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/', $password)) {
+    header('Location: reset-password.php?error=password_short');
     exit;
 }
 
@@ -121,6 +113,6 @@ try {
     exit;
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    header('Location: reset-password.php?error=invalid_token');
+    header('Location: reset-password.php?error=database');
     exit;
 }

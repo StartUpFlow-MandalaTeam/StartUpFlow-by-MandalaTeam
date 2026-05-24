@@ -6,6 +6,48 @@ require_once __DIR__ . '/../includes/auth.php';
 
 $token = $_GET['token'] ?? null;
 $csrf = csrfToken();
+
+$statusMessage = '';
+$statusType = '';
+$debugLink = '';
+
+if (isset($_GET['sent'])) {
+    $statusMessage = 'If an account with that email exists, you will receive reset instructions.';
+    $statusType = 'success';
+    if (defined('APP_ENV') && APP_ENV === 'dev' && !empty($_GET['debug_link'])) {
+        $debugLink = (string) $_GET['debug_link'];
+    }
+} elseif (isset($_GET['error'])) {
+    switch ($_GET['error']) {
+        case 'empty':
+            $statusMessage = 'Please complete all required fields.';
+            break;
+        case 'password_mismatch':
+            $statusMessage = 'Passwords do not match.';
+            break;
+        case 'password_short':
+            $statusMessage = 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.';
+            break;
+        case 'invalid_token':
+            $statusMessage = 'Invalid or expired token.';
+            break;
+        case 'database':
+            $statusMessage = 'Password reset temporarily unavailable. Please try again.';
+            break;
+        case 'csrf':
+            $statusMessage = 'Security check failed. Please try again.';
+            break;
+    }
+
+    if ($statusMessage !== '') {
+        $statusType = 'error';
+    }
+}
+
+$statusClass = '';
+if ($statusMessage !== '') {
+    $statusClass = 'is-visible ' . ($statusType === 'success' ? 'is-success' : 'is-error');
+}
 ?>
 
 <!DOCTYPE html>
@@ -23,29 +65,27 @@ $csrf = csrfToken();
     </head>
     <body>
         <div class="container">
-            <div class="form-box">
-                <?php if (isset($_GET['sent'])): ?>
-                    <script>alert('If an account with that email exists, you will receive reset instructions.');</script>
-                    <?php if (defined('APP_ENV') && APP_ENV === 'dev' && !empty($_GET['debug_link'])): ?>
-                        <p id="debug">Dev debug link: <a href="<?php echo htmlspecialchars($_GET['debug_link'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($_GET['debug_link'], ENT_QUOTES, 'UTF-8'); ?></a></p>
-                    <?php endif; ?>
-                <?php elseif (isset($_GET['error']) && $_GET['error'] === 'invalid_token'): ?>
-                    <p id="result">Invalid or expired token.</p>
+            <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusMessage !== '' ? 'false' : 'true'; ?>">
+                <?php echo htmlspecialchars($statusMessage, ENT_QUOTES, 'UTF-8'); ?>
+                <?php if ($debugLink !== ''): ?>
+                    <span class="result-message__debug">Dev debug link: <a href="<?php echo htmlspecialchars($debugLink, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($debugLink, ENT_QUOTES, 'UTF-8'); ?></a></span>
                 <?php endif; ?>
-
+            </div>
+            <div class="form-box">
                 <?php if ($token): ?>
                     <form action="process-reset.php" method="POST" name="Formfill" onsubmit="return resetValidation()">
                         <h2>Set New Password</h2>
-                        <p id="result"></p>
                         <?php echo csrfInput(); ?>
                         <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="input-box">
                             <i class='bx bxs-lock-alt' ></i>
-                            <input type="password" name="Password" placeholder="New Password">
+                            <input type="password" name="Password" id="reset-password" placeholder=" ">
+                            <label for="reset-password">New Password</label>
                         </div>
                         <div class="input-box">
                             <i class='bx bxs-lock-alt'></i>
-                            <input type="password" name="CPassword" placeholder="Confirm Password">
+                            <input type="password" name="CPassword" id="reset-cpassword" placeholder=" ">
+                            <label for="reset-cpassword">Confirm Password</label>
                         </div>
                         <div class="button">
                             <input type="submit" class="btn" value="Reset Password">
@@ -54,11 +94,11 @@ $csrf = csrfToken();
                 <?php else: ?>
                     <form action="process-reset.php" method="POST" name="Formfill" onsubmit="return requestResetValidation()">
                         <h2>Password Reset</h2>
-                        <p id="result"></p>
                         <?php echo csrfInput(); ?>
                         <div class="input-box">
                             <i class='bx bxs-envelope'></i>
-                            <input type="email" name="email" placeholder="Your account email">
+                            <input type="email" name="email" id="reset-email" placeholder=" ">
+                            <label for="reset-email">Email address</label>
                         </div>
                         <div class="button">
                             <input type="submit" class="btn" value="Send reset link">

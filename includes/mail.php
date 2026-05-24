@@ -4,11 +4,24 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+function appBaseUrlFromRequest(): string
+{
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+    $scheme = $isHttps ? 'https' : 'http';
+
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        return $scheme . '://' . $_SERVER['HTTP_HOST'];
+    }
+
+    return rtrim(APP_URL, '/');
+}
+
 /**
  * Minimal SMTP sender for development using MailHog (or any SMTP server).
  * Does not require PHPMailer. Returns ['sent'=>bool, 'error'=>string|null]
  */
-function sendResetEmail(string $toEmail, string $resetLink, string $toName = ''): array
+function smtpSendEmail(string $toEmail, string $subject, string $bodyText, string $bodyHtml, string $toName = ''): array
 {
     $host = SMTP_HOST ?? '127.0.0.1';
     $port = SMTP_PORT ?? 25;
@@ -24,12 +37,9 @@ function sendResetEmail(string $toEmail, string $resetLink, string $toName = '')
     $headers[] = 'Date: ' . $date;
     $headers[] = 'From: ' . sprintf('%s <%s>', $fromName, $from);
     $headers[] = 'To: ' . sprintf('%s <%s>', $toName ?: $toEmail, $toEmail);
-    $headers[] = 'Subject: Password reset instructions';
+    $headers[] = 'Subject: ' . $subject;
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
-
-    $bodyText = $resetLink;
-    $bodyHtml = '<p>To reset your password click the link: <a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '</a></p>';
 
     $message = [];
     $message[] = '--' . $boundary;
@@ -111,4 +121,20 @@ function sendResetEmail(string $toEmail, string $resetLink, string $toName = '')
     }
 
     return ['sent' => true, 'error' => null];
+}
+
+function sendResetEmail(string $toEmail, string $resetLink, string $toName = ''): array
+{
+    $bodyText = 'To reset your password, open this link: ' . $resetLink;
+    $bodyHtml = '<p>To reset your password click the link: <a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '</a></p>';
+
+    return smtpSendEmail($toEmail, 'Password reset instructions', $bodyText, $bodyHtml, $toName);
+}
+
+function sendVerificationEmail(string $toEmail, string $verificationLink, string $toName = ''): array
+{
+    $bodyText = 'To verify your email address, open this link: ' . $verificationLink;
+    $bodyHtml = '<p>To verify your email address click the link: <a href="' . htmlspecialchars($verificationLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($verificationLink, ENT_QUOTES, 'UTF-8') . '</a></p>';
+
+    return smtpSendEmail($toEmail, 'Email verification', $bodyText, $bodyHtml, $toName);
 }

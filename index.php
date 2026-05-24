@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 
-requireLogin();
+// If the user is not logged in, show the registration page first
+if (!isLoggedIn()) {
+	header('Location: /auth/register.php');
+	exit;
+}
 
 $username = htmlspecialchars($_SESSION['username'] ?? 'utente', ENT_QUOTES, 'UTF-8');
 ?>
@@ -50,7 +54,7 @@ $username = htmlspecialchars($_SESSION['username'] ?? 'utente', ENT_QUOTES, 'UTF
 </head>
 <body>
 	<div class="main">
-		<h1>Benvenuto, <?php echo $username; ?></h1>
+		<h1>Ciao, <?php echo $username; ?></h1>
 		<form action="auth/process-logout.php" method="post">
 			<?php echo csrfInput(); ?>
 			<button type="submit">Logout</button>
