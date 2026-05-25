@@ -58,7 +58,10 @@ if ($statusMessage !== '') {
         <title>Reset Password</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>html{background:#dbad00;}</style>
+        <link rel="preload" as="image" href="../assets/img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg">
         <link rel="stylesheet" href="../assets/css/style.css">
+        <link rel="stylesheet" href="../assets/css/page-transition.css">
         <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>

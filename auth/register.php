@@ -74,12 +74,23 @@ if ($statusHtml !== '') {
         <title></title>
         <meta name="description" content="register and login">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>html{background:#dbad00;}</style>
+        <link rel="preload" as="image" href="../assets/img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg">
         <link rel="stylesheet" href="../assets/css/style.css">
+        <link rel="stylesheet" href="../assets/css/page-transition.css">
+        <link rel="stylesheet" href="../assets/css/startup-overlay.css">
         <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
     <body>
+        <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
+            <button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
+                <ion-icon name="power-outline"></ion-icon>
+            </button>
+        
+            <div class="startup-overlay__title">StartupFlow</div>
+        </div>
         <div class="container">
             <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusHtml !== '' ? 'false' : 'true'; ?>">
                 <?php echo htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8'); ?>
@@ -117,5 +128,6 @@ if ($statusHtml !== '') {
             </div>
         </div>
         <script src="../assets/js/index.js" defer></script>
+        <script src="../assets/js/startup-overlay.js" defer></script>
     </body>
 </html>

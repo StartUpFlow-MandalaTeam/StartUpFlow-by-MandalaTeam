@@ -147,28 +147,32 @@ The server also checks data in the database before writing anything:
 
 For local development we use MailHog to safely capture outgoing emails for both verification and password reset.
 
-1. Start MailHog (Docker):
+With the current registration flow, email delivery is mandatory. If sending the verification email fails, registration is considered failed and the newly created account is removed.
+
+Manual workflow (recommended for this project): start MailHog first, then start PHP, then register.
+
+1. Start MailHog manually (Docker):
 
     ```bash
     docker run --rm -p 1025:1025 -p 8025:8025 mailhog/mailhog
     ```
 
-2. Start the PHP built-in server from the project root:
+2. Keep that terminal open, then in a second terminal start the PHP built-in server from the project root:
 
     ```bash
     cd '/media/gianluca/WD 500 GB1/Login'
     php -S localhost:8000
     ```
 
-3. Register or use an existing account via the web UI:
-
-   - <http://localhost:8000/auth/register.php>
-
-4. Complete registration and open the verification email in MailHog:
+3. Open MailHog UI and confirm it is reachable:
 
    - <http://localhost:8025>
 
-5. Click the verification link to activate the account.
+4. Register via the web UI using a new username and a new email:
+
+   - <http://localhost:8000/auth/register.php>
+
+5. Open the verification email in MailHog and click the verification link to activate the account.
 
 6. Request a password reset:
 
