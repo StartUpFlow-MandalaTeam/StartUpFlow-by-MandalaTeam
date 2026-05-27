@@ -119,6 +119,7 @@ Client-side and server-side checks are applied to:
 - reset token must be present
 - new password is required
 - new password must satisfy the strong-password policy
+- new password must be different from the current password
 - confirm password is required
 - confirm password must match the new password
 - token must be valid, unused, and not expired
@@ -149,7 +150,19 @@ For local development we use MailHog to safely capture outgoing emails for both 
 
 With the current registration flow, email delivery is mandatory. If sending the verification email fails, registration is considered failed and the newly created account is removed.
 
-Manual workflow (recommended for this project): start MailHog first, then start PHP, then register.
+Recommended workflow: use the single development script in the project root. It starts MailHog and the PHP built-in server together.
+
+Start everything with:
+
+```bash
+bash start-dev.sh
+```
+
+The app will be available at <http://localhost:8000> and MailHog at <http://localhost:8025>.
+
+If you prefer to run the pieces manually, start MailHog first, then PHP, then register.
+
+### A. Email Verification During Registration
 
 1. Start MailHog manually (Docker):
 
@@ -160,7 +173,7 @@ Manual workflow (recommended for this project): start MailHog first, then start 
 2. Keep that terminal open, then in a second terminal start the PHP built-in server from the project root:
 
     ```bash
-    cd '/media/gianluca/WD 500 GB1/Login'
+   cd /path/to/project
     php -S localhost:8000
     ```
 
@@ -174,15 +187,17 @@ Manual workflow (recommended for this project): start MailHog first, then start 
 
 5. Open the verification email in MailHog and click the verification link to activate the account.
 
-6. Request a password reset:
+### B. Password Reset
+
+1. Request a password reset:
 
    - <http://localhost:8000/auth/reset-password.php> - enter the account email and submit.
 
-7. Open MailHog UI in your browser to find the reset email:
+2. Open MailHog UI in your browser to find the reset email:
 
    - <http://localhost:8025>
 
-8. Click the reset link in the MailHog message to open the reset form. Set a new password and then log in.
+3. Click the reset link in the MailHog message to open the reset form. Set a new password and then log in.
 
 ## Auth Smoke Test
 

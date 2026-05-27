@@ -16,6 +16,16 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
     exit;
 }
 
+$buildResetErrorRedirect = static function (string $error, ?string $token = null): string {
+    $location = 'reset-password.php?error=' . urlencode($error);
+
+    if ($token !== null && $token !== '') {
+        $location .= '&token=' . urlencode($token);
+    }
+
+    return $location;
+};
+
 // Request reset by email
 if (!empty($_POST['email'])) {
     $email = trim($_POST['email']);
@@ -71,29 +81,34 @@ $password = $_POST['Password'] ?? '';
 $cpassword = $_POST['CPassword'] ?? '';
 
 if ($token === '' || $password === '' || $cpassword === '') {
-    header('Location: reset-password.php?error=empty');
+    header('Location: ' . $buildResetErrorRedirect('empty', $token));
     exit;
 }
 
 if ($password !== $cpassword) {
-    header('Location: reset-password.php?error=password_mismatch');
+    header('Location: ' . $buildResetErrorRedirect('password_mismatch', $token));
     exit;
 }
 
 if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/', $password)) {
-    header('Location: reset-password.php?error=password_short');
+    header('Location: ' . $buildResetErrorRedirect('password_short', $token));
     exit;
 }
 
 $tokenHash = hash('sha256', $token);
 
 try {
-    $stmt = $pdo->prepare('SELECT pr.id AS pr_id, pr.user_id, pr.expires_at, pr.used_at, u.id AS uid FROM password_resets pr JOIN users u ON u.id = pr.user_id WHERE pr.token_hash = :th LIMIT 1');
+    $stmt = $pdo->prepare('SELECT pr.id AS pr_id, pr.user_id, pr.expires_at, pr.used_at, u.id AS uid, u.password_hash FROM password_resets pr JOIN users u ON u.id = pr.user_id WHERE pr.token_hash = :th LIMIT 1');
     $stmt->execute([':th' => $tokenHash]);
     $row = $stmt->fetch();
 
     if (!$row || !empty($row['used_at']) || strtotime($row['expires_at']) < time()) {
         header('Location: reset-password.php?error=invalid_token');
+        exit;
+    }
+
+    if (password_verify($password, (string) $row['password_hash'])) {
+        header('Location: ' . $buildResetErrorRedirect('password_reused', $token));
         exit;
     }
 
@@ -113,6 +128,6 @@ try {
     exit;
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    header('Location: reset-password.php?error=database');
+    header('Location: ' . $buildResetErrorRedirect('database', $token));
     exit;
 }

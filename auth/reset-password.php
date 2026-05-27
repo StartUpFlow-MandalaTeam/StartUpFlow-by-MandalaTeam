@@ -28,6 +28,9 @@ if (isset($_GET['sent'])) {
         case 'password_short':
             $statusMessage = 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.';
             break;
+        case 'password_reused':
+            $statusMessage = 'Please choose a different password.';
+            break;
         case 'invalid_token':
             $statusMessage = 'Invalid or expired token.';
             break;

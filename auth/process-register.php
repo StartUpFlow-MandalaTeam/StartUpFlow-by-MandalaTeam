@@ -54,15 +54,24 @@ if ($password !== $confirmPassword) {
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username OR email = :email LIMIT 1');
+    $stmt = $pdo->prepare('SELECT username, email FROM users WHERE username = :username OR email = :email LIMIT 1');
     $stmt->execute([
         ':username' => $username,
         ':email' => $email,
     ]);
 
-    if ($stmt->fetch()) {
+    $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($existingUser) {
         $pdo->rollBack();
-        header('Location: register.php?error=exists');
+
+        if (strcasecmp($existingUser['email'] ?? '', $email) === 0) {
+            header('Location: register.php?error=email_exists');
+        } elseif (strcasecmp($existingUser['username'] ?? '', $username) === 0) {
+            header('Location: register.php?error=username_exists');
+        } else {
+            header('Location: register.php?error=exists');
+        }
+
         exit;
     }
 

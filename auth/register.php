@@ -24,6 +24,14 @@ if (isset($_GET['error'])) {
             $statusHtml = 'You are already registered!';
             $statusType = 'error';
             break;
+        case 'email_exists':
+            $statusHtml = 'This email address is already in use. Please use another email.';
+            $statusType = 'error';
+            break;
+        case 'username_exists':
+            $statusHtml = 'This username is already in use. Please choose another one.';
+            $statusType = 'error';
+            break;
         case 'empty':
             $statusHtml = 'Please complete all required fields.';
             $statusType = 'error';
@@ -63,6 +71,8 @@ $statusClass = '';
 if ($statusHtml !== '') {
     $statusClass = 'is-visible ' . ($statusType === 'success' ? 'is-success' : 'is-error');
 }
+
+$showStartupOverlay = $statusHtml === '';
 ?>
 
 <!DOCTYPE html>
@@ -84,13 +94,15 @@ if ($statusHtml !== '') {
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
     <body>
-        <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
-            <button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
-                <ion-icon name="power-outline"></ion-icon>
-            </button>
-        
-            <div class="startup-overlay__title">StartupFlow</div>
-        </div>
+        <?php if ($showStartupOverlay): ?>
+            <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
+                <button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
+                    <ion-icon name="power-outline"></ion-icon>
+                </button>
+
+                <div class="startup-overlay__title">StartupFlow</div>
+            </div>
+        <?php endif; ?>
         <div class="container">
             <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusHtml !== '' ? 'false' : 'true'; ?>">
                 <?php echo htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8'); ?>
@@ -128,6 +140,8 @@ if ($statusHtml !== '') {
             </div>
         </div>
         <script src="../assets/js/index.js" defer></script>
-        <script src="../assets/js/startup-overlay.js" defer></script>
+        <?php if ($showStartupOverlay): ?>
+            <script src="../assets/js/startup-overlay.js" defer></script>
+        <?php endif; ?>
     </body>
 </html>
