@@ -1,3 +1,5 @@
+// asstets/js/mobile-nav.js
+// Mobile navigation drawer functionality
 document.addEventListener('DOMContentLoaded', () => {
     const toggle = document.querySelector('[data-mobile-nav-toggle]');
     const drawer = document.getElementById('mobile-nav-drawer');
@@ -10,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Update the drawer and backdrop to match the current open or closed state.
     const setOpenState = (isOpen) => {
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         drawer.classList.toggle('is-open', isOpen);
@@ -20,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = isOpen ? 'hidden' : '';
     };
 
+    // Close the drawer and optionally move focus back to the toggle button.
     const closeDrawer = (shouldFocusToggle = true) => {
         setOpenState(false);
 
@@ -28,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Keep the drawer hidden in landscape mode and reset the open state.
     const syncLandscapeState = () => {
         if (landscapeQuery.matches) {
             drawer.classList.remove('is-open');
@@ -44,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     syncLandscapeState();
 
+    // Toggle the drawer when the mobile menu button is clicked.
     toggle.addEventListener('click', () => {
         if (landscapeQuery.matches) {
             syncLandscapeState();
@@ -58,8 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
         closeButton.addEventListener('click', () => closeDrawer());
     }
 
+    // Close the drawer when the backdrop is clicked.
     backdrop.addEventListener('click', () => closeDrawer());
 
+    // Close the drawer after a short delay when a menu link or action is used.
     drawer.addEventListener('click', (event) => {
         const target = event.target;
 
@@ -70,11 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Allow Escape to close the drawer.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && drawer.classList.contains('is-open')) {
             closeDrawer();
         }
     });
 
+    // Re-sync the drawer whenever the orientation changes.
     landscapeQuery.addEventListener('change', syncLandscapeState);
 });

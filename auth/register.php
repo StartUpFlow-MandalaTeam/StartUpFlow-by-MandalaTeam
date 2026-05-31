@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 
+// If the user is already logged in, redirect to the dashboard
 if (isLoggedIn()) {
     header('Location: ../index.php');
     exit;
 }
-
+// Create a CSRF token for the registration form and store it in the session for later verification
 $csrfToken = csrfToken();
 
+// Prepare user-visible status messages based on URL flags for display in the registration form
 $statusHtml = '';
 $statusType = '';
 
+// Map URL flags to user-friendly messages and types for display in the registration form
 if (isset($_GET['error'])) {
     switch ($_GET['error']) {
         case 'csrf':
@@ -67,11 +70,13 @@ if (isset($_GET['error'])) {
     }
 }
 
+// Build CSS classes for the status message based on whether there is a message to show and its type
 $statusClass = '';
 if ($statusHtml !== '') {
     $statusClass = 'is-visible ' . ($statusType === 'success' ? 'is-success' : 'is-error');
 }
 
+// Show the startup overlay if there is no status message to display, otherwise show the registration form immediately with the status message
 $showStartupOverlay = $statusHtml === '';
 ?>
 
@@ -94,6 +99,7 @@ $showStartupOverlay = $statusHtml === '';
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
     <body>
+        <!-- Startup Overlay -->
         <?php if ($showStartupOverlay): ?>
             <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
                 <button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
@@ -103,14 +109,17 @@ $showStartupOverlay = $statusHtml === '';
                 <div class="startup-overlay__title">StartupFlow</div>
             </div>
         <?php endif; ?>
+
         <div class="container">
+            <!-- Result banner: shows success or error messages to the user -->
             <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusHtml !== '' ? 'false' : 'true'; ?>">
                 <?php echo htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8'); ?>
             </div>
+            <!-- Registration form -->
             <div class="form-box">
                 <form action="process-register.php" method="POST" name="Formfill" onsubmit="return validation()" novalidate>
                     <h2>Register</h2>
-                    <?php echo csrfInput(); ?>
+                    <?php echo csrfInput(); ?><!-- CSRF token for security -->
                     <div class="input-box">
                         <i class='bx bxs-user'></i>
                         <input type="text" name="Username" id="register-username" placeholder=" ">
@@ -133,13 +142,16 @@ $showStartupOverlay = $statusHtml === '';
                     </div>
                     <div class="button">
                         <input type="submit" class="btn" value="Sign up"></div>
+                    <!-- Link to login page for users who already have an account -->
                     <div class="group">
                         <span><a href="login.php">Already have an account? Log in here</a></span>
                     </div>
                 </form>
             </div>
         </div>
+        <!-- Client-side validation and UI behavior -->
         <script src="../assets/js/index.js" defer></script>
+        <!-- Only include the startup overlay script if needed -->
         <?php if ($showStartupOverlay): ?>
             <script src="../assets/js/startup-overlay.js" defer></script>
         <?php endif; ?>

@@ -6,16 +6,19 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/mail.php';
 
+// Only accept POST requests for reset processing to prevent CSRF and other issues
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: reset-password.php');
     exit;
 }
 
+// Validate the CSRF token to protect against cross-site request forgery attacks
 if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
     header('Location: reset-password.php?error=csrf');
     exit;
 }
 
+// Helper to build redirect URLs that preserve the token in case of errors during the reset process
 $buildResetErrorRedirect = static function (string $error, ?string $token = null): string {
     $location = 'reset-password.php?error=' . urlencode($error);
 
@@ -35,12 +38,12 @@ if (!empty($_POST['email'])) {
         exit;
     }
 
-    try {
+    try {// Find user by email
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch();
 
-        if ($user) {
+        if ($user) {// Generate a password reset token, store it in the database, and send the reset link via email
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
             $expires = date('Y-m-d H:i:s', time() + 3600); // 1 hour
@@ -67,51 +70,58 @@ if (!empty($_POST['email'])) {
             exit;
         }
 
+        // No user found
         header('Location: reset-password.php?sent=1');
         exit;
-    } catch (PDOException $e) {
+    } catch (PDOException $e) {// On database error, log the error and show a neutral confirmation message to avoid exposing details
         header('Location: reset-password.php?sent=1');
         exit;
     }
 }
 
-// Perform reset with token + new password
+// Perform password reset with token + new password
 $token = $_POST['token'] ?? '';
 $password = $_POST['Password'] ?? '';
 $cpassword = $_POST['CPassword'] ?? '';
 
+// Ensure that the token, password, and confirm password are not empty
 if ($token === '' || $password === '' || $cpassword === '') {
     header('Location: ' . $buildResetErrorRedirect('empty', $token));
     exit;
 }
-
+// Confirm password match
 if ($password !== $cpassword) {
     header('Location: ' . $buildResetErrorRedirect('password_mismatch', $token));
     exit;
 }
 
+// Enforce strong password requirements (at least 8 characters, including uppercase, lowercase, number, and special character)
 if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/', $password)) {
     header('Location: ' . $buildResetErrorRedirect('password_short', $token));
     exit;
 }
 
+// Compare token hash to stored value
 $tokenHash = hash('sha256', $token);
 
-try {
+try {//Load reset row and associated user
     $stmt = $pdo->prepare('SELECT pr.id AS pr_id, pr.user_id, pr.expires_at, pr.used_at, u.id AS uid, u.password_hash FROM password_resets pr JOIN users u ON u.id = pr.user_id WHERE pr.token_hash = :th LIMIT 1');
     $stmt->execute([':th' => $tokenHash]);
     $row = $stmt->fetch();
 
+    // Validate token: exists, not used, not expired
     if (!$row || !empty($row['used_at']) || strtotime($row['expires_at']) < time()) {
         header('Location: reset-password.php?error=invalid_token');
         exit;
     }
 
+    // Ensure the new password is not the same as the old password
     if (password_verify($password, (string) $row['password_hash'])) {
         header('Location: ' . $buildResetErrorRedirect('password_reused', $token));
         exit;
     }
 
+    // Hash the new password and update it in the database, while also marking the reset token as used to prevent reuse
     $newHash = password_hash($password, PASSWORD_DEFAULT);
 
     $pdo->beginTransaction();
@@ -124,6 +134,7 @@ try {
 
     $pdo->commit();
 
+    // After successful password reset, redirect the user to the login page with a success message
     header('Location: login.php?reset=1');
     exit;
 } catch (PDOException $e) {

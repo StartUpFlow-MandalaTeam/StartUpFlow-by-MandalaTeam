@@ -10,6 +10,7 @@ if (!isLoggedIn()) {
 	exit;
 }
 
+// Fetch user profile data from the database
 global $pdo;
 
 $userId = currentUserId();
@@ -32,7 +33,7 @@ if ($userId !== null) {
 		];
 	}
 }
-
+// Sanitize user data for safe output in HTML contexts to prevent XSS attacks.
 $username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
 $email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
 $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8') : '';
@@ -64,6 +65,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	</style>
 </head>
 <body>
+<!-- Navbar component -->
 	<header class="dashboard-navbar" aria-label="Primary navigation">
 		<button type="button" class="dashboard-navbar__toggle" data-mobile-nav-toggle aria-controls="mobile-nav-drawer" aria-expanded="false" aria-label="Apri menu">
 			<span></span>
@@ -96,7 +98,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			</form>
 		</div>
 	</header>
-
+<!-- Mobile navigation drawer -->
 	<div class="dashboard-navbar__backdrop" data-mobile-nav-backdrop hidden></div>
 
 	<aside class="dashboard-navbar__drawer" id="mobile-nav-drawer" aria-label="Menu mobile" aria-hidden="true">
@@ -106,7 +108,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				<span class="material-symbols-outlined" aria-hidden="true">close</span>
 			</button>
 		</div>
-
+<!-- Static page links in mobile drawer -->
 		<div class="dashboard-navbar__drawer-content">
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-links" aria-label="Static pages mobile">
@@ -117,22 +119,22 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			</div>
 
 		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
-
+<!-- Module links in mobile drawer -->
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
-					<a href="#modulo-1">Modulo 1</a>
-					<a href="#modulo-2">Modulo 2</a>
-					<a href="#modulo-3">Modulo 3</a>
-					<a href="#modulo-4">Modulo 4</a>
-					<a href="#modulo-5">Modulo 5</a>
-					<a href="#modulo-6">Modulo 6</a>
-					<a href="#modulo-7">Modulo 7</a>
+					<a href="#modulo-1">Link 1</a>
+					<a href="#modulo-2">Link 2</a>
+					<a href="#modulo-3">Link 3</a>
+					<a href="#modulo-4">Link 4</a>
+					<a href="#modulo-5">Link 5</a>
+					<a href="#modulo-6">Link 6</a>
+					<a href="#modulo-7">Link 7</a>
 				</nav>
 			</div>
 		</div>
 
 		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
-
+<!-- User actions in mobile drawer -->
 		<div class="dashboard-navbar__drawer-actions">
 			<button type="button" class="dashboard-navbar__drawer-profile" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false" aria-label="Apri profilo utente">
 				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
@@ -147,11 +149,11 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			</form>
 		</div>
 	</aside>
-
+<!-- Main content area -->
 	<div class="main">
 		<h1>Ciao, <?php echo $username; ?></h1>
 	</div>
-
+<!-- User profile modal dialog -->
 	<dialog class="profile-modal" id="profile-modal" aria-labelledby="profile-modal-title">
 		<form class="profile-modal__panel" method="dialog">
 			<header class="profile-modal__header">

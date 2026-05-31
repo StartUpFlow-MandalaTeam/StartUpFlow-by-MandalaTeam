@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
-
+// Start session with secure settings
 if (session_status() === PHP_SESSION_NONE) {
 	$secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 	session_set_cookie_params([
@@ -18,12 +18,12 @@ if (session_status() === PHP_SESSION_NONE) {
 	ini_set('session.use_strict_mode', '1');
 	session_start();
 }
-
+// Set a custom session name to avoid conflicts with other applications
 const REMEMBER_ME_COOKIE = 'remember_me';
 const REMEMBER_ME_TOKEN_BYTES = 32;
 const REMEMBER_ME_SELECTOR_BYTES = 12;
 const REMEMBER_ME_DAYS = 30;
-
+// Build cookie options for "remember me" functionality
 function rememberMeCookieOptions(int $expires): array
 {
 	$secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
@@ -37,17 +37,17 @@ function rememberMeCookieOptions(int $expires): array
 		'samesite' => 'Lax',
 	];
 }
-
+// Clear the "remember me" cookie by setting it with an expired timestamp
 function clearRememberMeCookie(): void
 {
 	setcookie(REMEMBER_ME_COOKIE, '', rememberMeCookieOptions(time() - 3600));
 }
-
+// Hash the remember me token using SHA-256 for secure storage in the database
 function rememberMeTokenDigest(string $token): string
 {
 	return hash('sha256', $token);
 }
-
+// Issue a new "remember me" token for the given user ID and store it in the database, then set the cookie
 function issueRememberMeToken(int $userId): void
 {
 	global $pdo;
@@ -67,7 +67,7 @@ function issueRememberMeToken(int $userId): void
 
 	setcookie(REMEMBER_ME_COOKIE, $selector . ':' . $validator, rememberMeCookieOptions(time() + (REMEMBER_ME_DAYS * 86400)));
 }
-
+// Remove remember-me token from DB (if present) and clear browser cookie
 function clearRememberMeToken(?string $cookieValue = null): void
 {
 	global $pdo;
@@ -86,7 +86,7 @@ function clearRememberMeToken(?string $cookieValue = null): void
 
 	clearRememberMeCookie();
 }
-
+// Log in the user by setting session variables based on the provided user data array
 function loginUserFromRow(array $user): void
 {
 	session_regenerate_id(true);
@@ -94,6 +94,7 @@ function loginUserFromRow(array $user): void
 	$_SESSION['username'] = $user['username'];
 }
 
+// Attempt to auto-login the user from the "remember me" cookie
 function tryAutoLoginFromRememberMe(): void
 {
 	global $pdo;
@@ -147,14 +148,14 @@ function tryAutoLoginFromRememberMe(): void
 
 	$pdo->commit();
 }
-
+// Attempt auto-login from "remember me" cookie on every page load
 tryAutoLoginFromRememberMe();
-
+// Return true when a valid user session exists, false otherwise
 function isLoggedIn(): bool
 {
 	return isset($_SESSION['user_id']) && is_numeric($_SESSION['user_id']);
 }
-
+// Require the user to be logged in to access a page, redirecting to the login page if not authenticated
 function requireLogin(): void
 {
 	if (!isLoggedIn()) {
@@ -162,12 +163,12 @@ function requireLogin(): void
 		exit;
 	}
 }
-
+// Get the current logged-in user's ID from the session, or return null if not logged in
 function currentUserId(): ?int
 {
 	return isLoggedIn() ? (int) $_SESSION['user_id'] : null;
 }
-
+// Generate a CSRF token, store it in the session, and return it for use in forms
 function csrfToken(): string
 {
 	if (empty($_SESSION['csrf_token'])) {
@@ -176,17 +177,17 @@ function csrfToken(): string
 
 	return (string) $_SESSION['csrf_token'];
 }
-
+// Return an HTML input field with the current CSRF token for inclusion in forms to protect against CSRF attacks
 function csrfInput(): string
 {
 	return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrfToken(), ENT_QUOTES, 'UTF-8') . '">';
 }
-
+// Validate a submitted CSRF token against the token stored in the session, returning true if valid and false otherwise
 function validateCsrfToken(?string $token): bool
 {
 	return is_string($token) && isset($_SESSION['csrf_token']) && hash_equals((string) $_SESSION['csrf_token'], $token);
 }
-
+// Log out the user by clearing session data, removing "remember me" tokens, and destroy session cookie
 function logoutUser(): void
 {
 	clearRememberMeToken();
