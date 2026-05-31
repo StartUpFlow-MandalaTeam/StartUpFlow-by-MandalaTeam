@@ -47,6 +47,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	<title>Dashboard</title>
 	<link rel="stylesheet" href="assets/css/navbar.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300..700&display=swap">
+	<script src="assets/js/mobile-nav.js" defer></script>
 	<script src="assets/js/profile-modal.js" defer></script>
 	
 	<style>
@@ -64,6 +65,12 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 </head>
 <body>
 	<header class="dashboard-navbar" aria-label="Primary navigation">
+		<button type="button" class="dashboard-navbar__toggle" data-mobile-nav-toggle aria-controls="mobile-nav-drawer" aria-expanded="false" aria-label="Apri menu">
+			<span></span>
+			<span></span>
+			<span></span>
+		</button>
+
 		<div class="dashboard-navbar__brand" aria-label="StartupFlow home">
 			<span class="dashboard-navbar__logo">SF</span>
 		</div>
@@ -89,6 +96,57 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			</form>
 		</div>
 	</header>
+
+	<div class="dashboard-navbar__backdrop" data-mobile-nav-backdrop hidden></div>
+
+	<aside class="dashboard-navbar__drawer" id="mobile-nav-drawer" aria-label="Menu mobile" aria-hidden="true">
+		<div class="dashboard-navbar__drawer-top">
+			<span class="dashboard-navbar__logo">SF</span>
+			<button type="button" class="dashboard-navbar__drawer-close" data-mobile-nav-close aria-label="Chiudi menu">
+				<span class="material-symbols-outlined" aria-hidden="true">close</span>
+			</button>
+		</div>
+
+		<div class="dashboard-navbar__drawer-content">
+			<div class="dashboard-navbar__drawer-section">
+				<nav class="dashboard-navbar__drawer-links" aria-label="Static pages mobile">
+					<a href="#chi-siamo">Chi siamo</a>
+					<a href="#servizi">Servizi</a>
+					<a href="#contatti">Contatti</a>
+				</nav>
+			</div>
+
+		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
+
+			<div class="dashboard-navbar__drawer-section">
+				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
+					<a href="#modulo-1">Modulo 1</a>
+					<a href="#modulo-2">Modulo 2</a>
+					<a href="#modulo-3">Modulo 3</a>
+					<a href="#modulo-4">Modulo 4</a>
+					<a href="#modulo-5">Modulo 5</a>
+					<a href="#modulo-6">Modulo 6</a>
+					<a href="#modulo-7">Modulo 7</a>
+				</nav>
+			</div>
+		</div>
+
+		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
+
+		<div class="dashboard-navbar__drawer-actions">
+			<button type="button" class="dashboard-navbar__drawer-profile" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false" aria-label="Apri profilo utente">
+				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
+					<span class="material-symbols-outlined">person</span>
+				</div>
+			</button>
+			<form class="dashboard-navbar__drawer-logout" action="auth/process-logout.php" method="post">
+				<?php echo csrfInput(); ?>
+				<button type="submit" class="dashboard-navbar__logout-btn" aria-label="Logout">
+					<span class="material-symbols-outlined" aria-hidden="true">logout</span>
+				</button>
+			</form>
+		</div>
+	</aside>
 
 	<div class="main">
 		<h1>Ciao, <?php echo $username; ?></h1>
@@ -138,7 +196,9 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				</label>
 				<label class="profile-modal__field">
 					<span>Stato di nascita</span>
-					<input type="text" name="stato" value="" placeholder="Inserisci lo Stato di nascita">
+					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select>
+						<option value="" selected>Seleziona uno Stato</option>
+					</select>
 				</label>
 				<label class="profile-modal__field">
 					<span>Codice fiscale</span>
