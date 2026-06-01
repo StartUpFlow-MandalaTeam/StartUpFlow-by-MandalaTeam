@@ -119,4 +119,71 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.addEventListener('close', () => {
         syncExpandedState(false);
     });
+
+    // --- Change Email modal handling (top-level dialog) ---
+    const changeEmailModal = document.getElementById('change-email-modal');
+    const changeEmailOpenTriggers = Array.from(document.querySelectorAll('[data-change-email-open]'));
+    const changeEmailCancel = changeEmailModal ? changeEmailModal.querySelector('[data-change-email-cancel]') : null;
+    const changeEmailForm = document.getElementById('change-email-form');
+
+    // Helper to set aria-hidden on main page regions while modal is open
+    const setPageHidden = (hidden) => {
+        const els = document.querySelectorAll('header, main, aside, footer, .dashboard-navbar__drawer');
+        els.forEach((el) => {
+            if (hidden) el.setAttribute('aria-hidden', 'true');
+            else el.removeAttribute('aria-hidden');
+        });
+    };
+
+    function openChangeEmailModal() {
+        // close profile modal if open
+        if (modal && modal.open) modal.close();
+
+        if (changeEmailModal && !changeEmailModal.open) {
+            changeEmailModal.showModal();
+            setPageHidden(true);
+            const first = changeEmailModal.querySelector('input, button, [tabindex]:not([tabindex="-1"])');
+            if (first) first.focus();
+        }
+    }
+
+    function closeChangeEmailModal() {
+        if (changeEmailModal && changeEmailModal.open) {
+            changeEmailModal.close();
+            setPageHidden(false);
+            if (lastTrigger) lastTrigger.focus();
+        }
+    }
+
+    changeEmailOpenTriggers.forEach((t) => t.addEventListener('click', () => openChangeEmailModal()));
+    if (changeEmailCancel) changeEmailCancel.addEventListener('click', closeChangeEmailModal);
+
+    // Submit via fetch to provide neutral response and keep modal UX
+    if (changeEmailForm) {
+        changeEmailForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fd = new FormData(changeEmailForm);
+
+            fetch(changeEmailForm.action, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then((res) => res.json())
+            .then((data) => {
+                // show a neutral success/error message
+                if (data && data.success) {
+                    alert(data.message || 'Se la richiesta è valida, riceverai una email di verifica.');
+                } else {
+                    alert(data.message || 'Si è verificato un errore.');
+                }
+                closeChangeEmailModal();
+            })
+            .catch((err) => {
+                console.error(err);
+                alert('Errore inviando la richiesta. Riprova.');
+            });
+        });
+    }
 });

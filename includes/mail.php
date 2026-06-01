@@ -138,3 +138,19 @@ function sendVerificationEmail(string $toEmail, string $verificationLink, string
 
     return smtpSendEmail($toEmail, 'Email verification', $bodyText, $bodyHtml, $toName);
 }
+
+function sendChangeEmailVerification(string $toEmail, string $verificationLink, string $toName = ''): array
+{
+    $bodyText = 'To confirm your requested email change, open this link: ' . $verificationLink;
+    $bodyHtml = '<p>To confirm your requested email change click the link: <a href="' . htmlspecialchars($verificationLink, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($verificationLink, ENT_QUOTES, 'UTF-8') . '</a></p>';
+
+    return smtpSendEmail($toEmail, 'Conferma cambio email', $bodyText, $bodyHtml, $toName);
+}
+
+function sendChangeEmailNotice(string $toEmail, string $oldEmail = '', string $toName = ''): array
+{
+    $bodyText = 'The email address for your account was just changed to: ' . $toEmail . '\nIf you did not request this change, contact support.';
+    $bodyHtml = '<p>The email address for your account was just changed to: ' . htmlspecialchars($toEmail, ENT_QUOTES, 'UTF-8') . '</p><p>If you did not request this change, contact support.</p>';
+
+    return smtpSendEmail($oldEmail ?: $toEmail, 'Notifica cambio email', $bodyText, $bodyHtml, $toName);
+}

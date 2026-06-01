@@ -222,6 +222,38 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 
 			<footer class="profile-modal__actions">
 				<button type="button" class="profile-modal__save">Salva</button>
+				<button type="button" class="profile-modal__change-email" data-change-email-open>Modifica email</button>
+			</footer>
+		</form>
+	</dialog>
+
+	<!-- Change Email dialog (top-level, not nested) -->
+	<dialog class="change-email-modal" id="change-email-modal" aria-labelledby="change-email-title">
+		<form class="change-email-panel" method="post" action="/auth/process-change-email.php" id="change-email-form">
+			<header class="change-email-header">
+				<div>
+					<h2 id="change-email-title">Cambia email</h2>
+				</div>
+			</header>
+
+			<div class="change-email-body">
+				<?php echo csrfInput(); ?>
+				<label class="profile-modal__field">
+					<span>Nuova email</span>
+					<input type="email" name="new_email" required autocomplete="email">
+				</label>
+
+				<label class="profile-modal__field">
+					<span>Password corrente</span>
+					<input type="password" name="current_password" required autocomplete="current-password">
+				</label>
+
+				<p class="hint">Ti invieremo un link di verifica alla nuova email. Conferma entro 24 ore.</p>
+			</div>
+
+			<footer class="change-email-actions">
+				<button type="submit" class="profile-modal__save">Invia verifica</button>
+				<button type="button" class="profile-modal__cancel" data-change-email-cancel>Annulla</button>
 			</footer>
 		</form>
 	</dialog>

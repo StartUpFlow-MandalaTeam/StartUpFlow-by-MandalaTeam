@@ -507,6 +507,14 @@
     display: flex;
     justify-content: flex-end;
     margin-top: 24px;
+    gap: 12px;
+}
+
+.change-email-actions{
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    gap: 12px;
 }
 
 .profile-modal__save{
@@ -524,6 +532,39 @@
 .profile-modal__save:hover,
 .profile-modal__save:focus-visible{
     background: #2a2a2f;
+}
+
+.profile-modal__change-email{
+    min-width: 132px;
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 18px;
+    background: #0b66ff; /* blue */
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.profile-modal__change-email:hover,
+.profile-modal__change-email:focus-visible{
+    background: #074dc4;
+}
+
+/* Danger / secondary negative action */
+.profile-modal__cancel{
+    min-width: 132px;
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 18px;
+    background: #d04545; /* red */
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.profile-modal__cancel:hover,
+.profile-modal__cancel:focus-visible{
+    background: #a73232;
 }
 
 @media (max-width: 640px){
@@ -590,6 +631,13 @@
     }
 
     .profile-modal__save{
+        min-width: 104px;
+        padding: 8px 13px;
+        font-size: 12px;
+    }
+
+    .profile-modal__change-email,
+    .profile-modal__cancel{
         min-width: 104px;
         padding: 8px 13px;
         font-size: 12px;

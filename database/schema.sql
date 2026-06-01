@@ -23,6 +23,37 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB;
 
+-- Audit logs: record security-relevant events and support rate-limiting checks
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NULL,
+  ip_address VARCHAR(45) NULL,
+  action VARCHAR(64) NOT NULL,
+  meta JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_audit_user (user_id),
+  KEY idx_audit_action_created (action, created_at),
+  CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Email change requests: stores tokens for verifying requested email changes
+CREATE TABLE IF NOT EXISTS email_change_requests (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  new_email VARCHAR(255) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_email_change_user_id (user_id),
+  CONSTRAINT fk_email_change_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 -- Password resets table: stores tokens for resetting user passwords
 CREATE TABLE IF NOT EXISTS password_resets (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,                -- PK
