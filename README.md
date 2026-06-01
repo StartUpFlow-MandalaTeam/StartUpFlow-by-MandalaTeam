@@ -22,6 +22,8 @@ The user can move between the pages through the UI links, and each form has both
 - `auth/process-login.php` - login handler
 - `auth/process-register.php` - registration handler
 - `auth/process-reset.php` - password reset handler
+- `auth/process-change-email.php` - change email request handler
+- `auth/confirm-change-email.php` - change email confirmation handler
 - `auth/verify-email.php` - email verification handler
 - `assets/css/navbar.css` - styling for the dashboard navigation bar
 - `assets/css/page-transition.css` - page transition styles
@@ -33,10 +35,12 @@ The user can move between the pages through the UI links, and each form has both
 - `assets/js/startup-overlay.js` - startup overlay interaction logic
 - `database/schema.sql` - database schema
 - `includes/mail.php` - SMTP helper for outgoing emails
+- `includes/audit.php` - audit logging helpers for security events
 - `includes/auth.php` - session, CSRF, and auth helpers
 - `includes/db.php` - database connection
 - `includes/config.example.php` - configuration template
 - `includes/config.php` - local configuration file
+- `scripts/cli-send-change-email-test.php` - CLI smoke test for the change email flow
 
 ## Database Setup
 
@@ -99,6 +103,39 @@ This project follows a simple end-to-end authentication flow where each page and
    - `includes/auth.php` provides session handling, CSRF helpers, remember-me management, and logout utilities.
    - `includes/db.php` creates the database connection used by all handlers.
    - `includes/mail.php` sends verification and reset emails.
+
+## Change Email (Account)
+
+This project includes a secure "change email" flow available from the user's profile modal. Key points:
+
+- The UI opens a top-level change-email dialog where the user provides the *new email* and their *current password*.
+- The server handler `auth/process-change-email.php` verifies CSRF and re-authenticates the user, checks uniqueness of the new email, then creates an entry in `email_change_requests` with a hashed token and `expires_at` set to 24 hours.
+- A verification email is sent to the *new* address containing a confirmation link handled by `auth/confirm-change-email.php`.
+- When the confirmation link is opened and the token is valid and unused, the server updates `users.email`, marks the request as used (`used_at`), removes other pending change requests for the user, and invalidates remember-me tokens for that account.
+- The system also sends a *notification* email to the *old* address to alert the user of the change.
+
+Technical details:
+
+- Table: `email_change_requests(user_id, new_email, token_hash, expires_at, used_at, created_at)` — token is stored hashed (SHA-256).
+- Token TTL: 24 hours from creation.
+- Mail sending: `includes/mail.php` provides `sendChangeEmailVerification()` and `sendChangeEmailNotice()` helpers. In development, MailHog is used (SMTP on `127.0.0.1:1025`, UI on `http://localhost:8025`).
+- Security: token validation uses `hash_equals()` on the hashed token; handlers mark tokens as used to prevent replay.
+
+Bug fixes / notes:
+
+- A recent bug caused confirmation links to include the wrong numeric `id` in the URL (root cause: calling other INSERTs before reading `$pdo->lastInsertId()` on the same connection). The code now reads `lastInsertId()` immediately after the `INSERT` into `email_change_requests` to ensure the correct link is sent.
+- The notification helper signature was clarified so the old address receives the notice and the body shows the new address.
+
+## Rate limiting & Audit
+
+To protect the change-email endpoint against abuse, the handler enforces two limits:
+
+- Per-account: 5 `change_email_request` attempts per hour.
+- Per-IP: 20 `change_email_request` attempts per hour.
+
+When limits are exceeded the handler logs `rate_limited_user` or `rate_limited_ip` in `audit_logs` and returns a neutral error message. Audit entries are written to `audit_logs` with `action`, `user_id` (nullable), `ip_address`, `meta` (JSON) and `created_at` for diagnostic and security review.
+
+Administrators can reset rate-limit entries by removing recent `audit_logs` rows (this project may add a small admin endpoint to clear blocks safely).
 
 ## Authentication Flow
 
