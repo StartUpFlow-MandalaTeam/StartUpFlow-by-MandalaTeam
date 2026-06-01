@@ -25,6 +25,7 @@ The user can move between the pages through the UI links, and each form has both
 - `auth/process-change-email.php` - change email request handler
 - `auth/confirm-change-email.php` - change email confirmation handler
 - `auth/verify-email.php` - email verification handler
+- `auth/process-logout.php` - ends session, clears auth cookies, and redirects.
 - `assets/css/navbar.css` - styling for the dashboard navigation bar
 - `assets/css/page-transition.css` - page transition styles
 - `assets/css/startup-overlay.css` - startup overlay styles
@@ -41,6 +42,13 @@ The user can move between the pages through the UI links, and each form has both
 - `includes/config.example.php` - configuration template
 - `includes/config.php` - local configuration file
 - `scripts/cli-send-change-email-test.php` - CLI smoke test for the change email flow
+
+## Requirements
+
+- PHP >= 8.0
+- Required PHP extensions: `pdo_mysql`, `mbstring`, `openssl`
+- MySQL 5.7+ (or MariaDB equivalent)
+- MailHog (recommended for local development)
 
 ## Database Setup
 
@@ -60,6 +68,30 @@ Import steps:
 Copy `includes/config.example.php` to `includes/config.php` and set your local database and application values there.
 
 The real `config.php` file is ignored by Git and should remain local.
+
+## Quick Start
+
+From the project root, run:
+
+```bash
+cp includes/config.example.php includes/config.php
+mysql -u root -p < database/schema.sql
+bash start-dev.sh
+```
+
+Recommended workflow: use the single development script in the project root. It starts MailHog and the PHP built-in server together.
+
+Start everything with:
+
+```bash
+bash start-dev.sh
+```
+
+The app will be available at <http://localhost:8000> and MailHog at <http://localhost:8025>.
+
+Note: `start-dev.sh` does not run the token cleanup job; schedule `scripts/cleanup-expired-tokens.php` separately for maintenance.
+
+`start-dev.sh` launches the PHP built-in server and MailHog for local testing.
 
 ## Application Flow
 
@@ -120,11 +152,6 @@ Technical details:
 - Token TTL: 24 hours from creation.
 - Mail sending: `includes/mail.php` provides `sendChangeEmailVerification()` and `sendChangeEmailNotice()` helpers. In development, MailHog is used (SMTP on `127.0.0.1:1025`, UI on `http://localhost:8025`).
 - Security: token validation uses `hash_equals()` on the hashed token; handlers mark tokens as used to prevent replay.
-
-Bug fixes / notes:
-
-- A recent bug caused confirmation links to include the wrong numeric `id` in the URL (root cause: calling other INSERTs before reading `$pdo->lastInsertId()` on the same connection). The code now reads `lastInsertId()` immediately after the `INSERT` into `email_change_requests` to ensure the correct link is sent.
-- The notification helper signature was clarified so the old address receives the notice and the body shows the new address.
 
 ## Rate limiting & Audit
 
@@ -220,6 +247,22 @@ Client-side and server-side checks are applied to:
 
 Registration keeps new accounts inactive and sends a verification email. The account is activated only after the verification link is opened, so unverified users cannot log in.
 
+### Change Email
+
+Client-side and server-side checks are applied to:
+
+- email is required (client-side)
+- email must have a valid format (client-side + server-side)
+- the email must be different from the current email
+- CSRF token is verified on submit (`validateCsrfToken()`)
+- current password is required and verified with `password_verify()`
+- new email uniqueness is checked against `users` (no duplicates)
+- rate limits enforced: per-account (5/h) and per-IP (20/h) via `audit_logs`
+- a verification token is generated, stored hashed (SHA-256) with 24h TTL, and emailed to the new address
+- if SMTP sending fails the request is rolled back and an audit entry is written
+- on confirmation (`auth/confirm-change-email.php`) the token is validated with `hash_equals()`, the request marked used, other pending requests removed, and `remember_me` tokens invalidated
+- audit entries and notifications are created (old email is notified of changes)
+
 ### Password Reset Request
 
 Client-side and server-side checks are applied to:
@@ -312,6 +355,8 @@ bash start-dev.sh
 
 The app will be available at <http://localhost:8000> and MailHog at <http://localhost:8025>.
 
+MailHog also captures change-email verification and notification messages (sent by `auth/process-change-email.php` and `auth/confirm-change-email.php`), so you can inspect the confirmation link and the notice sent to the old address in the MailHog UI.
+
 This development script does not run the token cleanup job. That maintenance task is intentionally kept separate and should be scheduled independently, so the app startup stays fast and predictable.
 
 If you prefer to run the pieces manually, start MailHog first, then PHP, then register.
@@ -354,6 +399,18 @@ If you prefer to run the pieces manually, start MailHog first, then PHP, then re
    - <http://localhost:8025>
 
 3. Click the reset link in the MailHog message to open the reset form. Set a new password and then log in.
+
+### C. Change Email
+
+1. Open the change-email dialog from the profile modal, enter the new email and current password, then submit the request.
+
+2. Open MailHog UI in your browser to find the verification email sent to the new address:
+
+   - <http://localhost:8025>
+
+3. Click the confirmation link in the MailHog message to complete the email change.
+
+4. Open MailHog UI again to check the notification email sent to the old address.
 
 ## Auth Smoke Test
 
