@@ -21,27 +21,24 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
     exit;
 }
 
-//retrieve submitted identifier (username or email) and password from the POST data
-$identifier = trim($_POST['Username'] ?? '');
+//retrieve submitted username and password from the POST data
+$username = trim($_POST['Username'] ?? '');
 $password = $_POST['Password'] ?? '';
 
-// Ensure that the identifier and password are not empty
-if ($identifier === '' || $password === '') {
+// Ensure that the username and password are not empty
+if ($username === '' || $password === '') {
     header('Location: login.php?error=empty');
     exit;
 }
 
-try {// Look up the user in the database by username or email
+try {// Look up the user in the database by username
     $stmt = $pdo->prepare('
         SELECT id, username, email, password_hash, is_active, failed_login_attempts, locked_until
         FROM users
-        WHERE username = :username OR email = :email
+        WHERE username = :username
         LIMIT 1
     ');
-    $stmt->execute([
-        ':username' => $identifier,
-        ':email' => $identifier,
-    ]);
+    $stmt->execute([':username' => $username]);
 
     $user = $stmt->fetch();
 

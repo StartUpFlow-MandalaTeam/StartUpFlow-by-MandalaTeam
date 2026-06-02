@@ -223,7 +223,7 @@ Client-side and server-side checks are applied to:
 
 Client-side and server-side checks are applied to:
 
-- username or email is required
+- username is required
 - password is required
 - account status is checked on the server
 - unverified accounts are rejected until the verification link is used
