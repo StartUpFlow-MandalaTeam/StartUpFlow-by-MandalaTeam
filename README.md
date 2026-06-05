@@ -1,7 +1,7 @@
 
 # Login Module
 
-This project is a lightweight PHP/MySQL authentication module featuring secure registration, login, password reset, and email management. It includes both client-side and server-side validation, comprehensive audit logging, and rate limiting.
+This project is a PHP/MySQL authentication module featuring secure registration, login, password reset, and email management. It includes both client-side and server-side validation, comprehensive audit logging, and rate limiting.
 
 ## Features & Validation Rules
 
