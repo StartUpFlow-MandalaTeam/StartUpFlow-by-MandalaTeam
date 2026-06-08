@@ -66,10 +66,9 @@ Engine: PHP ≥ 8.0 (Required extensions: pdo_mysql, mbstring, openssl)
 Database: MySQL 5.7+ / MariaDB equivalent
 Mail Capture: MailHog (recommended for local development)
 
-## Database Setup
+## Database Setup 
 
 Initialize your schema by importing database/schema.sql via your database client or terminal:
-Bash
 
 ```bash
 mysql -u root -p < database/schema.sql
@@ -78,9 +77,10 @@ mysql -u root -p < database/schema.sql
 ## Configuration
 
 Generate your local configuration file from the template:
-Bash
 
+```bash
 cp includes/config.example.php includes/config.php
+```
 
 ⚠️ Production Note: Ensure APP_ENV='prod' is declared in includes/config.php and configure an official, secure SMTP provider.
 
