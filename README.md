@@ -66,7 +66,7 @@ Engine: PHP ≥ 8.0 (Required extensions: pdo_mysql, mbstring, openssl)
 Database: MySQL 5.7+ / MariaDB equivalent
 Mail Capture: MailHog (recommended for local development)
 
-## Database Setup 
+## Database Setup
 
 Initialize your schema by importing database/schema.sql via your database client or terminal:
 
