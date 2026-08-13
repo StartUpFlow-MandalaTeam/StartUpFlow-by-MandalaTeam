@@ -1,0 +1,323 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins');
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "poppins", sans-serif;
+}
+
+body{
+    background-color: #dbad00;
+    background-image: url(../img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg);
+    background-position: center;
+    background-size: cover;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.startup-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #dbad00;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+}
+
+.startup-overlay__power{
+    width: 92px;
+    height: 92px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #d40000;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.startup-overlay__power:hover{
+    transform: scale(1.06);
+}
+
+.startup-overlay__power ion-icon{
+    font-size: 74px;
+    color: #d40000;
+}
+
+.startup-overlay__title{
+    color: #111;
+    font-size: clamp(34px, 5vw, 64px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: center;
+}
+
+.container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+}
+
+.result-message{
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 460px);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    color: #111;
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.45;
+    padding: 14px 16px;
+    border-radius: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 5;
+}
+
+.result-message.is-visible{
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.result-message.is-error{
+    color: #a80000;
+}
+
+.result-message.is-success{
+    color: #0f6a2d;
+}
+
+.result-message__debug{
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+}
+.form-box{
+    position: relative;
+    width: min(400px, calc(100vw - 32px));
+    min-height: 550px;
+    height: auto;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 32px 20px;
+}
+
+.form-box form{
+    width: 100%;
+}
+
+.form-box h2{
+    color: #fff;
+    text-align: center;
+    font-size: 32px;
+}
+
+.form-box .input-box{
+    position: relative;
+    margin: 30px 0;
+    width: min(310px, 100%);
+    border-bottom: 2px solid #fff;
+}
+
+.form-box .input-box input{
+    width: 100%;
+    height: 45px;
+    background: transparent;
+    border: none;
+    padding: 20px 20px 2px 5px;
+    color: #fff;
+    font-size: 16px;
+}
+
+.form-box .input-box input:not(:placeholder-shown){
+    color: #ffd400;
+}
+
+.form-box .input-box label{
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 17px;
+    pointer-events: none;
+    transition: all .2s ease;
+}
+
+.form-box .input-box input:focus ~ label{
+    top: -2px;
+    transform: translateY(-100%);
+    font-size: 13px;
+    opacity: .9;
+}
+
+.form-box .input-box input:not(:placeholder-shown) ~ label{
+    top: -2px;
+    transform: translateY(-100%);
+    font-size: 13px;
+    color: #fff;
+    opacity: .9;
+    font-weight: 400;
+}
+
+i{
+    position: absolute;
+    color: #fff;
+    top: 13px;
+    right: 0;
+    transition: color .2s ease;
+
+}
+
+.form-box .input-box:has(input:not(:placeholder-shown)) i{
+    color: #ffd400;
+}
+
+input::placeholder{
+    color: transparent;
+}
+
+.btn{
+    color: #fff;
+    background: blue;
+    width: 100%;
+    height: 50px;
+    border-radius: 5px;
+    outline: none;
+    border: none;
+    font-size: 17px;
+    cursor: pointer;
+    box-shadow: 3px 0 10px rgba(0,0,0.5);
+}
+
+.group{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.group span a{
+    color: #fff;
+    position: relative;
+    top: 10px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.group a:focus{
+    text-decoration: underline;
+}
+
+.remember-me{
+    margin-top: 12px;
+    font-size: 13px;
+    color: #fff;
+}
+
+.remember-me label{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.remember-me input{
+    width: 16px;
+    height: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
+    background: transparent;
+    backdrop-filter: blur(15px);
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.remember-me input:checked{
+    background: #ffd400;
+    border-color: #ffd400;
+    box-shadow: 0 0 0 2px rgba(255, 212, 0, 0.18);
+}
+
+.remember-me input:checked::after{
+    content: '';
+    width: 5px;
+    height: 8px;
+    border: solid #111;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+}
+.result-message__debug a{
+    color: inherit;
+    word-break: break-word;
+}
+
+@media (max-width: 520px){
+    .container{
+        align-items: flex-start;
+        padding: 76px 12px 24px;
+    }
+
+    .result-message{
+        top: 12px;
+        width: min(calc(100vw - 24px), 460px);
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+
+    .form-box{
+        width: 100%;
+        min-height: auto;
+        padding: 28px 16px;
+        border-radius: 16px;
+    }
+
+    .form-box h2{
+        font-size: 28px;
+    }
+
+    .form-box .input-box{
+        margin: 24px 0;
+    }
+
+    .form-box .input-box input{
+        font-size: 15px;
+    }
+
+    .group{
+        font-size: 11px;
+    }
+
+    .group span a{
+        top: 0;
+    }
+
+    .btn{
+        font-size: 16px;
+    }
+}

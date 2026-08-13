@@ -1,3 +1,26 @@
+<<<<<<< HEAD
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+build/
+
+# Environment files
+.env
+includes/config.php
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+storage/*.log
+=======
 # --- Default di Composer ---
 composer.phar
 /vendor/
@@ -26,3 +49,4 @@ config.php
 Thumbs.db
 .idea/
 .vscode/
+>>>>>>> origin/main
