@@ -157,32 +157,32 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 1</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Fatturazione</h3>
+						<p class="card-description">Emetti le tue fatture</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 2</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Scadenzario</h3>
+						<p class="card-description">Monitora pagamenti & incassi</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 3</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Nota Spese</h3>
+						<p class="card-description">Registra le uscite</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 4</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Burn Rate Meter</h3>
+						<p class="card-description">Il tuo stato di salute</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
@@ -191,24 +191,24 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 5</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Time-Tracker</h3>
+						<p class="card-description">Tempo di fatturazione per cliente</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 6</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">Archivio "Zero carta"</h3>
+						<p class="card-description">Repository documentale</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Servizio 7</h3>
-						<p class="card-description">Descrizione.</p>
+						<h3 class="card-title">CRM di acquisizione</h3>
+						<p class="card-description">Ciclo di acquisizione clienti</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
