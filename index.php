@@ -123,13 +123,13 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 <!-- Module links in mobile drawer -->
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
-					<a href="#modulo-1">Link 1</a>
-					<a href="#modulo-2">Link 2</a>
-					<a href="#modulo-3">Link 3</a>
-					<a href="#modulo-4">Link 4</a>
-					<a href="#modulo-5">Link 5</a>
-					<a href="#modulo-6">Link 6</a>
-					<a href="#modulo-7">Link 7</a>
+					<a href="#modulo-1">Fatturazione</a>
+					<a href="#modulo-2">Scadenzario</a>
+					<a href="#modulo-3">Nota Spese</a>
+					<a href="#modulo-4">Burn Rate Meter</a>
+					<a href="#modulo-5">Time-Tracker</a>
+					<a href="#modulo-6">"Zero carta"</a>
+					<a href="#modulo-7">CRM di acquisizione</a>
 				</nav>
 			</div>
 		</div>
@@ -166,7 +166,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
 						<h3 class="card-title">Scadenzario</h3>
-						<p class="card-description">Monitora pagamenti & incassi</p>
+						<p class="card-description">Pagamenti & Incassi</p>
 						<button class="card-button">Vai!</button>
 					</div>
 				</div>
@@ -199,7 +199,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				<div class="card">
 					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
 					<div class="card-content">
-						<h3 class="card-title">Archivio "Zero carta"</h3>
+						<h3 class="card-title">"Zero carta"</h3>
 						<p class="card-description">Repository documentale</p>
 						<button class="card-button">Vai!</button>
 					</div>
