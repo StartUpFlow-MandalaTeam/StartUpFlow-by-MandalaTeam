@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Node.js
 node_modules/
 npm-debug.log*
@@ -7,46 +6,35 @@ npm-debug.log*
 dist/
 build/
 
-# Environment files
-.env
-includes/config.php
-
-# VS Code
-.vscode/
-
-# macOS
-.DS_Store
-
-# Logs
-*.log
-storage/*.log
-=======
-# --- Default di Composer ---
+# Composer
 composer.phar
 /vendor/
 composer.lock
 
-# --- Sicurezza StartupFlow ---
-# Ignora le credenziali di database
-config.php
+# Environment & Database Config
 .env
+config.php
+includes/config.php
 
-# --- Database ---
-# Ignora i dump (es. backup.sql), ma manteniamo lo schema ufficiale
+# Database dumps (keep schema.sql)
 *.sql
 !database/schema.sql
 
-# Ignora documenti sensibili (Modulo Zero Carta & Spese)
+# Uploads (keep .gitkeep)
 /uploads*
-# MA permette ai file .gitkeep di essere tracciati (mantiene la struttura delle cartelle vuote su Github)
 !/uploads/documenti/.gitkeep
 !/uploads/scontrini/.gitkeep
 
-# Ignora file temporanei e di sistema
+# Logs
 *.log
-*.sql
-.DS_Store
-Thumbs.db
-.idea/
+storage/*.log
+
+# Editor/IDE
 .vscode/
->>>>>>> origin/main
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

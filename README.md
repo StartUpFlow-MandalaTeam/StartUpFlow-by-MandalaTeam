@@ -53,7 +53,8 @@ To prevent abuse, actions are logged in `audit_logs` (`action`, `user_id`, `ip_a
 │   └── config.example.php / config.php
 ├── scripts/                         # Maintenance & CLI Utilities
 │   ├── cleanup-expired-tokens.php   # Cron utility to purge expired database tokens
-│   └── cli-send-change-email-test.php
+│   ├── cli-send-change-email-test.php
+│   └── seed-test-user.php            # Create/update test user for local development
 ├── tests/                           # Automation Suite
 │   └── auth-smoke.sh                # Zero-data HTTP routing & redirect smoke test
 ├── index.php                        # Protected landing dashboard (requires valid session)
@@ -73,6 +74,22 @@ Initialize your schema by importing database/schema.sql via your database client
 ```bash
 mysql -u root -p < database/schema.sql
 ```
+
+## Test User
+
+For local development, create a test user with known credentials:
+
+```bash
+php scripts/seed-test-user.php
+```
+
+Default test user credentials:
+
+- **Username:** `utente`
+- **Password:** `password123`
+- **Email:** `utente@test.com`
+
+This user will be automatically activated (`is_active = 1`) and can log in immediately.
 
 ## Configuration
 
