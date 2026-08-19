@@ -22,15 +22,11 @@
     cursor: pointer;
     padding: 0;
     transition: transform .2s ease, opacity .2s ease;
+    margin: 0 auto;
 }
 
 .startup-overlay__power:hover{
     transform: scale(1.06);
-}
-
-.startup-overlay__power ion-icon{
-    font-size: 78px;
-    color: #d40000;
 }
 
 .startup-overlay__title{
