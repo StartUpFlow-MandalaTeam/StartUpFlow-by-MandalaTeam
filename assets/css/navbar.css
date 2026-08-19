@@ -15,6 +15,7 @@
     left: 0;
     width: 100%;
     z-index: 50;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .dashboard-navbar__toggle{
@@ -66,9 +67,10 @@
 .dashboard-navbar__links{
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: left;
     gap: clamp(18px, 3vw, 36px);
     flex-wrap: wrap;
+    
 }
 
 .dashboard-navbar__links a{
@@ -131,6 +133,7 @@
     color: rgba(255, 255, 255, 0.78);
     font-size: 14px;
     font-weight: 600;
+    font-family: Montserrat, sans-serif;
     white-space: nowrap;
 }
 
@@ -198,6 +201,7 @@
     justify-content: flex-start;
     gap: 0;
     backdrop-filter: blur(12px);
+    font-family: Montserrat, sans-serif;
 }
 
 .dashboard-navbar__drawer-top{
@@ -221,8 +225,8 @@
 
 .dashboard-navbar__drawer-links{
     display: grid;
-    gap: 18px;
-    margin-top: 42px;
+    gap: 12px;
+    margin-top: 20px;
 }
 
 .dashboard-navbar__drawer-links a{
@@ -247,7 +251,7 @@
 }
 
 .dashboard-navbar__drawer-separator{
-    margin-top: 40px;
+    margin-top: 20px;
 	height: 1px;
 	background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.16) 18%, rgba(255, 255, 255, 0.16) 82%, transparent 100%);
 	flex-shrink: 0;
@@ -268,7 +272,7 @@
 
 .dashboard-navbar__drawer-modules{
     display: grid;
-    gap: 16px;
+    gap: 8px;
 }
 
 .dashboard-navbar__drawer-modules a{

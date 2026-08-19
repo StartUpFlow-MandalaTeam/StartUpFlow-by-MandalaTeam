@@ -47,7 +47,8 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Dashboard</title>
 	<link rel="stylesheet" href="assets/css/navbar.css">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300..700&display=swap">
+	<link rel="stylesheet" href="assets/css/card-container.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300..700&family=Montserrat:wght@400;500;600&display=swap">
 	<script src="assets/js/mobile-nav.js" defer></script>
 	<script src="assets/js/profile-modal.js" defer></script>
 	
@@ -58,7 +59,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			background: #fff;
+			background: #d6a800;
 			font-family: Arial, sans-serif;
 			color: #111;
 		}
@@ -88,7 +89,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
 					<span class="material-symbols-outlined">person</span>
 				</div>
-				<span class="dashboard-navbar__user"><?php echo $username; ?></span>
+				<span class="dashboard-navbar__user"><?php echo "Ciao, " . $username; ?></span>
 			</button>
 			<form class="dashboard-navbar__logout" action="auth/process-logout.php" method="post">
 				<?php echo csrfInput(); ?>
@@ -151,7 +152,68 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	</aside>
 <!-- Main content area -->
 	<div class="main">
-		<h1>Ciao, <?php echo $username; ?></h1>
+		<div class="card-container">
+			<div class="card-row card-row--top">
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 1</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 2</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 3</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 4</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+			</div>
+			<div class="card-row card-row--bottom">
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 5</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 6</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+				<div class="card">
+					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+					<div class="card-content">
+						<h3 class="card-title">Servizio 7</h3>
+						<p class="card-description">Descrizione.</p>
+						<button class="card-button">Vai!</button>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 <!-- User profile modal dialog -->
 	<dialog class="profile-modal" id="profile-modal" aria-labelledby="profile-modal-title">
