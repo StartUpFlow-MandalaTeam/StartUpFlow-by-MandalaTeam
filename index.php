@@ -39,18 +39,7 @@ $username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
 $email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
 $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8') : '';
 
-// Array delle card con titolo, descrizione e link
-$cards = [
-	['title' => 'Fatturazione', 'description' => 'Emetti le tue fatture', 'link' => '/fatturazione'],
-	['title' => 'Scadenzario', 'description' => 'Pagamenti & Incassi', 'link' => '/scadenzario'],
-	['title' => 'Nota Spese', 'description' => 'Registra le uscite', 'link' => '/nota-spese'],
-	['title' => 'Burn Rate Meter', 'description' => 'Il tuo stato di salute', 'link' => '/burn-rate-meter'],
-	['title' => 'Time-Tracker', 'description' => 'Tempo di fatturazione per cliente', 'link' => '/time-tracker'],
-	['title' => '"Zero carta"', 'description' => 'Repository documentale', 'link' => '/zero-carta'],
-	['title' => 'CRM clienti', 'description' => 'Ciclo di acquisizione clienti', 'link' => '/crm-clienti'],
-];
-
-$pageTitle = 'Dashboard';
+$pageTitle = 'Dashboard - StartUpFlow';
 $currentPage = '';
 
 require_once __DIR__ . '/includes/layout/header.php';
@@ -58,34 +47,14 @@ require_once __DIR__ . '/includes/layout/header.php';
 ?>
 
 	<main class="main">
-		<div class="card-container">
-			<div class="card-row card-row--top">
-				<?php foreach (array_slice($cards, 0, 4) as $card): ?>
-					<div class="card">
-						<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-						<div class="card-content">
-							<h3 class="card-title"><?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
-							<p class="card-description"><?php echo htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-							<a href="<?php echo htmlspecialchars($card['link'], ENT_QUOTES, 'UTF-8'); ?>" class="card-button">Vai!</a>
-						</div>
-					</div>
-				<?php endforeach; ?>
-			</div>
-
-			<div class="card-row card-row--bottom">
-				<?php foreach (array_slice($cards, 4) as $card): ?>
-					<div class="card">
-						<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-						<div class="card-content">
-							<h3 class="card-title"><?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
-							<p class="card-description"><?php echo htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-							<a href="<?php echo htmlspecialchars($card['link'], ENT_QUOTES, 'UTF-8'); ?>" class="card-button">Vai!</a>
-						</div>
-					</div>
-				<?php endforeach; ?>
+		<div id="app">
+			<div id="dynamic-content">
+				<!-- Contenuto dinamico verra' caricato qui dal router SPA -->
 			</div>
 		</div>
 	</main>
-	
+
 <?php
 require_once __DIR__ . '/includes/layout/footer.php';
+?>
+	<script src="/assets/js/spa-router.js"></script>
