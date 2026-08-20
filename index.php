@@ -76,9 +76,6 @@ $userDataJson = json_encode($userDataForReact, JSON_HEX_TAG | JSON_HEX_APOS | JS
 		body {
 			margin: 0;
 			min-height: 100vh;
-			display: flex;
-			align-items: center;
-			justify-content: center;
 			background: #d6a800;
 			font-family: Arial, sans-serif;
 			color: #111;
@@ -97,11 +94,31 @@ $userDataJson = json_encode($userDataForReact, JSON_HEX_TAG | JSON_HEX_APOS | JS
 			display: none;
 		}
 		
-		.no-react .static-fallback {
-			display: block;
+		.has-react .static-fallback {
+			display: none;
 		}
 		
-		.has-react {
+		.no-react .static-fallback {
+			display: flex;
+			min-height: 100vh;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+		}
+		
+		.no-react .static-fallback .main {
+			width: 100%;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding-top: 100px; /* Spazio per la navbar fixed */
+		}
+		
+		.has-react #root {
+			display: flex;
+		}
+		
+		.no-react #root {
 			display: none;
 		}
 	</style>
@@ -115,23 +132,35 @@ $userDataJson = json_encode($userDataForReact, JSON_HEX_TAG | JSON_HEX_APOS | JS
 	<?php endif; ?>
 	
 	<script>
-		// Aggiungi classe per gestire fallback
+		// Gestione fallback PHP/React
+		// Di default, mostriamo il contenuto statico
 		document.documentElement.classList.add('no-react');
 		
-		// Quando React è caricato, nascondi il fallback
-		if (typeof window.React !== 'undefined' || document.getElementById('root').children.length > 0) {
-			document.documentElement.classList.remove('no-react');
-			document.documentElement.classList.add('has-react');
+		// Funzione per verificare se React è caricato
+		function checkReactLoaded() {
+			// Se abbiamo React globale OPPURE il root ha contenuto (Vite dev server)
+			if (typeof window.React !== 'undefined' || document.getElementById('root').children.length > 0) {
+				document.documentElement.classList.remove('no-react');
+				document.documentElement.classList.add('has-react');
+				return true;
+			}
+			return false;
 		}
 		
-		// Per sviluppo: se sei su localhost:3000 (Vite dev server), 
-		// reindirizza automaticamente alla SPA
-		if (window.location.hostname === 'localhost' && window.location.port === '3000') {
-			// Già nella SPA, non fare nulla
-		} else if (window.location.hostname === 'localhost' && window.location.port === '') {
-			// Se sei su Apache locale, puoi testare React in sviluppo
-			// sotto la porta 3000
-		}
+		// Verifica iniziale
+		checkReactLoaded();
+		
+		// Verifica periodicamente (per Vite dev server che carichi asincrono)
+		const reactCheckInterval = setInterval(checkReactLoaded, 100);
+		
+		// Fermati dopo 5 secondi (se React non si carichi, mostriamo il fallback)
+		setTimeout(() => {
+			clearInterval(reactCheckInterval);
+			// Se ancora non abbiamo React, assicurati che il fallback sia visibile
+			if (!document.documentElement.classList.contains('has-react')) {
+				document.documentElement.classList.add('no-react');
+			}
+		}, 5000);
 	</script>
 </head>
 <body>
