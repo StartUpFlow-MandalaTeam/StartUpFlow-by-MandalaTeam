@@ -91,14 +91,14 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 			<span></span>
 		</button>
 
-		<a href="/index.php" class="dashboard-navbar__brand" aria-label="StartupFlow home">
+		<a href="/" class="dashboard-navbar__brand" aria-label="StartupFlow home">
 			<span class="dashboard-navbar__logo">SF</span>
 		</a>
 
 		<nav class="dashboard-navbar__links" aria-label="Static pages">
-			<a href="/pages/chi-siamo.php" <?php echo ($currentPage ?? '') === 'chi-siamo' ? 'class="active"' : ''; ?>>Chi siamo</a>
-			<a href="/pages/servizi.php" <?php echo ($currentPage ?? '') === 'servizi' ? 'class="active"' : ''; ?>>Servizi</a>
-			<a href="/pages/contatti.php" <?php echo ($currentPage ?? '') === 'contatti' ? 'class="active"' : ''; ?>>Contatti</a>
+			<a href="/chi-siamo" <?php echo ($currentPage ?? '') === 'chi-siamo' ? 'class="active"' : ''; ?> data-spa="true">Chi siamo</a>
+			<a href="/servizi" <?php echo ($currentPage ?? '') === 'servizi' ? 'class="active"' : ''; ?> data-spa="true">Servizi</a>
+			<a href="/contatti" <?php echo ($currentPage ?? '') === 'contatti' ? 'class="active"' : ''; ?> data-spa="true">Contatti</a>
 		</nav>
 
 		<div class="dashboard-navbar__userarea">
@@ -120,7 +120,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 
 	<aside class="dashboard-navbar__drawer" id="mobile-nav-drawer" aria-label="Menu mobile" aria-hidden="true">
 		<div class="dashboard-navbar__drawer-top">
-			<a href="/index.php" class="dashboard-navbar__logo" aria-label="StartupFlow home">SF</a>
+			<a href="/" class="dashboard-navbar__logo" aria-label="StartupFlow home">SF</a>
 			<button type="button" class="dashboard-navbar__drawer-close" data-mobile-nav-close aria-label="Chiudi menu">
 				<span class="material-symbols-outlined" aria-hidden="true">close</span>
 			</button>
@@ -128,22 +128,22 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 		<div class="dashboard-navbar__drawer-content">
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-links" aria-label="Static pages mobile">
-					<a href="/pages/chi-siamo.php">Chi siamo</a>
-					<a href="/pages/servizi.php">Servizi</a>
-					<a href="/pages/contatti.php">Contatti</a>
+					<a href="/chi-siamo" data-spa="true">Chi siamo</a>
+					<a href="/servizi" data-spa="true">Servizi</a>
+					<a href="/contatti" data-spa="true">Contatti</a>
 				</nav>
 			</div>
 
 			<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
-					<a href="/fatturazione">Fatturazione</a>
-					<a href="/scadenzario">Scadenzario</a>
-					<a href="/nota-spese">Nota Spese</a>
-					<a href="/burn-rate-meter">Burn Rate Meter</a>
-					<a href="/time-tracker">Time-Tracker</a>
-					<a href="/zero-carta">"Zero carta"</a>
-					<a href="/crm-clienti">CRM clienti</a>
+					<a href="/fatturazione" data-spa="true">Fatturazione</a>
+					<a href="/scadenzario" data-spa="true">Scadenzario</a>
+					<a href="/nota-spese" data-spa="true">Nota Spese</a>
+					<a href="/burn-rate-meter" data-spa="true">Burn Rate Meter</a>
+					<a href="/time-tracker" data-spa="true">Time-Tracker</a>
+					<a href="/zero-carta" data-spa="true">"Zero carta"</a>
+					<a href="/crm-clienti" data-spa="true">CRM clienti</a>
 				</nav>
 			</div>
 		</div>

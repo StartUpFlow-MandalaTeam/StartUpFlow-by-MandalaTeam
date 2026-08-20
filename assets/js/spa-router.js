@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mappa dei percorsi alle pagine
     const routes = {
+        // Servizi
         '/fatturazione': { file: '/fatturazione.php', title: 'Fatturazione - StartUpFlow' },
         '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow' },
         '/nota-spese': { file: '/nota-spese.php', title: 'Nota Spese - StartUpFlow' },
@@ -12,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
         '/time-tracker': { file: '/time-tracker.php', title: 'Time Tracker - StartUpFlow' },
         '/zero-carta': { file: '/zero-carta.php', title: 'Zero Carta - StartUpFlow' },
         '/crm-clienti': { file: '/crm-clienti.php', title: 'CRM Clienti - StartUpFlow' },
+
+        // Pagine statiche
+        '/chi-siamo': { file: '/chi-siamo.php', title: 'Chi Siamo - StartUpFlow' },
+        '/servizi': { file: '/servizi.php', title: 'Servizi - StartUpFlow' },
+        '/contatti': { file: '/contatti.php', title: 'Contatti - StartUpFlow' },
     };
 
     // Funzione per mostrare la dashboard
@@ -81,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.title = 'Dashboard - StartUpFlow';
-        // AGGIUNTO: Aggiorna l'URL a "/" quando mostri la dashboard
         history.pushState({ path: '/' }, '', '/');
     }
 
@@ -109,8 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = await response.text();
             dynamicContent.innerHTML = html;
             document.title = route.title;
-
-            // Aggiorna l'URL senza ricaricare
             history.pushState({ path }, '', path);
         } catch (error) {
             console.error('Errore:', error);
@@ -118,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="error-container">
                     <h2>Errore</h2>
                     <p>${error.message}</p>
-                    <a href="/" data-spa="true" class="back-button">← Torna alla Dashboard</a>
+                    <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
                 </div>
             `;
         }
