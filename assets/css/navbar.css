@@ -49,6 +49,7 @@
 .dashboard-navbar__brand{
     display: flex;
     align-items: center;
+    text-decoration: none;
 }
 
 .dashboard-navbar__logo{
