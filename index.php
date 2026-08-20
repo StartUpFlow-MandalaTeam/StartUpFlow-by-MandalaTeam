@@ -38,16 +38,24 @@ $username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
 $email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
 $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8') : '';
 
-// Array delle card con titolo, descrizione e link
+// Array delle card con titolo, descrizione e link (route React)
 $cards = [
-	['title' => 'Fatturazione', 'description' => 'Emetti le tue fatture', 'link' => '#modulo-1'],
-	['title' => 'Scadenzario', 'description' => 'Pagamenti & Incassi', 'link' => '#modulo-2'],
-	['title' => 'Nota Spese', 'description' => 'Registra le uscite', 'link' => '#modulo-3'],
-	['title' => 'Burn Rate Meter', 'description' => 'Il tuo stato di salute', 'link' => '#modulo-4'],
-	['title' => 'Time-Tracker', 'description' => 'Tempo di fatturazione per cliente', 'link' => '#modulo-5'],
-	['title' => '"Zero carta"', 'description' => 'Repository documentale', 'link' => '#modulo-6'],
-	['title' => 'CRM clienti', 'description' => 'Ciclo di acquisizione clienti', 'link' => '#modulo-7'],
+	['title' => 'Fatturazione', 'description' => 'Emetti le tue fatture', 'link' => '/fatturazione'],
+	['title' => 'Scadenzario', 'description' => 'Pagamenti & Incassi', 'link' => '/scadenzario'],
+	['title' => 'Nota Spese', 'description' => 'Registra le uscite', 'link' => '/nota-spese'],
+	['title' => 'Burn Rate Meter', 'description' => 'Il tuo stato di salute', 'link' => '/burn-rate-meter'],
+	['title' => 'Time-Tracker', 'description' => 'Tempo di fatturazione per cliente', 'link' => '/time-tracker'],
+	['title' => '"Zero carta"', 'description' => 'Repository documentale', 'link' => '/zero-carta'],
+	['title' => 'CRM clienti', 'description' => 'Ciclo di acquisizione clienti', 'link' => '/crm-clienti'],
 ];
+
+// Dati utente per React (da usare quando la SPA sarà operativa)
+$userDataForReact = [
+	'username' => $profile['username'],
+	'email' => $profile['email'],
+	'createdAt' => $profile['created_at']
+];
+$userDataJson = json_encode($userDataForReact, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 ?>
 
@@ -75,10 +83,63 @@ $cards = [
 			font-family: Arial, sans-serif;
 			color: #111;
 		}
+		
+		/* Stili per React SPA */
+		#root {
+			width: 100%;
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+		}
+		
+		/* Nascondi contenuto statico quando React è caricato */
+		.static-fallback {
+			display: none;
+		}
+		
+		.no-react .static-fallback {
+			display: block;
+		}
+		
+		.has-react {
+			display: none;
+		}
 	</style>
+	
+	<!-- Dati utente per React (SPA) -->
+	<script>window.__USER_DATA__ = <?php echo $userDataJson; ?>;</script>
+	
+	<!-- Carica React bundle (quando disponibile) -->
+	<?php if (file_exists(__DIR__ . '/dist/assets/main.js')): ?>
+		<script type="module" src="/dist/assets/main.js"></script>
+	<?php endif; ?>
+	
+	<script>
+		// Aggiungi classe per gestire fallback
+		document.documentElement.classList.add('no-react');
+		
+		// Quando React è caricato, nascondi il fallback
+		if (typeof window.React !== 'undefined' || document.getElementById('root').children.length > 0) {
+			document.documentElement.classList.remove('no-react');
+			document.documentElement.classList.add('has-react');
+		}
+		
+		// Per sviluppo: se sei su localhost:3000 (Vite dev server), 
+		// reindirizza automaticamente alla SPA
+		if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+			// Già nella SPA, non fare nulla
+		} else if (window.location.hostname === 'localhost' && window.location.port === '') {
+			// Se sei su Apache locale, puoi testare React in sviluppo
+			// sotto la porta 3000
+		}
+	</script>
 </head>
 <body>
-<!-- Navbar component -->
+<!-- Root per React SPA -->
+<div id="root"></div>
+
+<!-- Contenuto statico di fallback (visibile solo se React non è caricato) -->
+<div class="static-fallback">
 	<header class="dashboard-navbar" aria-label="Primary navigation">
 		<button type="button" class="dashboard-navbar__toggle" data-mobile-nav-toggle aria-controls="mobile-nav-drawer" aria-expanded="false" aria-label="Apri menu">
 			<span></span>
@@ -135,13 +196,13 @@ $cards = [
 <!-- Module links in mobile drawer -->
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
-					<a href="#modulo-1">Fatturazione</a>
-					<a href="#modulo-2">Scadenzario</a>
-					<a href="#modulo-3">Nota Spese</a>
-					<a href="#modulo-4">Burn Rate Meter</a>
-					<a href="#modulo-5">Time-Tracker</a>
-					<a href="#modulo-6">"Zero carta"</a>
-					<a href="#modulo-7">CRM clienti</a>
+					<a href="/fatturazione">Fatturazione</a>
+					<a href="/scadenzario">Scadenzario</a>
+					<a href="/nota-spese">Nota Spese</a>
+					<a href="/burn-rate-meter">Burn Rate Meter</a>
+					<a href="/time-tracker">Time-Tracker</a>
+					<a href="/zero-carta">"Zero carta"</a>
+					<a href="/crm-clienti">CRM clienti</a>
 				</nav>
 			</div>
 		</div>
@@ -298,5 +359,6 @@ $cards = [
 			</footer>
 		</form>
 	</dialog>
+</div> <!-- Fine static-fallback -->
 </body>
 </html>
