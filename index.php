@@ -37,6 +37,18 @@ if ($userId !== null) {
 $username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
 $email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
 $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8') : '';
+
+// Array delle card con titolo, descrizione e link
+$cards = [
+	['title' => 'Fatturazione', 'description' => 'Emetti le tue fatture', 'link' => '#modulo-1'],
+	['title' => 'Scadenzario', 'description' => 'Pagamenti & Incassi', 'link' => '#modulo-2'],
+	['title' => 'Nota Spese', 'description' => 'Registra le uscite', 'link' => '#modulo-3'],
+	['title' => 'Burn Rate Meter', 'description' => 'Il tuo stato di salute', 'link' => '#modulo-4'],
+	['title' => 'Time-Tracker', 'description' => 'Tempo di fatturazione per cliente', 'link' => '#modulo-5'],
+	['title' => '"Zero carta"', 'description' => 'Repository documentale', 'link' => '#modulo-6'],
+	['title' => 'CRM clienti', 'description' => 'Ciclo di acquisizione clienti', 'link' => '#modulo-7'],
+];
+
 ?>
 
 <!DOCTYPE html>
@@ -129,7 +141,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 					<a href="#modulo-4">Burn Rate Meter</a>
 					<a href="#modulo-5">Time-Tracker</a>
 					<a href="#modulo-6">"Zero carta"</a>
-					<a href="#modulo-7">CRM di acquisizione</a>
+					<a href="#modulo-7">CRM clienti</a>
 				</nav>
 			</div>
 		</div>
@@ -153,65 +165,32 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 <!-- Main content area -->
 	<div class="main">
 		<div class="card-container">
+			<!-- Riga superiore: prime 4 card -->
 			<div class="card-row card-row--top">
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">Fatturazione</h3>
-						<p class="card-description">Emetti le tue fatture</p>
-						<button class="card-button">Vai!</button>
+				<?php foreach (array_slice($cards, 0, 4) as $card): ?>
+					<div class="card">
+						<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+						<div class="card-content">
+							<h3 class="card-title"><?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+							<p class="card-description"><?php echo htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+							<a href="<?php echo htmlspecialchars($card['link'], ENT_QUOTES, 'UTF-8'); ?>" class="card-button">Vai!</a>
+						</div>
 					</div>
-				</div>
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">Scadenzario</h3>
-						<p class="card-description">Pagamenti & Incassi</p>
-						<button class="card-button">Vai!</button>
-					</div>
-				</div>
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">Nota Spese</h3>
-						<p class="card-description">Registra le uscite</p>
-						<button class="card-button">Vai!</button>
-					</div>
-				</div>
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">Burn Rate Meter</h3>
-						<p class="card-description">Il tuo stato di salute</p>
-						<button class="card-button">Vai!</button>
-					</div>
-				</div>
+				<?php endforeach; ?>
 			</div>
+
+			<!-- Riga inferiore: ultime 3 card -->
 			<div class="card-row card-row--bottom">
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">Time-Tracker</h3>
-						<p class="card-description">Tempo di fatturazione per cliente</p>
-						<button class="card-button">Vai!</button>
+				<?php foreach (array_slice($cards, 4) as $card): ?>
+					<div class="card">
+						<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
+						<div class="card-content">
+							<h3 class="card-title"><?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+							<p class="card-description"><?php echo htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+							<a href="<?php echo htmlspecialchars($card['link'], ENT_QUOTES, 'UTF-8'); ?>" class="card-button">Vai!</a>
+						</div>
 					</div>
-				</div>
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">"Zero carta"</h3>
-						<p class="card-description">Repository documentale</p>
-						<button class="card-button">Vai!</button>
-					</div>
-				</div>
-				<div class="card">
-					<img class="card-image" src="https://placehold.co/290x180" alt="Placeholder">
-					<div class="card-content">
-						<h3 class="card-title">CRM di acquisizione</h3>
-						<p class="card-description">Ciclo di acquisizione clienti</p>
-						<button class="card-button">Vai!</button>
-					</div>
-				</div>
+				<?php endforeach; ?>
 			</div>
 		</div>
 	</div>
