@@ -278,4 +278,22 @@ input::placeholder{
         font-size: 16px;
     }
 }
-\n/* Stile per il pulsante Torna alla Dashboard */\n.back-link {\n    display: inline-block;\n    margin-top: 1rem;\n    padding: 0.5rem 1rem;\n    background: rgba(0, 0, 0, 0.5);\n    color: #fff;\n    text-decoration: none;\n    font-size: 0.9rem;\n    font-weight: 500;\n    border-radius: 4px;\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n}\n.back-link:hover {\n    background: rgba(0, 0, 0, 0.7);\n    border-color: rgba(0, 0, 0, 0.5);\n}
+
+    .back-link {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        transition: all 0.2s;
+    }
+
+    .back-link:hover {
+        background: rgba(0, 0, 0, 0.7);
+        border-color: rgba(0, 0, 0, 0.5);
+    }
