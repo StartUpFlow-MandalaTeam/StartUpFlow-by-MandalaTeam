@@ -1,582 +1,286 @@
 # Contribuire a StartupFlow
 
-Grazie per voler contribuire a StartupFlow! Questo documento fornisce le line guide per lavorare al progetto in team, gestire i branch Git e collaborare efficacemente.
+Grazie per il tuo interesse nel contribuire a StartupFlow. Questa guida descrive il workflow Git, la configurazione dell'ambiente locale, l'organizzazione del codice e i controlli da eseguire prima di aprire una Pull Request.
 
-## 📋 Indice
+## Indice
 
-1. [Struttura del Team](#-struttura-del-team)
-2. [Assegnazione dei Servizi](#-assegnazione-dei-servizi)
-3. [Workflow Git](#-workflow-git)
-4. [Setup Iniziale](#-setup-iniziale)
-5. [Sviluppo di una Feature](#-sviluppo-di-una-feature)
-6. [Convenzioni di Commit](#-convenzioni-di-commit)
-7. [Pull Request](#-pull-request)
-8. [Review del Codice](#-review-del-codice)
-9. [Merge e Deploy](#-merge-e-deploy)
-10. [Risoluzione Conflitti](#-risoluzione-conflitti)
-11. [Comandi Git Utili](#-comandi-git-utili)
+- [Contribuire a StartupFlow](#contribuire-a-startupflow)
+  - [Indice](#indice)
+  - [Struttura del team](#struttura-del-team)
+  - [Assegnazione dei servizi](#assegnazione-dei-servizi)
+  - [Architettura e struttura](#architettura-e-struttura)
+    - [Dove intervenire](#dove-intervenire)
+  - [Prerequisiti](#prerequisiti)
+  - [Setup locale](#setup-locale)
+  - [Avvio dell'applicazione](#avvio-dellapplicazione)
+  - [Sviluppare una modifica](#sviluppare-una-modifica)
+    - [Branch](#branch)
+    - [Implementazione](#implementazione)
+  - [Test e controlli](#test-e-controlli)
+  - [Convenzioni di codice](#convenzioni-di-codice)
+  - [Commit e Pull Request](#commit-e-pull-request)
+  - [Sicurezza](#sicurezza)
+  - [Risoluzione dei conflitti](#risoluzione-dei-conflitti)
+  - [Comandi Git utili](#comandi-git-utili)
+  - [Riferimenti](#riferimenti)
 
----
+## Struttura del team
 
-## 👥 Struttura del Team
+| Membro | Servizi assegnati | Branch di competenza |
 
-| Membro | Servizi Assegnati | Branch di Competenza |
-|--------|-------------------|---------------------|
-| Dev A | Fatturazione, Scadenzario | `feature/fatturazione`, `feature/scadenzario` |
-| Dev B | Nota Spese, Burn Rate Meter | `feature/nota-spese`, `feature/burn-rate-meter` |
-| Dev C | Time-Tracker, Zero carta | `feature/time-tracker`, `feature/zero-carta` |
-| Team Lead (Tu) | CRM clienti | `feature/crm-clienti` |
+|--------|-------------------|----------------------|
+| Dev A | ?, ? | `feature/?`, `feature/?` |
+| Dev B | ?, ? | `feature/?`, `feature/?` |
+| Dev C | ?, ? | `feature/?`, `feature/?` |
+| Dev D | ? | `feature/?` |
 
-> **Nota**: Chi ha implementato il sistema di login lavora su un solo servizio (CRM clienti).
+## Assegnazione dei servizi
 
----
+| N. | Servizio | File PHP | Branch feature |
 
-## 🎯 Assegnazione dei Servizi
+|----|----------|----------|----------------|
+| 1 | Fatturazione | `fatturazione.php` | `feature/fatturazione` |
+| 2 | Scadenzario | `scadenzario.php` | `feature/scadenzario` |
+| 3 | Nota Spese | `nota-spese.php` | `feature/nota-spese` |
+| 4 | Burn Rate Meter | `burn-rate-meter.php` | `feature/burn-rate-meter` |
+| 5 | Time-Tracker | `time-tracker.php` | `feature/time-tracker` |
+| 6 | Zero carta | `zero-carta.php` | `feature/zero-carta` |
+| 7 | CRM clienti | `crm-clienti.php` | `?` |
 
-I 7 servizi del progetto sono rappresentati dalle card nella dashboard:
+Ogni sviluppatore è responsabile di:
 
-| N° | Servizio | Route SPA | Branch Feature | Colore Card |
-|---|----------|-----------|----------------|-------------|
-| 1 | Fatturazione | `/fatturazione` | `feature/fatturazione` | - |
-| 2 | Scadenzario | `/scadenzario` | `feature/scadenzario` | - |
-| 3 | Nota Spese | `/nota-spese` | `feature/nota-spese` | - |
-| 4 | Burn Rate Meter | `/burn-rate-meter` | `feature/burn-rate-meter` | - |
-| 5 | Time-Tracker | `/time-tracker` | `feature/time-tracker` | - |
-| 6 | Zero carta | `/zero-carta` | `feature/zero-carta` | - |
-| 7 | CRM clienti | `/crm-clienti` | `feature/crm-clienti` | - |
+- implementare la logica specifica del servizio;
+- mantenere coerenti pagina PHP, CSS e JavaScript del modulo;
+- integrare il modulo con autenticazione, database e layout condivisi;
+- testare il proprio modulo e verificare che non rompa gli altri flussi;
+- documentare le modifiche rilevanti.
 
-**Ogni sviluppatore è responsabile di:**
-- Implementare la logica specifica del servizio
-- Creare i componenti React necessari
-- Integrare con il backend PHP (API)
-- Testare il proprio modulo
-- Documentare il codice
+## Architettura e struttura
 
----
+StartupFlow è un'applicazione web server-side in PHP, con MySQL come database e JavaScript/CSS vanilla per le interazioni del browser. Non utilizza React, Vite, npm o un client frontend separato.
 
-## 🔄 Workflow Git
-
-Utilizziamo il **Feature Branch Workflow** con le seguenti regole:
-
+```text
+StartupFlow-by-MandalaTeam/
+├── index.php                 # Dashboard protetta
+├── fatturazione.php          # Modulo fatturazione
+├── scadenzario.php           # Modulo scadenze
+├── nota-spese.php            # Modulo note spese
+├── burn-rate-meter.php       # Modulo burn rate
+├── time-tracker.php          # Modulo rilevazione tempi
+├── zero-carta.php            # Modulo gestione documenti
+├── crm-clienti.php           # Modulo CRM
+├── auth/                     # Pagine e handler autenticazione
+├── includes/                 # Connessione DB, sessioni, layout, mail e audit
+│   └── layout/               # Header, footer e modali condivisi
+├── assets/
+│   ├── css/                  # Stili globali e specifici delle pagine
+│   ├── js/                   # Navigazione, router, modali e overlay
+│   ├── data/                 # Dati statici, ad esempio countries.json
+│   └── img/                  # Immagini statiche
+├── database/schema.sql       # Schema MySQL
+├── scripts/                  # Utility CLI e manutenzione
+├── tests/auth-smoke.sh       # Smoke test del flusso autenticazione
+├── uploads/                  # Documenti e scontrini caricati dagli utenti
+└── start-dev.sh              # Server PHP + MailHog
 ```
-main (branch principale)
-├── feature/fatturazione (Dev A)
-├── feature/scadenzario (Dev A)
-├── feature/nota-spese (Dev B)
-├── feature/burn-rate-meter (Dev B)
-├── feature/time-tracker (Dev C)
-├── feature/zero-carta (Dev C)
-└── feature/crm-clienti (Team Lead)
-```
 
-### Regole Fondamentali
+### Dove intervenire
 
-1. **`main` è sempre stabile** - Contiene solo codice funzionante e testato
-2. **Non lavorare mai direttamente su `main`** - Ogni modifica passa per un branch feature
-3. **Ogni feature ha il suo branch** - Non mischiare il lavoro su più servizi in un solo branch
-4. **Merge frequenti da `main`** - prima di iniziare a lavorare, assicurati che il tuo branch sia aggiornato
+- Una pagina o un modulo: modificare il relativo file PHP e, quando necessario, il CSS in `assets/css/`.
+- Layout condiviso: usare `includes/layout/header.php`, `footer.php` o `modals.php`.
+- Autenticazione e sessioni: seguire le funzioni esistenti in `includes/auth.php` e gli handler in `auth/`.
+- Database: modificare `database/schema.sql` e documentare ogni cambiamento allo schema.
+- Interazioni browser: aggiungere o aggiornare gli script in `assets/js/`, mantenendo separata la logica condivisa da quella specifica di una pagina.
 
----
+Evitare di duplicare header, footer, gestione sessione o connessioni PDO nei file delle pagine. Prima di aggiungere un helper, verificare se esiste già in `includes/`.
 
-## 🚀 Setup Iniziale
+## Prerequisiti
 
-### 1. Clonare il repository
+- PHP 8.0 o superiore, con estensioni `pdo_mysql`, `mbstring` e `openssl`.
+- MySQL 5.7+ o MariaDB compatibile.
+- Docker, necessario per avviare MailHog con `start-dev.sh`.
+- Git.
+
+Composer e Node.js non sono richiesti dal progetto attuale.
+
+## Setup locale
 
 ```bash
-# Clonare il repository
-cd /percorso/dove/lavorare
 git clone <url-del-repository>
-cd StartupFlow-by-MandalaTeam
+cd StartUpFlow-by-MandalaTeam
+
+# Crea il database e le tabelle
+mysql -u root -p < database/schema.sql
+
+# Crea la configurazione locale, esclusa dal versionamento
+cp includes/config.example.php includes/config.php
 ```
 
-### 2. Configurare l'ambiente locale
+Modificare `includes/config.php` con le credenziali MySQL e con gli indirizzi locali dell'applicazione e del servizio mail. Non committare mai password, token o altre credenziali.
+
+Per creare un utente attivo di sviluppo:
 
 ```bash
-# Installare dipendenze PHP (se non già fatto)
-composer install
-
-# Configurare il database
-# 1. Creare database MySQL
-# 2. Importare schema: mysql -u username -p database_name < database/schema.sql
-# 3. Configurare includes/config.php con le tue credenziali
-cp includes/config.php.example includes/config.php
-nano includes/config.php  # Modificare con i tuoi dati
-
-# Installare dipendenze Node.js per React
-cd client
-npm install
-cd ..
+php scripts/seed-test-user.php
 ```
 
-### 3. Avviare lo sviluppo
+Per i dettagli del flusso di autenticazione e dell'utente di test, consultare `README_LOGIN.md`.
 
-**Opzione A - Sviluppo frontend isolato (consigliato per test React):**
+## Avvio dell'applicazione
+
+Dalla root del progetto:
+
 ```bash
-cd client
-npm run dev
-# Applicazione disponibile su http://localhost:3000
+bash start-dev.sh
 ```
 
-**Opzione B - Sviluppo full stack:**
+Lo script avvia:
+
+- applicazione PHP su `http://127.0.0.1:8000`;
+- MailHog SMTP sulla porta `1025`;
+- interfaccia MailHog su `http://127.0.0.1:8025`.
+
+Lo script richiede Docker in esecuzione. Per avviare solo il server PHP:
+
 ```bash
-# In un terminale: avviare server PHP
-php -S localhost:8000
-
-# In un altro terminale: avviare Vite in modalità watch
-cd client
-npm run dev -- --port 3000
-
-# PHP su http://localhost:8000, React su http://localhost:3000
+php -S 127.0.0.1:8000 -t .
 ```
 
-**Opzione C - Full stack con React buildato:**
-```bash
-cd client
-npm run build
-cd ..
-php -S localhost:8000
-# Applicazione completa su http://localhost:8000
-```
+In questo caso il recapito delle email deve essere configurato separatamente. Lo script di sviluppo non esegue la pulizia dei token scaduti; per quella attività usare `scripts/cleanup-expired-tokens.php` secondo le necessità dell'ambiente.
 
----
+## Sviluppare una modifica
 
-## 💻 Sviluppo di una Feature
+### Branch
 
-### Passo 1: Selezionare il branch corretto
+Usare un branch dedicato partendo da `main` aggiornato:
 
 ```bash
-# Verificare di essere su main
-git checkout main
-
-# Aggiornare main con l'origin
+git switch main
 git pull origin main
-
-# Passare al proprio branch feature
-git checkout feature/<nome-servizio>
-
-# Example per Dev A che lavora su Fatturazione:
-git checkout feature/fatturazione
+git switch -c feature/<descrizione-breve>
 ```
 
-### Passo 2: Aggiornare il branch con main
+Esempi di nomi validi: `feature/fatturazione`, `fix/login-csrf`, `docs/contributing`.
 
-**Prima di iniziare a lavorare**, assicurati che il tuo branch abbia le ultime modifiche da main:
+### Implementazione
+
+Prima di modificare una pagina, individuare il suo flusso completo:
+
+1. pagina PHP e form visualizzato;
+2. handler PHP che riceve la richiesta;
+3. validazione server-side e controllo CSRF;
+4. accesso al database tramite PDO;
+5. risposta, redirect o messaggio mostrato all'utente;
+6. eventuali asset CSS/JS condivisi.
+
+Le validazioni client-side migliorano l'esperienza, ma non sostituiscono mai quelle server-side. Per nuove query usare statement preparati e mantenere la gestione degli errori coerente con `includes/db.php`.
+
+Quando una modifica tocca `database/schema.sql`, includere nella Pull Request le istruzioni di migrazione o le operazioni necessarie per aggiornare un database già esistente.
+
+## Test e controlli
+
+Prima di aprire una Pull Request:
 
 ```bash
-# Dal tuo branch feature:
-git merge main
+# Controllo sintattico sui file PHP modificati
+php -l percorso/del/file.php
 
-# Se ci sono conflitti, risolverli (vedi sezione Risoluzione Conflitti)
-# Poi fare commit del merge:
-git commit -m "merge: Aggiornamento da main"
+# Smoke test del flusso di autenticazione
+bash tests/auth-smoke.sh
 ```
 
-### Passo 3: Implementare la feature
+Lo smoke test richiede una configurazione valida in `includes/config.php`, MySQL raggiungibile e le tabelle già create. Verifica pagine pubbliche, token CSRF, redirect di validazione, reset password e verifica email.
 
-**Dove lavorare:**
-- Il tuo codice va **solo** nella cartella del servizio assegnato
-- Esempio per Fatturazione: `client/src/pages/FatturazionePage.jsx`
+Per le modifiche UI verificare manualmente desktop e mobile, inclusi navigazione, form, messaggi di errore, sessione autenticata e logout. Controllare anche la console del browser e il log del server PHP.
 
-**Cosa modificare:**
-- ✅ Componenti specifici del servizio
-- ✅ Logica business del modulo
-- ✅ API/endpoint specifici
-- ✅ Stili CSS specifici del modulo
+## Convenzioni di codice
 
-**Cosa NON modificare:**
-- ❌ `client/src/App.jsx` (router)
-- ❌ `client/src/components/SharedNavbar.jsx`
-- ❌ `client/src/components/DashboardLayout.jsx`
-- ❌ `client/src/main.jsx`
-- ❌ `index.php` (a meno di accordi con il team lead)
-- ❌ File in `assets/css/` condivisi
+- Seguire lo stile già presente nel file modificato e mantenere le modifiche circoscritte.
+- Usare `declare(strict_types=1);` nei nuovi file PHP quando compatibile con il contesto.
+- Preferire funzioni esistenti in `includes/` a implementazioni duplicate.
+- Escapare l'output HTML e validare ogni input lato server.
+- Proteggere le richieste POST con CSRF e verificare autorizzazione e sessione prima di operare su dati privati.
+- Usare nomi descrittivi per variabili e funzioni.
+- Aggiungere commenti solo per chiarire logica non immediata.
+- Non includere file di configurazione locali, credenziali o dati personali nei commit.
 
-### Passo 4: Testare localmente
+## Commit e Pull Request
 
-```bash
-# Testare il proprio modulo
-cd client
-npm run dev
+Usare Conventional Commits, con ambito facoltativo riferito al modulo:
 
-# Verificare che:
-# - La route funziona (es: /fatturazione)
-# - La navbar e il layout siano integrati correttamente
-# - Non ci siano errori nella console
-# - Il modulo non rompa le altre funzionalità
+```text
+feat(fatturazione): aggiunge la creazione di una fattura
+fix(auth): corregge la validazione del token di reset
+docs: aggiorna la guida di contribuzione
+test(auth): estende lo smoke test
+refactor(layout): riusa il footer condiviso
+chore: aggiorna la configurazione locale
 ```
 
-### Passo 5: Commit frequenti
+Evitare messaggi generici come `fix`, `aggiornamenti` o `WIP`. Preferire commit piccoli e autosufficienti.
 
-Fare commit **frequenti e atomic** (uno per ogni cambiamento logico):
+La Pull Request deve contenere:
+
+- descrizione del problema e della soluzione;
+- file o moduli coinvolti;
+- eventuali modifiche al database o alla configurazione;
+- test eseguiti e relativo risultato;
+- screenshot per cambiamenti visivi significativi.
+
+Checklist consigliata:
+
+- [ ] La modifica è limitata allo scopo della PR.
+- [ ] Ho eseguito `php -l` sui file PHP modificati.
+- [ ] Ho eseguito `bash tests/auth-smoke.sh` quando la configurazione lo consente.
+- [ ] Ho verificato autorizzazione, CSRF e validazione degli input.
+- [ ] Ho aggiornato documentazione o schema quando necessario.
+- [ ] Non ci sono credenziali o file locali inclusi nella PR.
+
+## Sicurezza
+
+Le modifiche all'autenticazione, alle sessioni, ai token, alle email o agli upload richiedono particolare attenzione. Non registrare password o token nei log, non esporre dettagli che consentano l'enumerazione degli account e mantenere gli upload limitati a percorsi e tipi di file consentiti.
+
+Per vulnerabilità o problemi di sicurezza non aprire una issue pubblica: contattare direttamente i maintainer del progetto seguendo la procedura concordata dal team.
+
+## Risoluzione dei conflitti
 
 ```bash
-# Verificare lo stato
 git status
-
-# Aggiungere i file modificati
-git add client/src/pages/FatturazionePage.jsx
-# Oppure aggiungere tutti i file modificati:
-git add -A
-
-# Fare commit con messaggio descrittivo
-git commit -m "feat(fatturazione): Aggiunto form creazione fattura"
-
-# Spingere sul branch remoto
-git push origin feature/fatturazione
+git fetch origin
+git merge origin/main
 ```
 
----
-
-## ✍️ Convenzioni di Commit
-
-Utilizziamo la convenzione **Conventional Commits** per i messaggi:
-
-```
-tipo(ambito): descrizione
-
-[corpo opzionale]
-
-[footer opzionale]
-```
-
-### Tipi di commit
-
-| Tipo | Quando usare | Esempio |
-|------|--------------|---------|
-| `feat` | Nuova feature | `feat(fatturazione): Aggiunto modulo fatturazione` |
-| `fix` | Bug fix | `fix(scadenzario): Corretto calcolo scadenze` |
-| `docs` | Documentazione | `docs: Aggiornato README per il modulo` |
-| `style` | Cambiamenti che non influenzano il codice | `style: Sistemati margini card` |
-| `refactor` | Rifattorizzazione codice | `refactor: Estratti componenti comuni` |
-| `perf` | Ottimizzazione prestazioni | `perf: Ottimizzata query database` |
-| `test` | Aggiunta/modifica test | `test: Aggiunti test per nota spese` |
-| `chore` | Manutenzione | `chore: Aggiornate dipendenze npm` |
-| `merge` | Merge da altri branch | `merge: Aggiornamento da main` |
-
-### Ambito
-
-L'ambito è il nome del modulo o della parte del codice interessata:
-- `fatturazione`
-- `scadenzario`
-- `nota-spese`
-- `burn-rate-meter`
-- `time-tracker`
-- `zero-carta`
-- `crm-clienti`
-- `navbar`
-- `layout`
-- `router`
-- `auth`
-
-### Esempi
+Dopo aver risolto manualmente i marker `<<<<<<<`, `=======`, `>>>>>>>`:
 
 ```bash
-# Buono
-git commit -m "feat(fatturazione): Aggiunto modulo emissione fatture"
-git commit -m "fix(scadenzario): Corretto bug visualizzazione scadenze"
-git commit -m "docs(nota-spese): Aggiornata documentazione modulo"
-
-# Cattivo (da evitare)
-git commit -m "fix"
-git commit -m "aggiornamenti"
-git commit -m "WIP"
-```
-
----
-
-## 📤 Pull Request
-
-### Quando aprire una PR
-
-- La feature è **completa** e funzionante
-- Il codice è **testato**
-- Tutti i **conflitti** sono risolti
-- Il branch è **aggiornato** con main
-
-### Come aprire una PR
-
-1. **Spingere il branch su GitHub**
-   ```bash
-   git push origin feature/<nome-servizio>
-   ```
-
-2. **Andare su GitHub** e creare una nuova Pull Request:
-   - Base branch: `main`
-   - Compare branch: `feature/<nome-servizio>`
-   - Titolo: `[feat] <nome-servizio>: <descrizione breve>`
-   - Descrizione: Spiegare cosa è stato fatto, eventuali note per i reviewer
-
-3. **Aggiungere i reviewer** (assegnare agli altri membri del team)
-
-4. **Collegare alla issue** (se esiste)
-
-### Template PR
-
-```markdown
-## Descrizione
-
-[Breve descrizione della feature implementata]
-
-## Cambiamenti
-
-- [x] Implementata funcionalità X
-- [x] Aggiunto componente Y
-- [x] Testato su desktop e mobile
-- [ ] ...
-
-## Note
-
-[Eventuali note per i reviewer, decisioni di design, ecc.]
-
-## Screenshot
-
-[Se utile, allegare screenshot o GIF]
-
-## Checklist
-
-- [x] Codice testato localmente
-- [x] Branch aggiornato con main
-- [x] Nessun conflitto
-- [x] Convenzioni di commit rispettate
-```
-
----
-
-## 👀 Review del Codice
-
-### Per il Reviewer
-
-**Cosa controllare:**
-
-1. **Funzionalità**
-   - La feature funziona come descritto?
-   - Ci sono errori o comportamenti inattesi?
-
-2. **Codice**
-   - È pulito e leggibile?
-   - Segue le convenzioni del progetto?
-   - Ci sono code smell o anti-pattern?
-
-3. **Integrazione**
-   - Il modulo si integra correttamente con il resto?
-   - Vengono rispettate le route?
-   - Non ci sono conflitti con altri moduli?
-
-4. **Sicurezza**
-   - I dati utente sono gestiti in modo sicuro?
-   - Ci sono vulnerabilità evidenti?
-
-### Commenti alla PR
-
-- Sii **costruttivo** e **rispettoso**
-- Spiega **perché** una cosa va cambiata
-- Proponi **soluzioni** concrete
-
-Esempi:
-```
-❌ "Questo codice è brutto"
-
-✅ "Questa funzione è un po' lunga. Che ne dici di estrarre la logica X in una funzione separata? Così sarebbe più leggibile e riutilizzabile."
-```
-
-### Rispondere ai commenti
-
-- Ringrazia per il feedback
-- Rispondi a ogni commento
-- Se non sei d'accordo, spiega il perché
-- Fai le modifiche richieste con commit separati
-
----
-
-## 🔄 Merge e Deploy
-
-### Merge in main
-
-Solo il **Team Lead** o una persona autorizzata può fare merge in `main`.
-
-**Procedura:**
-
-1. **Verificare la PR**
-   - Tutti i reviewer hanno approvato
-   - Tutti i commenti sono stati risolti
-   - I test passano
-
-2. **Fare merge**
-   ```bash
-   git checkout main
-   git pull origin main
-   git merge feature/<nome-servizio>
-   ```
-
-3. **Risolvere eventuali conflitti** (vedi prossima sezione)
-
-4. **Spingere su main**
-   ```bash
-   git push origin main
-   ```
-
-5. **Chiudere la PR** su GitHub
-
-### After Merge
-
-- Il branch feature può essere **cancellato** (opzionale)
-- Il developper può **creare un nuovo branch** per la prossima feature
-
----
-
-## ⚠️ Risoluzione Conflitti
-
-### Quando si verificano conflitti
-
-I conflitti si verificano quando:
-- Due persone hanno modificato lo stesso file
-- Il branch non è aggiornato con main
-- Ci sono cambiamenti incompatibili
-
-### Come risolvere
-
-1. **Identificare i conflitti**
-   ```bash
-   git status
-   # Git mostrerà: "Unmerged paths"
-   ```
-
-2. **Aprire i file in conflitto**
-   Git segnalerà i conflitti con:
-   ```
-   <<<<<<< HEAD
-   Le tue modifiche
-   =======
-   Le modifiche dall'altro branch
-   >>>>>>> branch-name
-   ```
-
-3. **Modificare manualmente** il file per risolvere il conflitto
-
-4. **Segnare come risolto**
-   ```bash
-   git add <file-conflitto>
-   ```
-
-5. **Completare il merge**
-   ```bash
-   git commit -m "merge: Risolto conflitto per <file>"
-   ```
-
-### Esempio pratico
-
-```bash
-# Stai su feature/fatturazione
-git merge main
-
-# Se ci sono conflitti:
-# 1. Apri i file in conflitto (es: client/src/App.jsx)
-# 2. Trova le sezioni segnate con <<<<<<< >>>>>>>
-# 3. Modifica il file mantenendo la versione corretta
-# 4. Salva il file
-
-# 5. Segnala risolto
-git add client/src/App.jsx
-
-# 6. Completa il merge
+git add <file-risolto>
 git commit
+php -l <file-php-modificato>
 ```
 
-### Tool utili per i conflitti
+Verificare con attenzione i conflitti in `includes/layout/`, `includes/auth.php`, `assets/css/` e `database/schema.sql`, perché possono influenzare più pagine.
 
-- **VS Code**: Ha un ottimo supporto per risolvere i conflitti
-- **`git diff`**: Mostra le differenze
-- **`git log --graph --oneline`**: Visualizza la storia dei branch
-- **`git mergetool`**: Strumento interattivo per risolvere conflitti
+## Comandi Git utili
 
----
+```bash
+git status
+git diff
+git diff --staged
+git log --oneline --graph --decorate -20
+git switch -c feature/<nome>
+git push -u origin feature/<nome>
+git fetch origin
+git merge origin/main
+```
 
-## 💡 Comandi Git Utili
+Per annullare modifiche locali non ancora committate, usare `git restore <file>` solo dopo aver verificato che non contengano lavoro da conservare.
 
-### Comandi Base
+## Riferimenti
 
-| Comando | Descrizione |
-|---------|-------------|
-| `git status` | Mostra lo stato del repository |
-| `git log` | Mostra la storia dei commit |
-| `git log --oneline` | Storia in formato compatto |
-| `git log --graph --oneline` | Storia con grafico dei branch |
-| `git diff` | Mostra le differenze non committate |
-| `git diff --staged` | Mostra le differenze nel staging |
-
-### Lavorare con i Branch
-
-| Comando | Descrizione |
-|---------|-------------|
-| `git branch` | Lista i branch locali |
-| `git branch -a` | Lista tutti i branch (locali e remoti) |
-| `git branch <nome>` | Crea un nuovo branch |
-| `git branch -d <nome>` | Elimina un branch locale |
-| `git checkout <nome>` | Passa a un branch |
-| `git checkout -b <nome>` | Crea e passa a un nuovo branch |
-| `git push origin <nome>` | Spinge un branch su remote |
-| `git push origin --delete <nome>` | Elimina un branch remoto |
-
-### Sincronizzare con Remote
-
-| Comando | Descrizione |
-|---------|-------------|
-| `git fetch` | Scarica i cambiamenti dal remote |
-| `git pull` | Scarica e mergea i cambiamenti |
-| `git pull origin main` | Aggiorna il branch corrente con main |
-| `git push` | Spinge i cambiamenti localmente committati |
-
-### Merge e Rebase
-
-| Comando | Descrizione |
-|---------|-------------|
-| `git merge <branch>` | Mergea un branch nel corrente |
-| `git merge main` | Aggiorna con le modifiche da main |
-| `git rebase <branch>` | Riapplica i tuoi commit sopra un altro branch |
-| `git rebase main` | Riapplica i tuoi commit sopra main (alternativa a merge) |
-
-### Stash (Salvataggio temporaneo)
-
-| Comando | Descrizione |
-|---------|-------------|
-| `git stash` | Salva le modifiche non committate |
-| `git stash list` | Lista tutti gli stash |
-| `git stash pop` | Ripristina l'ultimo stash |
-| `git stash apply` | Applica uno stash senza rimuoverlo |
-| `git stash drop` | Elimina uno stash |
-
-### Reset
-
-| Comando | Descrizione | **Attenzione** |
-|---------|-------------|----------------|
-| `git reset --soft HEAD~1` | Annulla l'ultimo commit, tengono le modifiche | Non distruttivo |
-| `git reset --mixed HEAD~1` | Annulla commit e unstage | Non distruttivo |
-| `git reset --hard HEAD~1` | Annulla TUTTO (commit e modifiche) | **DISTRUTTIVO** |
-| `git reset --hard origin/main` | Resetta a main remoto | **DISTRUTTIVO** |
-
-> ⚠️ **Non usare `--hard` a meno che tu non sia sicuro di quello che stai facendo!**
-
----
-
-## 📚 Riferimenti
-
+- [README.md](README.md)
+- [README_LOGIN.md](README_LOGIN.md)
+- [Schema del database](database/schema.sql)
 - [Conventional Commits](https://www.conventionalcommits.org/)
-- [Git Documentation](https://git-scm.com/doc)
-- [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow)
-- [React Documentation](https://react.dev/)
-- [Vite Documentation](https://vitejs.dev/)
+- [Documentazione Git](https://git-scm.com/doc)
 
----
-
-## 🆘 Help
-
-Se hai dubbi o incontri problemi:
-
-1. **Leggi questa guida** - La risposta c'è probabilmente qui
-2. **Chiedi al team** - Usa il canale di comunicazione del team (Slack, Telegram, ecc.)
-3. **Cerca su Google** - "git <problema>" spesso risolve
-4. **Stack Overflow** - C'è già una risposta per quasi tutto
-
----
-
-**Buon lavoro!** 🚀
+Grazie per il contributo a StartupFlow.
