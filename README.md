@@ -1,198 +1,147 @@
-# StartupFlow
+# StartUpFlow
 
-> **Gestione aziendale completa per startup e PMI**
+StartUpFlow e una piattaforma web per la gestione operativa di startup e PMI. Riunisce in un'unica applicazione i moduli di fatturazione, scadenzario, note spese, burn rate, rilevazione tempi, gestione documentale e CRM.
 
-StartupFlow è una piattaforma web per la gestione integrata dei processi aziendali: dall'emissione fatture al monitoraggio finanziario, dalla gestione documentale al CRM clienti.
+## Stato attuale
 
-## 📋 Panoramica del Progetto
+Il progetto e un'applicazione PHP server-side con database MySQL. La navigazione interna usa un router JavaScript leggero (`assets/js/spa-router.js`) che carica i moduli PHP senza richiedere un frontend separato.
 
-StartupFlow è un'applicazione **SPA (Single Page Application)** basata su **React** per il frontend, con backend in **PHP**. L'obiettivo è fornire una soluzione tutto-in-uno per la gestione amministrativa, finanziaria e commerciale delle aziende.
+## Funzionalita
 
-## 🏗️ Struttura del Progetto
+| Modulo | Percorso |
+| --- | --- |
+| Dashboard | `/` |
+| Fatturazione | `/fatturazione` |
+| Scadenzario | `/scadenzario` |
+| Nota spese | `/nota-spese` |
+| Burn Rate Meter | `/burn-rate-meter` |
+| Time Tracker | `/time-tracker` |
+| Zero Carta | `/zero-carta` |
+| CRM clienti | `/crm-clienti` |
+| Chi siamo | `/chi-siamo` |
+| Servizi | `/servizi` |
+| Contatti | `/contatti` |
+
+Le pagine applicative richiedono una sessione autenticata. Gli utenti possono registrarsi, verificare il proprio indirizzo email, accedere, usare il recupero password, mantenere la sessione tramite Remember Me e modificare l'email dal profilo.
+
+## Struttura
 
 ```text
-StartupFlow-by-MandalaTeam/
-├── client/                  # SPA React (frontend)
-│   ├── src/
-│   │   ├── components/     # Componenti condivisi
-│   │   │   ├── DashboardLayout.jsx
-│   │   │   └── SharedNavbar.jsx
-│   │   ├── pages/          # Pagine dei 7 servizi
-│   │   │   ├── FatturazionePage.jsx
-│   │   │   ├── ScadenzarioPage.jsx
-│   │   │   ├── NotaSpesePage.jsx
-│   │   │   ├── BurnRateMeterPage.jsx
-│   │   │   ├── TimeTrackerPage.jsx
-│   │   │   ├── ZeroCartaPage.jsx
-│   │   │   └── CrmClientiPage.jsx
-│   │   ├── App.jsx         # Router principale
-│   │   ├── main.jsx        # Entry point React
-│   │   └── index.css       # Stili globali
-│   ├── package.json
-│   ├── vite.config.js      # Configurazione Vite
-│   └── index.html
-├── dist/                   # Bundle React buildato (generato)
-├── assets/                 # Asset statici (CSS, JS legacy)
-│   └── css/
-│       ├── navbar.css
-│       └── card-container.css
-├── auth/                   # Autenticazione PHP
-│   ├── register.php
-│   └── process-logout.php
-├── includes/               # Librerie e configurazioni PHP
-│   └── auth.php
-├── database/               # Script database
-├── uploads/                # File uploadati
-├── index.php               # Entry point (wrapper per React)
-├── README.md               # Documentazione originale
-└── CONTRIBUTING.md         # Guida per sviluppatori
+StartUpFlow-by-MandalaTeam/
+├── index.php                 # Dashboard protetta
+├── fatturazione.php          # Modulo fatturazione
+├── scadenzario.php           # Modulo scadenze
+├── nota-spese.php            # Modulo note spese
+├── burn-rate-meter.php       # Modulo burn rate
+├── time-tracker.php          # Rilevazione tempi
+├── zero-carta.php            # Gestione documentale
+├── crm-clienti.php           # CRM clienti
+├── auth/                     # Pagine e handler di autenticazione
+├── includes/                 # Database, sessioni, email, audit e layout
+│   └── layout/               # Header, footer e modali condivisi
+├── assets/                   # CSS, JavaScript, immagini e dati statici
+├── database/schema.sql       # Schema MySQL
+├── scripts/                  # Utility CLI e manutenzione
+├── tests/auth-smoke.sh       # Smoke test HTTP dell'autenticazione
+├── uploads/                  # Documenti e scontrini caricati
+└── start-dev.sh              # Avvio locale PHP + MailHog
 ```
 
-## 🎯 I 7 Servizi Principali
+## Requisiti
 
-| Servizio | Route | Branch | Descrizione |
+- PHP 8.0 o superiore con estensioni `pdo_mysql`, `mbstring` e `openssl`;
+- MySQL 5.7+ o MariaDB compatibile;
+- Docker in esecuzione, necessario per MailHog durante lo sviluppo;
+- Git.
 
-|----------|-------|--------|-------------|
-| **Fatturazione** | `/fatturazione` | `feature/fatturazione` | Emissione e gestione fatture |
-| **Scadenzario** | `/scadenzario` | `feature/scadenzario` | Pagamenti e incassi |
-| **Nota Spese** | `/nota-spese` | `feature/nota-spese` | Registrazione uscite |
-| **Burn Rate Meter** | `/burn-rate-meter` | `feature/burn-rate-meter` | Monitoraggio salute finanziaria |
-| **Time-Tracker** | `/time-tracker` | `feature/time-tracker` | Tracciamento tempo lavorato |
-| **Zero carta** | `/zero-carta` | `feature/zero-carta` | Repository documentale digitale |
-| **CRM clienti** | `/crm-clienti` | `feature/crm-clienti` | Gestione ciclo clienti |
+## Configurazione locale
 
-## 🛠️ Tecnologie Utilizzate
-
-### Frontend (SPA)
-
-- **React 18** - Libreria per UI
-- **React Router 6** - Gestione routing
-- **Vite** - Build tool
-- **Material Symbols** - Icone
-- **Montserrat** - Font
-
-### Backend
-
-- **PHP 8+** - Linguaggio server-side
-- **PDO** - Database abstraction
-- **MySQL** - Database
-
-## 📦 Requisiti
-
-### Sviluppo Locale
-
-- Node.js 18+ (per React/Vite)
-- PHP 8.0+
-- MySQL 8.0+
-- Composer (per dipendenze PHP)
-- Git
-
-### Produzione
-
-- Server web (Apache/Nginx)
-- PHP 8.0+
-- MySQL 8.0+
-- Node.js (per build React)
-
-## 🚀 Avvio Rapido
-
-### 1. Clonare il repository
+Dalla directory principale del progetto:
 
 ```bash
-git clone <url-repository>
-cd StartupFlow-by-MandalaTeam
+# Inizializza database e tabelle
+mysql -u root -p < database/schema.sql
+
+# Crea la configurazione locale, non versionata
+cp includes/config.example.php includes/config.php
 ```
 
-### 2. Configurare il backend PHP
+Modificare `includes/config.php` inserendo le credenziali del database e l'URL dell'applicazione. Non committare password, token o altri segreti.
+
+Per creare o aggiornare un utente attivo di test:
 
 ```bash
-# Installare dipendenze PHP
-composer install
-
-# Configurare database (vedi database/schema.sql)
-# Copiare e configurare includes/config.php
-cp includes/config.php.example includes/config.php
-# Modificare con le proprie credenziali database
+php scripts/seed-test-user.php
 ```
 
-### 3. Configurare il frontend React
+Il flusso completo di registrazione, verifica email, login, reset password e cambio email e descritto in [README_LOGIN.md](README_LOGIN.md).
+
+## Avvio locale
+
+Il comando consigliato avvia il server PHP e MailHog insieme:
 
 ```bash
-cd client
-npm install
+bash start-dev.sh
 ```
 
-### 4. Avviare lo sviluppo
+L'applicazione sara disponibile su <http://127.0.0.1:8000>. MailHog intercetta le email di sviluppo:
 
-#### Opzione A: Solo frontend (Vite dev server)
+- SMTP: `127.0.0.1:1025`;
+- interfaccia web: <http://127.0.0.1:8025>.
+
+Lo script usa l'immagine Docker `mailhog/mailhog` e termina il container quando il server viene arrestato. Per avviare solo PHP:
 
 ```bash
-cd client
-npm run dev
-# SPA disponibile su http://localhost:3000
+php -S 127.0.0.1:8000 -t .
 ```
 
-#### Opzione B: Full stack (PHP + React buildato)
+In questo caso il servizio email deve essere configurato separatamente. `start-dev.sh` non esegue la pulizia dei token scaduti: usare `scripts/cleanup-expired-tokens.php` come attivita periodica.
+
+## Database
+
+`database/schema.sql` crea il database `login_auth_db` e le tabelle per:
+
+- utenti, stato dell'account e tentativi di login;
+- log di audit e rate limiting;
+- verifiche email e richieste di cambio email;
+- reset password;
+- token Remember Me.
+
+La connessione PDO e centralizzata in `includes/db.php`. Le query applicative devono usare statement preparati.
+
+## Sicurezza
+
+Il progetto include:
+
+- sessioni PHP con cookie `HttpOnly` e `SameSite=Lax`;
+- rigenerazione della sessione al login;
+- token CSRF per i form;
+- password memorizzate tramite hashing PHP;
+- token email, reset e Remember Me memorizzati come hash;
+- validazione client-side e server-side;
+- audit log e limiti per account e indirizzo IP sul cambio email;
+- sanitizzazione dell'output HTML.
+
+Per l'ambiente di produzione impostare `APP_ENV='prod'` nella configurazione e usare un provider SMTP affidabile.
+
+## Test
+
+Lo smoke test HTTP verifica le pagine e i principali redirect del flusso di autenticazione. Richiede PHP, MySQL, `curl` e una configurazione valida:
 
 ```bash
-# Buildare React
-cd client
-npm run build
-
-# Avviare server PHP (es: con PHP built-in server)
-cd ..
-php -S localhost:8000
-# Applicazione disponibile su http://localhost:8000
+bash tests/auth-smoke.sh
 ```
 
-## 🔧 Script Utili
+Per testare la configurazione del database:
 
-| Comando | Descrizione |
+```bash
+php tests/test-db.php
+```
 
-|---------|-------------|
-| `npm run dev` | Avvia Vite dev server (porta 3000) |
-| `npm run build` | Builda React per produzione |
-| `npm run preview` | Anteprima build di produzione |
-| `npm run lint` | Esegue linting del codice |
+## Contribuire
 
-## 🌐 Routing
+Per convenzioni, workflow Git, setup e controlli prima di una Pull Request, consultare [CONTRIBUTING.md](CONTRIBUTING.md).
 
-L'applicazione utilizza **React Router** per la navigazione client-side:
+## Licenza
 
-- `/` - Dashboard principale con card dei servizi
-- `/fatturazione` - Modulo fatturazione
-- `/scadenzario` - Modulo scadenzario
-- `/nota-spese` - Modulo nota spese
-- `/burn-rate-meter` - Modulo Burn Rate Meter
-- `/time-tracker` - Modulo Time Tracker
-- `/zero-carta` - Modulo Zero carta
-- `/crm-clienti` - Modulo CRM clienti
-
-## 📁 Gestione File
-
-### Upload documenti
-
-I file uploadati (scontrini, documenti, ecc.) vengono salvati in:
-
-- `/uploads/documenti/` - Documenti generici
-- `/uploads/scontrini/` - Scontrini e ricevute
-
-## 🔒 Sicurezza
-
-- Autenticazione basata su sessione PHP
-- CSRF protection su tutti i form
-- Sanitizzazione input/output
-
-## 📝 Licenza
-
-MIT License - vedi [LICENSE](LICENSE) per dettagli.
-
----
-
-## 🤝 Contribuire
-
-Vedi [CONTRIBUTING.md](CONTRIBUTING.md) per le line guide su come contribuire al progetto.
-
-## 📧 Contatti
-
-Per domande o supporto, contattare il team di sviluppo.
+Il progetto e distribuito con licenza MIT. Consultare [LICENSE](LICENSE).
