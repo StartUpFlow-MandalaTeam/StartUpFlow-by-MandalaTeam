@@ -48,6 +48,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title><?php echo htmlspecialchars($pageTitle ?? 'StartupFlow', ENT_QUOTES, 'UTF-8'); ?></title>
+	<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ffffff'/><path d='M 30,50 C 20,20 80,10 70,40 C 60,70 10,60 25,80 C 40,100 90,80 80,50 C 70,20 20,30 35,15 C 50,0 85,35 65,65 C 45,95 15,40 45,30 C 75,20 85,75 50,75 C 15,75 25,35 55,45 Z' fill='none' stroke='%23111111' stroke-width='5' stroke-linecap='round'/></svg>">
 	<link rel="stylesheet" href="/assets/css/navbar.css">
 	<link rel="stylesheet" href="/assets/css/card-container.css">
 	<link rel="stylesheet" href="/assets/css/page-common.css">
