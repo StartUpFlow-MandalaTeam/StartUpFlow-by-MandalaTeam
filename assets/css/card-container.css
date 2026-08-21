@@ -108,14 +108,21 @@
     .card {
         width: auto;
         min-width: 0;
-        transform: scale(0.7);
+        transform: scale(0.9);
         transform-origin: center;
     }
     
     .card-container {
-        padding: 0 0.2rem;
+        padding: 0 0.1rem;
+    }
+
+    .card-title {
+    font-size: 1rem;
     }
     
+    .card-description {
+        font-size: 0.85rem;
+    }
 }
 
 

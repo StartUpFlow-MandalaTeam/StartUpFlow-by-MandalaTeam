@@ -51,34 +51,11 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 	<link rel="stylesheet" href="/assets/css/navbar.css">
 	<link rel="stylesheet" href="/assets/css/card-container.css">
 	<link rel="stylesheet" href="/assets/css/page-common.css">
+	<link rel="stylesheet" href="/assets/css/style.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300..700&family=Montserrat:wght@400;500;600&display=swap">
 	<?php echo ($additionalCss ?? ''); ?>
 	<script src="/assets/js/mobile-nav.js" defer></script>
 	<script src="/assets/js/profile-modal.js" defer></script>
-	
-	<style>
-		body {
-			margin: 0;
-			min-height: 100vh;
-			background: #d6a800;
-			font-family: Arial, sans-serif;
-			color: #111;
-			display: flex;
-			flex-direction: column;
-		}
-		
-		.main {
-			flex: 1;
-			width: 100%;
-			max-width: 1200px;
-			margin: 0 auto;
-			margin-top: 3rem;
-			padding: 2rem 1rem;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-		}
-	</style>
 	
 	<?php echo $additionalHead ?? ''; ?>
 </head>

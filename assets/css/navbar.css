@@ -63,6 +63,7 @@
     font-weight: 800;
     letter-spacing: 0.04em;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+    text-decoration: none;
 }
 
 .dashboard-navbar__links{
@@ -190,6 +191,7 @@
     z-index: 60;
     width: min(82vw, 320px);
     height: 100dvh;
+    overflow-y: auto;
     box-sizing: border-box;
     padding: 18px 18px 20px;
     background: linear-gradient(180deg, rgba(16, 17, 20, 0.74) 0%, rgba(23, 24, 29, 0.66) 100%);

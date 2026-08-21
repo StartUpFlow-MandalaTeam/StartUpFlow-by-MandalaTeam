@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img class="card-image" src="https://placehold.co/290x180" alt="Time-Tracker">
                         <div class="card-content">
                             <h3 class="card-title">Time-Tracker</h3>
-                            <p class="card-description">Tempo di fatturazione per cliente</p>
+                            <p class="card-description"> Traccia il timing per cliente</p>
                             <a href="/time-tracker" class="card-button" data-spa="true">Vai!</a>
                         </div>
                     </div>
