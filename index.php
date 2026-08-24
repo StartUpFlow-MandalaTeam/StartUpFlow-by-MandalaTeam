@@ -41,6 +41,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 
 $pageTitle = 'Dashboard - StartUpFlow';
 $currentPage = '';
+$bodyClass = 'dashboard-page';
 
 require_once __DIR__ . '/includes/layout/header.php';
 

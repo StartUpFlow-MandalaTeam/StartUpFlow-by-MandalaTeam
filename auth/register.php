@@ -98,7 +98,7 @@ $showStartupOverlay = $statusHtml === '';
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
-    <body>
+    <body class="auth-page">
         <!-- Startup Overlay -->
         <?php if ($showStartupOverlay): ?>
             <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
@@ -143,7 +143,7 @@ $showStartupOverlay = $statusHtml === '';
                         <input type="submit" class="btn" value="Sign up"></div>
                     <!-- Link to login page for users who already have an account -->
                     <div class="group">
-                        <span><a href="login.php">Already have an account? Log in here</a></span>
+                        <span><a href="login.php">Already have an account? <strong class="auth-login-link">Log in</strong> here</a></span>
                     </div>
                 </form>
             </div>

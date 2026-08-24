@@ -18,6 +18,14 @@ body{
     overflow-x: hidden;
 }
 
+.auth-page{
+    background: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)), url('../img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg') center / cover no-repeat fixed;
+}
+
+.dashboard-page{
+    background: url('../img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg') center / cover no-repeat fixed;
+}
+
 .main {
     flex: 1;
     width: 100%;
@@ -194,6 +202,11 @@ input::placeholder{
     top: 10px;
     text-decoration: none;
     font-weight: 500;
+}
+
+.group span a .auth-login-link{
+    color: #ffd400;
+    font-weight: 700;
 }
 
 .group a:focus{
