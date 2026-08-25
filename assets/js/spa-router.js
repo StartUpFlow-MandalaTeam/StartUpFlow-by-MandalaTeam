@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="card-container">
                 <div class="card-row card-row--top">
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Fatturazione">
+                        <img class="card-image" src="/assets/img/card-1.webp" alt="Fatturazione">
                         <div class="card-content">
                             <h3 class="card-title">Fatturazione</h3>
                             <p class="card-description">Emetti le tue fatture</p>
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Scadenzario">
+                        <img class="card-image" src="/assets/img/card-2.webp" alt="Scadenzario">
                         <div class="card-content">
                             <h3 class="card-title">Scadenzario</h3>
                             <p class="card-description">Pagamenti & Incassi</p>
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Nota Spese">
+                        <img class="card-image" src="/assets/img/card-3.webp" alt="Nota Spese">
                         <div class="card-content">
                             <h3 class="card-title">Nota Spese</h3>
                             <p class="card-description">Registra le uscite</p>
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Burn Rate Meter">
+                        <img class="card-image" src="/assets/img/card-4.webp" alt="Burn Rate Meter">
                         <div class="card-content">
                             <h3 class="card-title">Burn Rate Meter</h3>
                             <p class="card-description">Il tuo stato di salute</p>
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="card-row card-row--bottom">
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Time-Tracker">
+                        <img class="card-image" src="/assets/img/card-5.webp" alt="Time-Tracker">
                         <div class="card-content">
                             <h3 class="card-title">Time-Tracker</h3>
                             <p class="card-description"> Traccia il timing per cliente</p>
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="Zero carta">
+                        <img class="card-image" src="/assets/img/card-6.webp" alt="Zero carta">
                         <div class="card-content">
                             <h3 class="card-title">"Zero carta"</h3>
                             <p class="card-description">Repository documentale</p>
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="card">
-                        <img class="card-image" src="https://placehold.co/290x180" alt="CRM clienti">
+                        <img class="card-image" src="/assets/img/card-7.webp" alt="CRM clienti">
                         <div class="card-content">
                             <h3 class="card-title">CRM clienti</h3>
                             <p class="card-description">Ciclo di acquisizione clienti</p>
