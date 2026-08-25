@@ -70,7 +70,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 		</button>
 
 		<a href="/" class="dashboard-navbar__brand" aria-label="StartupFlow home">
-			<span class="dashboard-navbar__logo">SF</span>
+			<span class="dashboard-navbar__logo"><img class="dashboard-navbar__logo-image" src="/assets/img/startupflow-mark.png" alt="StartUpFlow"></span>
 		</a>
 
 		<nav class="dashboard-navbar__links" aria-label="Static pages">
@@ -98,7 +98,7 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 
 	<aside class="dashboard-navbar__drawer" id="mobile-nav-drawer" aria-label="Menu mobile" aria-hidden="true">
 		<div class="dashboard-navbar__drawer-top">
-			<a href="/" class="dashboard-navbar__logo" aria-label="StartupFlow home">SF</a>
+			<a href="/" class="dashboard-navbar__logo" aria-label="StartupFlow home"><img class="dashboard-navbar__logo-image" src="/assets/img/startupflow-mark.png" alt="StartUpFlow"></a>
 			<button type="button" class="dashboard-navbar__drawer-close" data-mobile-nav-close aria-label="Chiudi menu">
 				<span class="material-symbols-outlined" aria-hidden="true">close</span>
 			</button>
