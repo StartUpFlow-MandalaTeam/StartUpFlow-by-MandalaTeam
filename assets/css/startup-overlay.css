@@ -23,6 +23,7 @@
     padding: 0;
     transition: transform .2s ease, opacity .2s ease;
     margin: 0 auto;
+    text-decoration: none;
 }
 
 .startup-overlay__power:hover{
@@ -35,11 +36,6 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-align: center;
-}
-
-/* Hide overlay on desktop */
-@media (min-width: 901px) {
-    .startup-overlay {
-        display: none !important;
-    }
+    text-decoration: none;
+    cursor: pointer;
 }

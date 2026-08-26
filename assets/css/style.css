@@ -425,9 +425,8 @@ input::placeholder{
 		}
 	}
 
-	/* Desktop: show auth buttons in navbar, hide overlay and center buttons */
+	/* Desktop: show auth buttons in navbar, hide center buttons */
 	@media (min-width: 901px) {
-		.startup-overlay,
 		.auth-buttons {
 			display: none !important;
 		}
