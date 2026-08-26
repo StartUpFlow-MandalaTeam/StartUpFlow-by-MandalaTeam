@@ -6,6 +6,8 @@ require_once __DIR__ . '/../auth.php';
 
 // Fetch user profile data from the database only if logged in
 $username = '';
+$email = '';
+$createdAt = '';
 if (isLoggedIn()) {
 	global $pdo;
 	$userId = currentUserId();
@@ -31,6 +33,10 @@ if (isLoggedIn()) {
 
 	// Sanitize user data for safe output in HTML contexts to prevent XSS attacks.
 	$username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
+	$email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
+	$createdAt = $profile['created_at'] !== ''
+		? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8')
+		: '';
 }
 
 ?>
