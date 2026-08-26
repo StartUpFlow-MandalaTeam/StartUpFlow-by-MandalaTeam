@@ -120,11 +120,17 @@ if ($statusHtml !== '') {
                         <i class='bx bxs-lock-alt' ></i>
                         <input type="password" name="Password" id="register-password" placeholder=" ">
                         <label for="register-password">Password</label>
+                        <button type="button" class="password-toggle" data-password-toggle="register-password" aria-label="Mostra password" aria-pressed="false">
+                            <i class="bx bx-show" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="input-box">
                         <i class='bx bxs-lock-alt'></i>
                         <input type="password" name="CPassword" id="register-cpassword" placeholder=" ">
                         <label for="register-cpassword">Confirm Password</label>
+                        <button type="button" class="password-toggle" data-password-toggle="register-cpassword" aria-label="Mostra password" aria-pressed="false">
+                            <i class="bx bx-show" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="button">
                         <input type="submit" class="btn" value="Sign up"></div>

@@ -8,6 +8,7 @@ require_once __DIR__ . '/../auth.php';
 $username = '';
 $email = '';
 $createdAt = '';
+$avatarUrl = '';
 if (isLoggedIn()) {
 	global $pdo;
 	$userId = currentUserId();
@@ -15,10 +16,11 @@ if (isLoggedIn()) {
 		'username' => $_SESSION['username'] ?? 'utente',
 		'email' => '',
 		'created_at' => '',
+		'avatar_path' => '',
 	];
 
 	if ($userId !== null) {
-		$stmt = $pdo->prepare('SELECT username, email, created_at FROM users WHERE id = :id LIMIT 1');
+		$stmt = $pdo->prepare('SELECT username, email, created_at, avatar_path FROM users WHERE id = :id LIMIT 1');
 		$stmt->execute([':id' => $userId]);
 		$userRow = $stmt->fetch();
 
@@ -27,6 +29,7 @@ if (isLoggedIn()) {
 				'username' => (string) $userRow['username'],
 				'email' => (string) $userRow['email'],
 				'created_at' => (string) $userRow['created_at'],
+				'avatar_path' => (string) ($userRow['avatar_path'] ?? ''),
 			];
 		}
 	}
@@ -37,6 +40,9 @@ if (isLoggedIn()) {
 	$createdAt = $profile['created_at'] !== ''
 		? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8')
 		: '';
+	if ($profile['avatar_path'] !== '') {
+		$avatarUrl = htmlspecialchars('/' . ltrim($profile['avatar_path'], '/'), ENT_QUOTES, 'UTF-8');
+	}
 }
 
 ?>
@@ -82,8 +88,8 @@ if (isLoggedIn()) {
 		<?php if (isLoggedIn()): ?>
 		<div class="dashboard-navbar__userarea">
 			<button type="button" class="dashboard-navbar__user-trigger" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false">
-				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
-					<span class="material-symbols-outlined">person</span>
+				<div class="dashboard-navbar__user-avatar" data-profile-avatar aria-hidden="true">
+					<?php if ($avatarUrl !== ''): ?><img src="<?php echo $avatarUrl; ?>" alt=""><?php else: ?><span class="material-symbols-outlined">person</span><?php endif; ?>
 				</div>
 				<span class="dashboard-navbar__user">Ciao, <?php echo $username; ?></span>
 			</button>
@@ -139,8 +145,9 @@ if (isLoggedIn()) {
 		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
 		<div class="dashboard-navbar__drawer-actions">
 			<button type="button" class="dashboard-navbar__drawer-profile" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false" aria-label="Apri profilo utente">
-				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
-					<span class="material-symbols-outlined">person</span>
+				<span class="dashboard-navbar__drawer-user">Ciao, <?php echo $username; ?></span>
+				<div class="dashboard-navbar__user-avatar" data-profile-avatar aria-hidden="true">
+					<?php if ($avatarUrl !== ''): ?><img src="<?php echo $avatarUrl; ?>" alt=""><?php else: ?><span class="material-symbols-outlined">person</span><?php endif; ?>
 				</div>
 			</button>
 			<form class="dashboard-navbar__drawer-logout" action="/auth/process-logout.php" method="post">

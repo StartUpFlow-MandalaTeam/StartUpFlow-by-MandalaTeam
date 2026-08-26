@@ -1,5 +1,6 @@
 	<dialog class="profile-modal" id="profile-modal" aria-labelledby="profile-modal-title">
-		<form class="profile-modal__panel" method="dialog">
+		<form class="profile-modal__panel" method="dialog" id="profile-form" enctype="multipart/form-data">
+			<?php echo csrfInput(); ?>
 			<header class="profile-modal__header">
 				<div>
 					<p class="profile-modal__eyebrow">Dati profilo</p>
@@ -22,6 +23,10 @@
 				<label class="profile-modal__field">
 					<span>Data di creazione</span>
 					<input type="text" value="<?php echo $createdAt ?? ''; ?>" readonly>
+				</label>
+				<label class="profile-modal__field">
+					<span>Immagine avatar</span>
+					<input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif">
 				</label>
 				<div class="profile-modal__divider" aria-hidden="true"></div>
 				<label class="profile-modal__field">
