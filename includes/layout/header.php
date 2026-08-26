@@ -4,40 +4,34 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../auth.php';
 
-// If the user is not logged in, show the registration page first
-if (!isLoggedIn()) {
-	header('Location: /auth/register.php');
-	exit;
-}
+// Fetch user profile data from the database only if logged in
+$username = '';
+if (isLoggedIn()) {
+	global $pdo;
+	$userId = currentUserId();
+	$profile = [
+		'username' => $_SESSION['username'] ?? 'utente',
+		'email' => '',
+		'created_at' => '',
+	];
 
-// Fetch user profile data from the database
-global $pdo;
+	if ($userId !== null) {
+		$stmt = $pdo->prepare('SELECT username, email, created_at FROM users WHERE id = :id LIMIT 1');
+		$stmt->execute([':id' => $userId]);
+		$userRow = $stmt->fetch();
 
-$userId = currentUserId();
-$profile = [
-	'username' => $_SESSION['username'] ?? 'utente',
-	'email' => '',
-	'created_at' => '',
-];
-
-if ($userId !== null) {
-	$stmt = $pdo->prepare('SELECT username, email, created_at FROM users WHERE id = :id LIMIT 1');
-	$stmt->execute([':id' => $userId]);
-	$userRow = $stmt->fetch();
-
-	if ($userRow) {
-		$profile = [
-			'username' => (string) $userRow['username'],
-			'email' => (string) $userRow['email'],
-			'created_at' => (string) $userRow['created_at'],
-		];
+		if ($userRow) {
+			$profile = [
+				'username' => (string) $userRow['username'],
+				'email' => (string) $userRow['email'],
+				'created_at' => (string) $userRow['created_at'],
+			];
+		}
 	}
-}
 
-// Sanitize user data for safe output in HTML contexts to prevent XSS attacks.
-$username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
-$email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
-$createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8') : '';
+	// Sanitize user data for safe output in HTML contexts to prevent XSS attacks.
+	$username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
+}
 
 ?>
 
@@ -74,11 +68,12 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 		</a>
 
 		<nav class="dashboard-navbar__links" aria-label="Static pages">
-			<a href="/chi-siamo" <?php echo ($currentPage ?? '') === 'chi-siamo' ? 'class="active"' : ''; ?> data-spa="true">Chi siamo</a>
-			<a href="/servizi" <?php echo ($currentPage ?? '') === 'servizi' ? 'class="active"' : ''; ?> data-spa="true">Servizi</a>
-			<a href="/contatti" <?php echo ($currentPage ?? '') === 'contatti' ? 'class="active"' : ''; ?> data-spa="true">Contatti</a>
+			<a href="/chi-siamo.php" <?php echo ($currentPage ?? '') === 'chi-siamo' ? 'class="active"' : ''; ?> data-spa="true">Chi siamo</a>
+			<a href="/servizi.php" <?php echo ($currentPage ?? '') === 'servizi' ? 'class="active"' : ''; ?> data-spa="true">Servizi</a>
+			<a href="/contatti.php" <?php echo ($currentPage ?? '') === 'contatti' ? 'class="active"' : ''; ?> data-spa="true">Contatti</a>
 		</nav>
 
+		<?php if (isLoggedIn()): ?>
 		<div class="dashboard-navbar__userarea">
 			<button type="button" class="dashboard-navbar__user-trigger" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false">
 				<div class="dashboard-navbar__user-avatar" aria-hidden="true">
@@ -93,6 +88,12 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				</button>
 			</form>
 		</div>
+		<?php else: ?>
+		<div class="dashboard-navbar__userarea">
+			<a href="/auth/register.php" class="auth-btn auth-btn--signup">Sign up</a>
+			<a href="/auth/login.php" class="auth-btn auth-btn--signin">Sign in</a>
+		</div>
+		<?php endif; ?>
 	</header>
 	<div class="dashboard-navbar__backdrop" data-mobile-nav-backdrop hidden></div>
 
@@ -106,13 +107,14 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 		<div class="dashboard-navbar__drawer-content">
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-links" aria-label="Static pages mobile">
-					<a href="/chi-siamo" data-spa="true">Chi siamo</a>
-					<a href="/servizi" data-spa="true">Servizi</a>
-					<a href="/contatti" data-spa="true">Contatti</a>
+					<a href="/chi-siamo.php" data-spa="true">Chi siamo</a>
+					<a href="/servizi.php" data-spa="true">Servizi</a>
+					<a href="/contatti.php" data-spa="true">Contatti</a>
 				</nav>
 			</div>
 
 			<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
+			<?php if (isLoggedIn()): ?>
 			<div class="dashboard-navbar__drawer-section">
 				<nav class="dashboard-navbar__drawer-modules" aria-label="Moduli mobile">
 					<a href="/fatturazione" data-spa="true">Fatturazione</a>
@@ -124,8 +126,10 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 					<a href="/crm-clienti" data-spa="true">CRM clienti</a>
 				</nav>
 			</div>
+			<?php endif; ?>
 		</div>
 
+		<?php if (isLoggedIn()): ?>
 		<div class="dashboard-navbar__drawer-separator" aria-hidden="true"></div>
 		<div class="dashboard-navbar__drawer-actions">
 			<button type="button" class="dashboard-navbar__drawer-profile" data-profile-modal-open aria-haspopup="dialog" aria-controls="profile-modal" aria-expanded="false" aria-label="Apri profilo utente">
@@ -140,4 +144,5 @@ $createdAt = $profile['created_at'] !== '' ? htmlspecialchars(date('d/m/Y H:i', 
 				</button>
 			</form>
 		</div>
+		<?php endif; ?>
 	</aside>

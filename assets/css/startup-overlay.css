@@ -36,3 +36,10 @@
     letter-spacing: 0.04em;
     text-align: center;
 }
+
+/* Hide overlay on desktop */
+@media (min-width: 901px) {
+    .startup-overlay {
+        display: none !important;
+    }
+}

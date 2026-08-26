@@ -1,31 +1,39 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/auth.php';
+header("Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; navigate-to 'self'; img-src 'self' https://placehold.co data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; form-action 'self'");
 
-// Se non è autenticato, reindirizza
-if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
-    exit;
-}
+require_once __DIR__ . '/includes/auth.php';
 
 // Controlla se la richiesta è AJAX (per SPA)
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-// Se NON è AJAX, reindirizza a /
+// Le pagine statiche sono pubbliche: le richieste normali ricevono il layout completo.
 if (!$isAjax) {
-    header('Location: /');
-    exit;
+    $pageTitle = 'Chi siamo - StartUpFlow';
+    $currentPage = 'chi-siamo';
+    $bodyClass = 'dashboard-page';
+    $additionalCss = '<link rel="stylesheet" href="/assets/css/chi-siamo.css">';
+    $email = '';
+    $createdAt = '';
+    require_once __DIR__ . '/includes/layout/header.php';
+    echo '<main class="main">';
 }
 
-// Recupera dati utente
-global $pdo;
-$userId = currentUserId();
-$username = $_SESSION['username'] ?? 'Utente';
+// Se è AJAX, recupera dati utente e restituisci solo il contenuto
+if ($isAjax) {
+    global $pdo;
+    $userId = currentUserId();
+    $username = $_SESSION['username'] ?? 'Utente';
+} else {
+    // Non-AJAX, non loggato: pagina completa già avviata con header
+    global $pdo;
+    $userId = null;
+    $username = 'Utente';
+}
 
-// Se è AJAX, restituisci solo il contenuto senza header/footer
 ?>
-<div class="page-content spa-page">
+<div class="page-content">
     <h1>Chi siamo</h1>
     
     <p>
@@ -60,18 +68,23 @@ $username = $_SESSION['username'] ?? 'Utente';
         <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
 </div>
         <div class="team-card">
-            <img src="https://placehold.co/120x120" alt="Sara Neri">
-            <h3>Sara Neri</h3>
-            <p>Product Manager</p>
+            <img src="/assets/img/GianLucaDev.jpg" alt="Gian Luca Vitale">
+            <h3>Gian Luca Vitale</h3>
+            <p>Developer</p>
         <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
 </div>
     <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
 </div>
     
+    <?php if ($isAjax || isLoggedIn()): ?>
     <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
-<style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
+    <?php endif; ?>
 </div>
 
-<style>
-    <?php include __DIR__ . '/assets/css/chi-siamo.css'; ?>
-</style>
+<?php
+// Chiudi la pagina completa per le richieste non-AJAX.
+if (!$isAjax) {
+    echo '</main>';
+    require_once __DIR__ . '/includes/layout/footer.php';
+}
+?>

@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
         '/crm-clienti': { file: '/crm-clienti.php', title: 'CRM Clienti - StartUpFlow' },
 
         // Pagine statiche
-        '/chi-siamo': { file: '/chi-siamo.php', title: 'Chi Siamo - StartUpFlow' },
-        '/servizi': { file: '/servizi.php', title: 'Servizi - StartUpFlow' },
-        '/contatti': { file: '/contatti.php', title: 'Contatti - StartUpFlow' },
+        '/chi-siamo.php': { file: '/chi-siamo.php', title: 'Chi Siamo - StartUpFlow' },
+        '/servizi.php': { file: '/servizi.php', title: 'Servizi - StartUpFlow' },
+        '/contatti.php': { file: '/contatti.php', title: 'Contatti - StartUpFlow' },
     };
 
     // Funzione per mostrare la dashboard

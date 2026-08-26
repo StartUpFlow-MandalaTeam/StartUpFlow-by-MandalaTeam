@@ -17,11 +17,11 @@
 				</label>
 				<label class="profile-modal__field">
 					<span>Email</span>
-					<input type="email" value="<?php echo $email; ?>" readonly>
+					<input type="email" value="<?php echo $email ?? ''; ?>" readonly>
 				</label>
 				<label class="profile-modal__field">
 					<span>Data di creazione</span>
-					<input type="text" value="<?php echo $createdAt; ?>" readonly>
+					<input type="text" value="<?php echo $createdAt ?? ''; ?>" readonly>
 				</label>
 				<div class="profile-modal__divider" aria-hidden="true"></div>
 				<label class="profile-modal__field">

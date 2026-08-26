@@ -3,22 +3,30 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 
-if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
-    exit;
-}
-
+// Controlla se la richiesta è AJAX (per SPA)
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// Le pagine statiche sono pubbliche: le richieste normali ricevono il layout completo.
 if (!$isAjax) {
-    header('Location: /');
-    exit;
+    $pageTitle = 'Servizi - StartUpFlow';
+    $currentPage = 'servizi';
+    $bodyClass = 'dashboard-page';
+    $additionalCss = '<link rel="stylesheet" href="/assets/css/servizi.css">';
+    $email = '';
+    $createdAt = '';
+    require_once __DIR__ . '/includes/layout/header.php';
+    echo '<main class="main">';
+}
+// Se è AJAX, recupera dati utente
+if ($isAjax) {
+    global $pdo;
+    $userId = currentUserId();
+    $username = $_SESSION['username'] ?? 'Utente';
 }
 
-global $pdo;
-$userId = currentUserId();
-$username = $_SESSION['username'] ?? 'Utente';
 ?>
-<div class="page-content spa-page">
+
+<div class="page-content">
     <h1>I nostri servizi</h1>
     
     <p>
@@ -83,10 +91,15 @@ $username = $_SESSION['username'] ?? 'Utente';
         <li>Supporto dedicato e aggiornamenti costanti</li>
     </ul>
     
+    <?php if ($isAjax || isLoggedIn()): ?>
     <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
-<style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
+    <?php endif; ?>
 </div>
 
-<style>
-    <?php include __DIR__ . '/assets/css/servizi.css'; ?>
-</style>
+<?php
+// Chiudi la pagina completa per le richieste non-AJAX.
+if (!$isAjax) {
+    echo '</main>';
+    require_once __DIR__ . '/includes/layout/footer.php';
+}
+?>
