@@ -19,7 +19,13 @@ if (isset($_GET['sent'])) {
     $statusType = 'success';
     // In development environment, allow showing the debug link for testing purposes
     if (defined('APP_ENV') && APP_ENV === 'dev' && !empty($_GET['debug_link'])) {
-        $debugLink = (string) $_GET['debug_link'];
+        $candidateDebugLink = (string) $_GET['debug_link'];
+        $debugLinkParts = parse_url($candidateDebugLink);
+        $debugScheme = strtolower((string) ($debugLinkParts['scheme'] ?? ''));
+
+        if (in_array($debugScheme, ['http', 'https'], true) && !empty($debugLinkParts['host'])) {
+            $debugLink = $candidateDebugLink;
+        }
     }
 } elseif (isset($_GET['error'])) {// Map URL error flags to user-friendly messages and types for display in the reset form
     switch ($_GET['error']) {
