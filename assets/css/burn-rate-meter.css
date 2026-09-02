@@ -1,0 +1,107 @@
+/* Burn Rate Meter - Stili del modulo */
+/* Feature branch: feature/burn-rate-meter */
+
+.service-page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+}
+
+.service-header {
+    margin-bottom: 2rem;
+}
+
+.service-header h1 {
+    font-size: 1.8rem;
+    color: #167c80;
+    margin-bottom: 0.5rem;
+}
+
+/* === Breadcrumb desktop (fisso sotto la navbar) === */
+.breadcrumb {
+    position: fixed;
+    top: 76px;
+    left: 0;
+    z-index: 45;
+    width: 100%;
+    padding: 0.4rem 1.5rem;
+    background: transparent;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.breadcrumb a {
+    color: #0055ff;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb__separator {
+    color: #555;
+    font-size: 1.2rem;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.breadcrumb__current {
+    color: #555;
+    font-weight: 600;
+}
+
+/* Nascondi back-link su desktop, mostra breadcrumb con padding */
+@media (min-width: 901px) {
+    .back-link {
+        display: none !important;
+    }
+
+    .service-page {
+        padding-top: calc(1.5rem + 36px);
+    }
+}
+
+/* Nascondi breadcrumb su mobile e attiva pulsante fixed */
+@media (max-width: 900px) and (orientation: portrait) {
+    .breadcrumb {
+        display: none !important;
+    }
+
+    .back-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 16px;
+        background: black;
+        color: white;
+        font-size: 0;
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+        text-decoration: none;
+        transition: none;
+    }
+
+    .back-link::before {
+        content: "←";
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    .service-header {
+        padding-top: 66px;
+    }
+}

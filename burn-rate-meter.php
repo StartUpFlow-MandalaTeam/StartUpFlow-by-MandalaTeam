@@ -14,19 +14,20 @@ global $pdo;
 $userId = currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
 ?>
+
+<link rel="stylesheet" href="/assets/css/burn-rate-meter.css">
+
+<!-- Breadcrumb (desktop) -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/" data-spa="true">Dashboard</a>
+    <span class="breadcrumb__separator" aria-hidden="true">›</span>
+    <span class="breadcrumb__current" aria-current="page">Burn Rate Meter</span>
+</nav>
+
 <div class="service-page">
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Burn Rate Meter</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
     </header>
-    <div class="service-content">
-        <div class="alert alert-info">
-            <strong>Modulo Burn Rate Meter</strong>
-            <p>Questo spazio è riservato al team di sviluppo per implementare il servizio.</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
 </div>
-    <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
-<style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+
