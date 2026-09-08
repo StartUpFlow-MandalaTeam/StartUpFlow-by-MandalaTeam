@@ -137,4 +137,18 @@ document.addEventListener('DOMContentLoaded', () => {
         resultEl.classList.add('is-visible');
         resultEl.setAttribute('aria-hidden', 'false');
     }
+
+    document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const passwordInput = document.getElementById(toggle.dataset.passwordToggle);
+            if (!passwordInput) return;
+
+            const isVisible = passwordInput.type === 'text';
+            passwordInput.type = isVisible ? 'password' : 'text';
+            toggle.setAttribute('aria-pressed', String(!isVisible));
+            toggle.setAttribute('aria-label', isVisible ? 'Mostra password' : 'Nascondi password');
+            const icon = toggle.querySelector('i');
+            if (icon) icon.className = isVisible ? 'bx bx-show' : 'bx bx-hide';
+        });
+    });
 });

@@ -76,8 +76,6 @@ if ($statusHtml !== '') {
     $statusClass = 'is-visible ' . ($statusType === 'success' ? 'is-success' : 'is-error');
 }
 
-// Show the startup overlay if there is no status message to display, otherwise show the registration form immediately with the status message
-$showStartupOverlay = $statusHtml === '';
 ?>
 
 <!DOCTYPE html>
@@ -93,22 +91,11 @@ $showStartupOverlay = $statusHtml === '';
         <link rel="preload" as="image" href="/assets/img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg">
         <link rel="stylesheet" href="/assets/css/style.css">
         <link rel="stylesheet" href="/assets/css/page-transition.css">
-        <link rel="stylesheet" href="/assets/css/startup-overlay.css">
         <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
-    <body>
-        <!-- Startup Overlay -->
-        <?php if ($showStartupOverlay): ?>
-            <div class="startup-overlay" id="startupOverlay" aria-hidden="true">
-                <button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
-                    <span style="font-size: 78px; color: #d40000; display: block;">⏻</span>
-                </button>
-                <div class="startup-overlay__title">StartupFlow</div>
-            </div>
-        <?php endif; ?>
-
+    <body class="auth-page">
         <div class="container">
             <!-- Result banner: shows success or error messages to the user -->
             <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusHtml !== '' ? 'false' : 'true'; ?>">
@@ -133,26 +120,28 @@ $showStartupOverlay = $statusHtml === '';
                         <i class='bx bxs-lock-alt' ></i>
                         <input type="password" name="Password" id="register-password" placeholder=" ">
                         <label for="register-password">Password</label>
+                        <button type="button" class="password-toggle" data-password-toggle="register-password" aria-label="Mostra password" aria-pressed="false">
+                            <i class="bx bx-show" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="input-box">
                         <i class='bx bxs-lock-alt'></i>
                         <input type="password" name="CPassword" id="register-cpassword" placeholder=" ">
                         <label for="register-cpassword">Confirm Password</label>
+                        <button type="button" class="password-toggle" data-password-toggle="register-cpassword" aria-label="Mostra password" aria-pressed="false">
+                            <i class="bx bx-show" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="button">
                         <input type="submit" class="btn" value="Sign up"></div>
                     <!-- Link to login page for users who already have an account -->
                     <div class="group">
-                        <span><a href="login.php">Already have an account? Log in here</a></span>
+                        <span><a href="login.php">Already have an account? <strong class="auth-login-link">Log in</strong> here</a></span>
                     </div>
                 </form>
             </div>
         </div>
         <!-- Client-side validation and UI behavior -->
         <script src="/assets/js/index.js" defer></script>
-        <!-- Only include the startup overlay script if needed -->
-        <?php if ($showStartupOverlay): ?>
-            <script src="/assets/js/startup-overlay.js" defer></script>
-        <?php endif; ?>
     </body>
 </html>

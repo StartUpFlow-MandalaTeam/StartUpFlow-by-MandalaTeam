@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,                -- PK
   username VARCHAR(50) NOT NULL,                          -- username (unique)
   email VARCHAR(255) NOT NULL,                            -- email (unique) 
+  avatar_path VARCHAR(255) NULL,                          -- relative path of the profile avatar
   password_hash VARCHAR(255) NOT NULL,                    -- hashed password (using bcrypt or Argon2)
   is_active TINYINT(1) NOT NULL DEFAULT 0,                -- account active status (0 = inactive, 1 = active)  
   failed_login_attempts INT UNSIGNED NOT NULL DEFAULT 0,  -- failed attemps counter (for rate limiting)
