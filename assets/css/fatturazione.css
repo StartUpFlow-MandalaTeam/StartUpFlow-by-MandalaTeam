@@ -1,0 +1,414 @@
+.service-content {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+	align-items: start;
+	gap: 3rem;
+	max-width: 1100px;
+	margin: 0 auto;
+}
+
+.form-fatturazione {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+	align-items: start;
+	column-gap: 2.5rem;
+	grid-column: 1 / -1;
+	justify-self: center;
+	width: min(100%, 1000px);
+}
+
+.form-fatturazione[hidden],
+.profile-completion[hidden],
+.cliente-completion[hidden] {
+	display: none !important;
+}
+
+.profile-completion {
+	grid-column: 1 / -1;
+	justify-self: center;
+	width: min(100%, 760px);
+}
+
+.cliente-completion {
+	grid-column: 1 / -1;
+	justify-self: center;
+	width: min(100%, 760px);
+}
+
+.cliente-completion [hidden] {
+	display: none !important;
+}
+
+.client-toolbar {
+	display: flex;
+	align-items: end;
+	gap: 1rem;
+	margin: 1.5rem 0;
+}
+
+.client-toolbar__select {
+	flex: 1;
+}
+
+.client-mode-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin: 1.5rem 0;
+}
+
+.client-mode-button {
+	border: 1px solid currentColor;
+	background: transparent;
+	padding: 0.65rem 1rem;
+	cursor: pointer;
+}
+
+.client-mode-button.is-active {
+	background: #111;
+	color: #fff;
+}
+
+.client-select-panel {
+	display: flex;
+	align-items: end;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.client-select-panel .profile-modal__field {
+	flex: 1;
+}
+
+.client-toolbar button {
+	white-space: nowrap;
+}
+
+.profile-completion form {
+	width: 100%;
+}
+
+.form-fatturazione > strong {
+	grid-column: 1;
+	display: block;
+	margin-bottom: 1.25rem;
+	text-align: center;
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.form-fatturazione > form {
+	grid-column: 1;
+}
+
+.billing-form-title,
+.dati-fattura,
+.billing-section {
+	grid-column: 1 / -1;
+}
+
+.billing-section {
+	justify-self: stretch;
+	padding-top: 1.5rem;
+}
+
+.billing-section h2 {
+	margin: 0 0 1rem;
+	font-size: 1.1rem;
+}
+
+.dati-fattura {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 16px;
+}
+
+.dati-fattura label {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.dati-fattura input,
+.dati-fattura select {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 13px 14px;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 14px;
+	background: #fff;
+	color: #111;
+	font: inherit;
+}
+
+.checklist {
+	grid-column: 2;
+	grid-row: 1 / span 2;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.75rem;
+	justify-self: end;
+	width: 100%;
+	padding-top: 0.85rem;
+}
+
+.checklist-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-height: 48px;
+	padding: 13px 14px;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 14px;
+	background: #fff;
+	color: #3f4657;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.beni-servizi-form {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
+	gap: 16px;
+	width: 100%;
+	margin: 0.75rem 0 1.5rem;
+}
+
+.beni-servizi-form label {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.beni-servizi-form input,
+.beni-servizi-form select {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 13px 14px;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 14px;
+	background: #fff;
+	color: #111;
+	font: inherit;
+}
+
+.beni-servizi-form input[readonly] {
+	background: #eff2f7;
+}
+
+.form-beni {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+	margin-top: 24px;
+	padding-top: 24px;
+	border-top: 1px solid rgba(17, 17, 17, 0.12);
+}
+
+.form-beni > strong {
+	grid-column: 1 / -1;
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.form-beni-heading {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.form-beni-heading strong {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.add-beni-button {
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 8px;
+	background: #3f4657;
+	color: #fff;
+	font: inherit;
+	font-size: 1.5rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.remove-beni-button {
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 8px;
+	background: #b84242;
+	color: #fff;
+	font: inherit;
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.form-beni > label {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.form-beni input,
+.form-beni select {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 13px 14px;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 14px;
+	background: #fff;
+	color: #111;
+	font: inherit;
+}
+
+.form-beni input[readonly] {
+	background: #eff2f7;
+	color: #4a5160;
+}
+
+#riepilogo-importi-form {
+	grid-column: 1 / -1;
+	margin-top: 1.5rem;
+}
+
+#riepilogo-importi-form h3 {
+	margin: 0 0 1rem;
+	font-size: 1.1rem;
+	color: #3f4657;
+}
+
+.vat-summary-list {
+	display: grid;
+	gap: 1rem;
+}
+
+.form-riepilogo {
+	min-width: 0;
+	margin: 0;
+	padding: 1rem;
+}
+
+.form-riepilogo > strong {
+	display: block;
+	margin-bottom: 1rem;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.vat-summary-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr);
+	gap: 16px;
+}
+
+.vat-summary-grid label {
+	align-self: center;
+	font-size: 13px;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.vat-summary-grid input,
+.vat-summary-grid select {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 13px 14px;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 8px;
+	background: #fff;
+	color: #111;
+	font: inherit;
+}
+
+.vat-summary-grid input[readonly] {
+	background: #eff2f7;
+	color: #4a5160;
+}
+
+@media (max-width: 700px) {
+	.service-content {
+		grid-template-columns: 1fr;
+		gap: 2rem;
+	}
+
+	.form-fatturazione,
+	.checklist,
+	.profile-completion,
+	.cliente-completion {
+		justify-self: stretch;
+		width: 100%;
+	}
+
+	.form-fatturazione {
+		grid-template-columns: 1fr;
+		column-gap: 0;
+	}
+
+	.form-fatturazione > strong,
+	.form-fatturazione > form,
+	.checklist {
+		grid-column: 1;
+		grid-row: auto;
+	}
+
+	.client-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.client-select-panel {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.dati-fattura {
+		grid-template-columns: 1fr;
+	}
+
+	.dati-fattura label {
+		justify-self: start;
+		text-align: left;
+	}
+
+	.checklist {
+		padding-top: 0;
+	}
+
+	.beni-servizi-form {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.form-beni {
+		grid-template-columns: 1fr;
+	}
+
+	.vat-summary-grid {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+	}
+}

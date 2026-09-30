@@ -19,11 +19,40 @@ if (!$isAjax) {
     exit;
 }
 
+$escape = static fn ($value): string => htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+
+$firstName = $escape($_SESSION['first_name'] ?? '');
+$lastName = $escape($_SESSION['last_name'] ?? '');
+$birthDate = $escape($_SESSION['birth_date'] ?? '');
+$birthPlace = $escape($_SESSION['birth_place'] ?? '');
+$birthCountry = $escape($_SESSION['birth_country'] ?? '');
+$cf = $escape($_SESSION['cf'] ?? '');
+$address = $escape($_SESSION['address'] ?? '');
+$city = $escape($_SESSION['city'] ?? '');
+$postalCode = $escape($_SESSION['postal_code'] ?? '');
+
+$isProfileOk = true;
+
+$requiredFields = [
+    $firstName,
+    $lastName,
+    $birthDate,
+    $birthPlace,
+    $birthCountry,
+    $cf,
+    $address,
+    $city,
+    $postalCode
+];
+
+if (in_array('', array_map('trim', $requiredFields), true)) {
+    $isProfileOk = false;
+}
+
 // Recupera dati utente (opzionale, per personalizzare)
 global $pdo;
 $userId = currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
-
 ?>
 <div class="service-page">
     <header class="service-header">
@@ -33,12 +62,238 @@ $username = $_SESSION['username'] ?? 'Utente';
     </header>
 
     <div class="service-content">
-        <div class="alert alert-info">
-            <strong>Modulo Fatturazione</strong>
-            <p>Questo spazio è riservato al team di sviluppo per implementare il servizio.</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
+        <?php if (!$isProfileOk): ?>
+        <section class="profile-completion" id="profile-completion">
+            <strong>Completa il tuo profilo per continuare</strong>
+            <p>Inserisci tutti i dati richiesti per procedere con la fatturazione.</p>
+            <form class="profile-modal__grid" id="profile-completion-form">
+                <?php echo csrfInput(); ?>
+                <label class="profile-modal__field">
+                    <span>Nome</span>
+                    <input type="text" name="nome" value="<?php echo $firstName; ?>" placeholder="Inserisci il nome" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Cognome</span>
+                    <input type="text" name="cognome" value="<?php echo $lastName; ?>" placeholder="Inserisci il cognome" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Data di nascita</span>
+                    <input type="date" name="data_di_nascita" value="<?php echo $birthDate; ?>" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Luogo di nascita</span>
+                    <input type="text" name="luogo_di_nascita" value="<?php echo $birthPlace; ?>" placeholder="Inserisci il luogo di nascita" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Stato di nascita</span>
+                    <select name="stato" data-fatturazione-countries-select data-selected-country="<?php echo $birthCountry; ?>" required>
+                        <option value="" selected>Seleziona uno Stato</option>
+                    </select>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Codice fiscale</span>
+                    <input type="text" name="codice_fiscale" value="<?php echo $cf; ?>" placeholder="Inserisci il codice fiscale" maxlength="16" required>
+                </label>
+                <label class="profile-modal__field profile-modal__field--full">
+                    <span>Indirizzo</span>
+                    <input type="text" name="indirizzo" value="<?php echo $address; ?>" placeholder="Inserisci l'indirizzo" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Città</span>
+                    <input type="text" name="citta" value="<?php echo $city; ?>" placeholder="Inserisci la città" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>CAP</span>
+                    <input type="text" name="cap" value="<?php echo $postalCode; ?>" placeholder="Inserisci il CAP" inputmode="numeric" maxlength="5" required>
+                </label>
+                <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
+                    <button type="submit" class="profile-modal__save">Avanti</button>
+                </footer>
+            </form>
+        </section>
+        <?php endif; ?>
+
+        <section class="cliente-completion" id="cliente-completion"<?php echo $isProfileOk ? '' : ' hidden'; ?>>
+            <strong>Cliente per la fattura</strong>
+            <div class="client-mode-buttons" role="tablist" aria-label="Gestione cliente">
+                <button type="button" class="client-mode-button is-active" data-client-mode="select">Seleziona Cliente</button>
+                <button type="button" class="client-mode-button" data-client-mode="add">Aggiungi Cliente</button>
+                <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button>
+            </div>
+
+            <div class="client-select-panel" data-client-panel="select">
+                <label class="profile-modal__field">
+                    <span>Cliente esistente</span>
+                    <select id="client-select" required>
+                        <option value="">Caricamento clienti...</option>
+                    </select>
+                </label>
+                <button type="button" class="profile-modal__save" id="use-client-button" disabled>Usa questo cliente</button>
+            </div>
+
+            <form class="profile-modal__grid" id="cliente-form" data-client-panel="form" hidden>
+                <?php echo csrfInput(); ?>
+                <input type="hidden" name="id" id="client-id" value="">
+                <label class="profile-modal__field">
+                    <span>Tipo cliente</span>
+                    <select name="client_type" id="client-type" required>
+                        <option value="company" selected>Azienda</option>
+                        <option value="individual">Persona fisica</option>
+                    </select>
+                </label>
+                <label class="profile-modal__field profile-modal__field--full" data-company-field>
+                    <span>Nome Compagnia</span>
+                    <input type="text" name="company_name" id="company-name" placeholder="Inserisci la ragione sociale">
+                </label>
+                <label class="profile-modal__field" data-individual-field hidden>
+                    <span>Nome</span>
+                    <input type="text" name="first_name" placeholder="Inserisci il nome">
+                </label>
+                <label class="profile-modal__field" data-individual-field hidden>
+                    <span>Cognome</span>
+                    <input type="text" name="last_name" placeholder="Inserisci il cognome">
+                </label>
+                <label class="profile-modal__field" data-individual-field hidden>
+                    <span>Codice fiscale</span>
+                    <input type="text" name="tax_code" placeholder="Inserisci il codice fiscale" maxlength="16">
+                </label>
+                <label class="profile-modal__field profile-modal__field--full">
+                    <span>Indirizzo</span>
+                    <input type="text" name="address" placeholder="Inserisci l'indirizzo" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Città</span>
+                    <input type="text" name="city" placeholder="Inserisci la città" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Provincia</span>
+                    <input type="text" name="state" maxlength="10" placeholder="Es. MI" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>CAP</span>
+                    <input type="text" name="postal_code" inputmode="numeric" maxlength="10" placeholder="Inserisci il CAP" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Paese</span>
+                    <input type="text" name="country" value="Italia" placeholder="Inserisci il paese" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Email</span>
+                    <input type="email" name="email" placeholder="cliente@esempio.it" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Telefono</span>
+                    <input type="tel" name="phone" placeholder="Inserisci il telefono" required>
+                </label>
+                <label class="profile-modal__field">
+                    <span>Status CRM</span>
+                    <select name="crm_status" required>
+                        <option value="lead" selected>Lead</option>
+                        <option value="customer">Cliente</option>
+                    </select>
+                </label>
+                <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
+                    <button type="submit" class="profile-modal__save">Salva e continua</button>
+                </footer>
+            </form>
+        </section>
+
+        <div class="form-fatturazione" id="billing-form" hidden>
+            <strong>Modulo Fatturazione Pro-Forma</strong>
+            <form id="invoice-form" method="post" action="/auth/process-invoice.php">
+                <?php echo csrfInput(); ?>
+                <div class="dati-fattura">
+                    <label for="regime-fiscale">Regime Fiscale valido per la fattura che si sta generando:</label>
+                    <select id="regime-fiscale" name="regime_fiscale" required>
+                        <option value="regime forfettario">Regime Forfettario</option>
+                        <option value="regime ordinario">Regime Ordinario</option>
+                    </select>
+                    <label for="data-documento">Data Documento:</label>
+                    <input type="date" id="data-documento" name="issue_date" required>
+                    <label for="data-scadenza">Data Scadenza:</label>
+                    <input type="date" id="data-scadenza" name="due_date" required>
+                    <label for="divisa">Divisa:</label>
+                    <select id="divisa" name="divisa" data-fatturazione-currency-select required>
+                        <option value="">Caricamento valute...</option>
+                    </select>
+                    <label for="num-doc">Numero Documento:</label>
+                    <input id="num-doc" name="document_number" type="text" placeholder="Generazione numero..." readonly disabled required>
+                </div>
+                <div id="beni-servizi-form">
+                    <div class="form-beni" data-beni-row>
+                        <div class="form-beni-heading">
+                            <strong>Beni e Servizi</strong>
+                            <button type="button" class="add-beni-button" data-add-beni aria-label="Aggiungi beni e servizi">+</button>
+                        </div>
+                        <label for="descrizione-1">Descrizione</label>
+                        <input id="descrizione-1" type="text" name="descrizione[]" required>
+                        <label for="quantita-1">Quantità</label>
+                        <input id="quantita-1" type="number" name="quantita[]" min="0" step="1" inputmode="numeric" required>
+                        <label for="prezzo-unitario-1">Prezzo unitario</label>
+                        <input id="prezzo-unitario-1" type="number" name="prezzo_unitario[]" min="0" step="0.01" inputmode="decimal" required>
+                        <label for="prezzo-totale-1">Prezzo totale</label>
+                        <input id="prezzo-totale-1" type="number" name="prezzo_totale[]" step="0.01" readonly required>
+                        <label for="aliquota-iva-1">Aliquota IVA</label>
+                        <select id="aliquota-iva-1" name="aliquota_iva[]" required>
+                            <option value="0">0%</option>
+                            <option value="4">4%</option>
+                            <option value="5">5%</option>
+                            <option value="10">10%</option>
+                            <option value="22">22%</option>
+                        </select>
+                        <input type="hidden" name="aliquota_iva[]" value="0" data-aliquota-iva-value>
+                    </div>
+                </div>
+                <div id="riepilogo-importi-form">
+                    <h3>Riepilogo importi per aliquota</h3>
+                    <div class="vat-summary-list" data-vat-summary-list></div>
+                    <template data-vat-summary-template>
+                        <div class="form-riepilogo" data-vat-summary-row>
+                            <strong data-vat-summary-title></strong>
+                            <div class="vat-summary-grid">
+                                <label data-summary-label="rate">Aliquota IVA</label>
+                                <input type="number" name="aliquota_iva1[]" data-summary-rate readonly>
+                                <label data-summary-label="nature">Natura</label>
+                                <select data-summary-nature>
+                                    <option value="non_soggetta">Non soggetta</option>
+                                    <option value="esente">Esente</option>
+                                    <option value="fuori_campo">Fuori campo IVA</option>
+                                </select>
+                                <input type="hidden" name="natura[]" data-summary-nature-value>
+                                <label data-summary-label="taxable">Imponibile</label>
+                                <input type="number" name="imponibile[]" step="0.01" data-summary-taxable readonly>
+                                <label data-summary-label="tax">Imposta</label>
+                                <input type="number" name="imposta[]" step="0.01" data-summary-tax readonly>
+                                <label data-summary-label="expenses">Spese accessorie</label>
+                                <input type="number" name="spese_accessorie[]" step="0.01" min="0" value="0.00">
+                                <label data-summary-label="reference">Riferimento normativo</label>
+                                <input type="text" name="riferimento_normativo[]" placeholder="Inserisci riferimento normativo">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <button type="submit" class="profile-modal__save" id="save-invoice-button">Salva fattura</button>
+                <p id="invoice-save-status" role="status" aria-live="polite"></p>
+            </form>
+
+            <div class="checklist" id="billing-checklist">
+                <label class="checklist-item" for="beni">
+                    <input type="checkbox" id="beni" name="extras" value="beni" checked disabled>
+                    <span>Beni e servizi</span>
+                </label>
+                <label class="checklist-item" for="riepilogo">
+                    <input type="checkbox" id="riepilogo" name="extras" value="riepilogo" checked disabled>
+                    <span>Riepilogo importi per aliquota</span>
+                </label>
+                <label class="checklist-item" for="beni-secondo">
+                    <input type="checkbox" id="beni-secondo" name="extras" value="beni">
+                    <span>Causale</span>
+                </label>
+                <label class="checklist-item" for="beni-terzo">
+                    <input type="checkbox" id="beni-terzo" name="extras" value="beni">
+                    <span>Beni e servizi</span>
+                </label>
+            </div>
+        </div>
 </div>
-    <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
-<style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+

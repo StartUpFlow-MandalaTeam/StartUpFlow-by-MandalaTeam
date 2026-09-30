@@ -61,6 +61,15 @@ try {
             ':email' => $email,
             ':password_hash' => $passwordHash,
         ]);
+        // Creation of user's profile
+        $userId = (int) $pdo->lastInsertId();
+        $profileCreation = $pdo->prepare('
+            INSERT INTO users_profiles (user_id)
+            VALUES (:user_id)
+        ');
+        $profileCreation->execute([
+            ':user_id' => $userId
+        ]);
         echo "Test user '$username' created successfully.\n";
     }
 
