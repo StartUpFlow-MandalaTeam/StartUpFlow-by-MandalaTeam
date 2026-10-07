@@ -146,7 +146,7 @@ try {
 		$respond(403, ['success' => false, 'message' => 'Il cliente selezionato non è valido']);
 	}
 
-	$storageDirectory = dirname(__DIR__, 2) . '/storage/invoices';
+	$storageDirectory = dirname(__DIR__) . '/storage/invoices';
 	if (!is_dir($storageDirectory) && !mkdir($storageDirectory, 0700, true) && !is_dir($storageDirectory)) {
 		throw new RuntimeException('Could not create invoice storage directory');
 	}

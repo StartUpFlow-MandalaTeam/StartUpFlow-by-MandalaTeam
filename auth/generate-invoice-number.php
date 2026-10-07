@@ -26,7 +26,7 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
 
 try {
 	$check = $pdo->prepare('SELECT 1 FROM invoices WHERE document_number = :document_number LIMIT 1');
-	$storageDirectory = dirname(__DIR__, 2) . '/storage/invoices';
+	$storageDirectory = dirname(__DIR__) . '/storage/invoices';
 	$generateDocumentNumber = static function () use ($check, $storageDirectory): string {
 		for ($attempt = 0; $attempt < 20; $attempt++) {
 			$number = 'SF-' . strtoupper(bin2hex(random_bytes(8)));

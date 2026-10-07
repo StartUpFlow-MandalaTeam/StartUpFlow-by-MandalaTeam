@@ -37,7 +37,7 @@ try {
 	);
 	$statement->execute([':user_id' => $userId]);
 	$invoices = [];
-	$storageDirectory = dirname(__DIR__, 2) . '/storage/invoices';
+	$storageDirectory = dirname(__DIR__) . '/storage/invoices';
 	$itemFields = [
 		'Description' => 'description',
 		'Quantity' => 'quantity',
