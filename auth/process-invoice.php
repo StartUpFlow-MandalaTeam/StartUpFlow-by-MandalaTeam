@@ -33,6 +33,7 @@ if ($userId === null || $clientId === null) {
 $documentNumber = trim((string) ($_POST['document_number'] ?? ''));
 $issueDate = (string) ($_POST['issue_date'] ?? '');
 $dueDate = (string) ($_POST['due_date'] ?? '');
+$causale = trim((string) ($_POST['causale'] ?? ''));
 $currency = strtoupper(trim((string) ($_POST['divisa'] ?? '')));
 $regimeInput = (string) ($_POST['regime_fiscale'] ?? '');
 $taxRegime = [
@@ -56,6 +57,9 @@ if (!$isValidDate($issueDate) || !$isValidDate($dueDate) || $dueDate < $issueDat
 }
 if ($taxRegime === null) {
 	$respond(422, ['success' => false, 'message' => 'Regime fiscale non valido']);
+}
+if (strlen($causale) > 8000) {
+	$respond(422, ['success' => false, 'message' => 'La causale supera la lunghezza consentita']);
 }
 
 $descriptions = $_POST['descrizione'] ?? null;
@@ -163,12 +167,15 @@ try {
 		}
 		throw new RuntimeException('Could not generate a unique invoice number');
 	};
-	$buildXml = static function (string $number) use ($lineItems): string {
+	$buildXml = static function (string $number) use ($lineItems, $causale): string {
 		$xml = new DOMDocument('1.0', 'UTF-8');
 		$xml->formatOutput = true;
 		$root = $xml->createElement('Invoice');
 		$root->setAttribute('documentNumber', $number);
 		$xml->appendChild($root);
+		$causaleElement = $xml->createElement('Causale');
+		$causaleElement->appendChild($xml->createTextNode($causale));
+		$root->appendChild($causaleElement);
 		$items = $xml->createElement('Items');
 		$root->appendChild($items);
 

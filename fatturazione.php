@@ -62,6 +62,34 @@ $username = $_SESSION['username'] ?? 'Utente';
     </header>
 
     <div class="service-content">
+        <nav class="invoice-actions" aria-label="Azioni fatturazione">
+            <button type="button" class="invoice-action" data-invoice-action="browse">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16M4 12h16M4 18.5h16M2.5 5.5h.01M2.5 12h.01M2.5 18.5h.01" /></svg>
+                <span>Fatture salvate</span>
+            </button>
+            <button type="button" class="invoice-action" data-invoice-action="create">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14M4 3.5h16a.5.5 0 0 1 .5.5v16a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+                <span>Nuova fattura</span>
+            </button>
+        </nav>
+
+        <section class="invoice-list-view" id="invoice-list-view" hidden>
+            <div class="invoice-list-heading">
+                <h2>Fatture salvate</h2>
+                <button type="button" class="invoice-back-button" data-invoice-action="home" aria-label="Torna alle azioni fatturazione" title="Torna indietro">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
+                </button>
+            </div>
+            <p class="invoice-list-status" id="invoice-list-status" role="status" aria-live="polite"></p>
+            <div class="invoice-list" id="invoice-list"></div>
+        </section>
+
+        <div class="invoice-create-workflow" id="invoice-create-workflow" hidden>
+        <div class="invoice-create-heading">
+            <button type="button" class="invoice-back-button" data-invoice-action="home" aria-label="Torna alle azioni fatturazione" title="Torna alle azioni">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
+            </button>
+        </div>
         <?php if (!$isProfileOk): ?>
         <section class="profile-completion" id="profile-completion">
             <strong>Completa il tuo profilo per continuare</strong>
@@ -109,6 +137,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                 <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
                     <button type="submit" class="profile-modal__save">Avanti</button>
                 </footer>
+                <p id="profile-completion-status" role="status" aria-live="polite" style="grid-column: 1 / -1;"></p>
             </form>
         </section>
         <?php endif; ?>
@@ -272,6 +301,11 @@ $username = $_SESSION['username'] ?? 'Utente';
                         </div>
                     </template>
                 </div>
+                <div id="causale-form">
+                    <h3>Causale</h3>
+                    <label for="causale">Motivo o riferimento della fattura</label>
+                    <textarea id="causale" name="causale" rows="4" maxlength="2000" placeholder="Aggiungi una causale o un riferimento (facoltativo)"></textarea>
+                </div>
                 <button type="submit" class="profile-modal__save" id="save-invoice-button">Salva fattura</button>
                 <p id="invoice-save-status" role="status" aria-live="polite"></p>
             </form>
@@ -285,15 +319,12 @@ $username = $_SESSION['username'] ?? 'Utente';
                     <input type="checkbox" id="riepilogo" name="extras" value="riepilogo" checked disabled>
                     <span>Riepilogo importi per aliquota</span>
                 </label>
-                <label class="checklist-item" for="beni-secondo">
-                    <input type="checkbox" id="beni-secondo" name="extras" value="beni">
+                <label class="checklist-item" for="causale-checklist">
+                    <input type="checkbox" id="causale-checklist" name="extras" value="causale" checked disabled>
                     <span>Causale</span>
                 </label>
-                <label class="checklist-item" for="beni-terzo">
-                    <input type="checkbox" id="beni-terzo" name="extras" value="beni">
-                    <span>Beni e servizi</span>
-                </label>
             </div>
+        </div>
         </div>
 </div>
 

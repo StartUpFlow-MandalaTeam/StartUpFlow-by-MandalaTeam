@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileForm = document.getElementById('profile-form');
     const profileSave = profileForm ? profileForm.querySelector('.profile-modal__save') : null;
     const countriesUrl = 'assets/data/countries.json';
+    const selectedCountry = countrySelect?.dataset.selectedCountry?.trim() || '';
 
     let countriesCache = null;
     let countriesPromise = null;
@@ -31,7 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
             countrySelect.append(option);
         });
 
-        countrySelect.value = '';
+        const savedCountry = countries.find((country) =>
+            country.code.toLowerCase() === selectedCountry.toLowerCase()
+            || country.name.toLowerCase() === selectedCountry.toLowerCase()
+        );
+        countrySelect.value = savedCountry?.code || '';
 
         countrySelect.dataset.countriesLoaded = 'true';
         countrySelect.disabled = false;

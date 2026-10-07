@@ -47,7 +47,7 @@
 				</label>
 				<label class="profile-modal__field">
 					<span>Stato di nascita</span>
-					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select required>
+					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select data-selected-country="<?php echo $birthCountry ?? ''; ?>" required>
 						<option value="<?php echo $birthCountry ?? ''; ?>" selected>Seleziona uno Stato</option>
 					</select>
 				</label>

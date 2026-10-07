@@ -18,10 +18,20 @@ const initializeFatturazione = () => {
     const invoiceForm = document.getElementById('invoice-form');
     const saveInvoiceButton = document.getElementById('save-invoice-button');
     const invoiceSaveStatus = document.getElementById('invoice-save-status');
+    const invoiceActions = document.querySelector('.invoice-actions');
+    const invoiceCreateWorkflow = document.getElementById('invoice-create-workflow');
+    const invoiceListView = document.getElementById('invoice-list-view');
+    const invoiceList = document.getElementById('invoice-list');
+    const invoiceListStatus = document.getElementById('invoice-list-status');
+    let invoiceNumberRequest = 0;
 
-    if (documentNumberInput && invoiceForm && documentNumberInput.dataset.initialized !== 'true') {
-        documentNumberInput.dataset.initialized = 'true';
-        const csrfToken = invoiceForm.querySelector('[name="csrf_token"]')?.value || '';
+    const generateInvoiceNumber = () => {
+        const requestId = ++invoiceNumberRequest;
+        const csrfToken = invoiceForm?.querySelector('[name="csrf_token"]')?.value || '';
+        documentNumberInput.disabled = true;
+        documentNumberInput.value = '';
+        documentNumberInput.placeholder = 'Generazione numero...';
+
         fetch('/auth/generate-invoice-number.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -32,22 +42,186 @@ const initializeFatturazione = () => {
                 return response.json();
             })
             .then((data) => {
+                if (requestId !== invoiceNumberRequest) return;
                 if (!data.success || !data.document_number) {
                     throw new Error(data.message || 'Impossibile generare il numero documento');
                 }
                 documentNumberInput.value = data.document_number;
                 documentNumberInput.disabled = false;
                 documentNumberInput.placeholder = '';
+                documentNumberInput.removeAttribute('aria-invalid');
             })
             .catch((error) => {
+                if (requestId !== invoiceNumberRequest) return;
                 console.error(error);
                 documentNumberInput.placeholder = 'Numero non disponibile';
                 documentNumberInput.setAttribute('aria-invalid', 'true');
             });
+    };
+
+    if (invoiceActions && invoiceActions.dataset.initialized !== 'true') {
+        invoiceActions.dataset.initialized = 'true';
+        let invoicesLoaded = false;
+        let invoicesLoading = false;
+
+        const showView = (view) => {
+            invoiceActions.hidden = view !== 'home';
+            invoiceListView.hidden = view !== 'browse';
+            invoiceCreateWorkflow.hidden = view !== 'create';
+        };
+
+        const addDetail = (container, label, value) => {
+            const term = document.createElement('dt');
+            const description = document.createElement('dd');
+            term.textContent = label;
+            description.textContent = value || '—';
+            container.append(term, description);
+        };
+
+        const displayValue = (value, currency) => {
+            const amount = Number(value);
+            return Number.isFinite(amount)
+                ? new Intl.NumberFormat('it-IT', { style: 'currency', currency }).format(amount)
+                : `${value} ${currency}`;
+        };
+
+        const renderInvoices = (invoices) => {
+            invoiceList.replaceChildren();
+            if (invoices.length === 0) {
+                invoiceListStatus.textContent = 'Non hai ancora fatture salvate.';
+                return;
+            }
+
+            invoiceListStatus.textContent = `${invoices.length} ${invoices.length === 1 ? 'fattura salvata' : 'fatture salvate'}`;
+            invoices.forEach((invoice) => {
+                const entry = document.createElement('details');
+                entry.className = 'invoice-entry';
+                const summary = document.createElement('summary');
+                const icon = document.createElement('span');
+                icon.className = 'invoice-entry__icon';
+                icon.setAttribute('aria-hidden', 'true');
+                icon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M6 3.5h8l4 4v13H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2ZM14 3.5v5h5M8 13h8M8 17h8" /></svg>';
+                const identity = document.createElement('span');
+                identity.className = 'invoice-entry__identity';
+                const title = document.createElement('strong');
+                title.textContent = invoice.document_number;
+                const subtitle = document.createElement('small');
+                subtitle.textContent = `${invoice.client_name} · ${invoice.issue_date}`;
+                identity.append(title, subtitle);
+                const total = document.createElement('strong');
+                total.className = 'invoice-entry__total';
+                total.textContent = displayValue(invoice.total, invoice.currency);
+                summary.append(icon, identity, total);
+                entry.append(summary);
+
+                const content = document.createElement('div');
+                content.className = 'invoice-entry__details';
+                const metadata = document.createElement('dl');
+                metadata.className = 'invoice-metadata';
+                addDetail(metadata, 'Cliente', invoice.client_name);
+                addDetail(metadata, 'Data documento', invoice.issue_date);
+                addDetail(metadata, 'Scadenza', invoice.due_date);
+                addDetail(metadata, 'Regime fiscale', invoice.tax_regime);
+                addDetail(metadata, 'Stato pagamento', invoice.is_paid ? 'Pagata' : 'Da pagare');
+                addDetail(metadata, 'Totale', displayValue(invoice.total, invoice.currency));
+                content.append(metadata);
+
+                if (invoice.causale.trim()) {
+                    const causaleHeading = document.createElement('h3');
+                    causaleHeading.textContent = 'Causale';
+                    const causaleText = document.createElement('p');
+                    causaleText.className = 'invoice-causale';
+                    causaleText.textContent = invoice.causale;
+                    content.append(causaleHeading, causaleText);
+                }
+
+                if (invoice.xml_available && invoice.items.length) {
+                    const itemHeading = document.createElement('h3');
+                    itemHeading.textContent = 'Beni e servizi';
+                    const itemList = document.createElement('ul');
+                    itemList.className = 'invoice-item-list';
+                    invoice.items.forEach((item) => {
+                        const row = document.createElement('li');
+                        const description = document.createElement('span');
+                        description.textContent = `${item.description} · ${item.quantity} × ${displayValue(item.unit_price, invoice.currency)} · IVA ${item.vat_rate}%`;
+                        const lineTotal = document.createElement('strong');
+                        lineTotal.textContent = displayValue(item.line_total, invoice.currency);
+                        row.append(description, lineTotal);
+                        itemList.append(row);
+                    });
+                    content.append(itemHeading, itemList);
+                } else {
+                    const fileStatus = document.createElement('p');
+                    fileStatus.className = 'invoice-file-status';
+                    fileStatus.textContent = invoice.xml_available
+                        ? 'Il file XML archiviato non contiene righe leggibili.'
+                        : 'File XML non disponibile nello storage.';
+                    content.append(fileStatus);
+                }
+
+                entry.append(content);
+                invoiceList.append(entry);
+            });
+        };
+
+        const loadInvoices = async () => {
+            if (invoicesLoading) return;
+            invoicesLoading = true;
+            invoiceListStatus.textContent = 'Caricamento fatture...';
+            try {
+                const response = await fetch('/auth/list-invoices.php', { credentials: 'same-origin' });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Impossibile caricare le fatture');
+                renderInvoices(data.invoices);
+                invoicesLoaded = true;
+            } catch (error) {
+                invoiceListStatus.textContent = error.message || 'Errore durante il caricamento delle fatture';
+            } finally {
+                invoicesLoading = false;
+            }
+        };
+
+        invoiceActions.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-invoice-action]');
+            if (!button) return;
+            if (button.dataset.invoiceAction === 'browse') {
+                showView('browse');
+                if (!invoicesLoaded || button.dataset.refreshInvoices === 'true') {
+                    button.dataset.refreshInvoices = 'false';
+                    invoicesLoaded = false;
+                    loadInvoices();
+                }
+                return;
+            }
+            if (button.dataset.invoiceAction === 'create') {
+                showView('create');
+                document.dispatchEvent(new Event('invoice:new'));
+                return;
+            }
+            showView('home');
+        });
+        invoiceListView.querySelector('[data-invoice-action="home"]').addEventListener('click', () => showView('home'));
+        invoiceCreateWorkflow.querySelector('[data-invoice-action="home"]').addEventListener('click', () => showView('home'));
+        document.addEventListener('invoice:saved', () => showView('home'));
+        invoiceActions.hidden = false;
+    }
+
+    if (documentNumberInput && invoiceForm && documentNumberInput.dataset.initialized !== 'true') {
+        documentNumberInput.dataset.initialized = 'true';
+        generateInvoiceNumber();
     }
 
     if (invoiceForm && saveInvoiceButton && invoiceForm.dataset.saveInitialized !== 'true') {
         invoiceForm.dataset.saveInitialized = 'true';
+        document.addEventListener('invoice:new', () => {
+            invoiceForm.reset();
+            invoiceSaveStatus.textContent = '';
+            saveInvoiceButton.textContent = 'Salva fattura';
+            saveInvoiceButton.disabled = false;
+            dueDate.min = documentDate.value;
+            documentNumberInput.removeAttribute('aria-invalid');
+            generateInvoiceNumber();
+        });
         invoiceForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             saveInvoiceButton.disabled = true;
@@ -68,6 +242,9 @@ const initializeFatturazione = () => {
 
                 invoiceSaveStatus.textContent = `Fattura salvata. XML: ${data.xml_file}`;
                 saveInvoiceButton.textContent = 'Fattura salvata';
+                const browseButton = document.querySelector('[data-invoice-action="browse"]');
+                if (browseButton) browseButton.dataset.refreshInvoices = 'true';
+                document.dispatchEvent(new Event('invoice:saved'));
             } catch (error) {
                 invoiceSaveStatus.textContent = error.message || 'Errore durante il salvataggio della fattura';
                 saveInvoiceButton.disabled = false;
@@ -240,6 +417,14 @@ const initializeFatturazione = () => {
         updateIva();
         updateSummary();
         updateBeniVisibility();
+        document.addEventListener('invoice:new', () => {
+            const rows = [...beniForm.querySelectorAll('[data-beni-row]')];
+            rows.slice(1).forEach((row) => row.remove());
+            if (rows[0]) rows[0].dataset.vatSummaryId = 'item-1';
+            nextBeniRowId = 2;
+            summaryList.replaceChildren();
+            updateIva();
+        });
     }
 
     if (countrySelect && countrySelect.dataset.initialized !== 'true') {
@@ -254,7 +439,11 @@ const initializeFatturazione = () => {
             .then((countries) => {
                 countrySelect.replaceChildren(new Option('Seleziona uno Stato', '', selectedCountry === '', selectedCountry === ''));
                 countries.forEach((country) => countrySelect.append(new Option(country.name, country.code)));
-                countrySelect.value = selectedCountry;
+                const savedCountry = countries.find((country) =>
+                    country.code.toLowerCase() === selectedCountry.trim().toLowerCase()
+                    || country.name.toLowerCase() === selectedCountry.trim().toLowerCase()
+                );
+                countrySelect.value = savedCountry?.code || '';
                 countrySelect.disabled = false;
             })
             .catch((error) => {
@@ -363,6 +552,7 @@ const initializeFatturazione = () => {
 
     const populateClients = (clientList) => {
         clientSelect.replaceChildren(new Option('Seleziona un cliente', ''));
+        clients.clear();
         clientList.forEach((client) => {
             const name = client.client_type === 'company'
                 ? client.company_name
@@ -394,7 +584,7 @@ const initializeFatturazione = () => {
             });
     };
 
-    fetch(clientsUrl, { credentials: 'same-origin' })
+    const loadClients = () => fetch(clientsUrl, { credentials: 'same-origin' })
         .then((response) => response.json())
         .then((data) => {
             if (!data.success) throw new Error(data.message || 'Impossibile caricare i clienti');
@@ -404,6 +594,22 @@ const initializeFatturazione = () => {
             console.error(error);
             clientSelect.replaceChildren(new Option('Nessun cliente disponibile', ''));
         });
+
+    loadClients();
+    document.addEventListener('invoice:new', () => {
+        const profileCompletion = document.getElementById('profile-completion');
+        const needsProfile = Boolean(profileCompletion && profileForm?.dataset.completed !== 'true');
+        if (profileCompletion) profileCompletion.hidden = !needsProfile;
+        clientCompletion.hidden = needsProfile;
+        billingForm.hidden = true;
+        clientSelect.value = '';
+        useClientButton.disabled = true;
+        modeButton('edit').disabled = true;
+        fillClientForm(null);
+        setMode('select');
+        clientSelect.replaceChildren(new Option('Caricamento clienti...', ''));
+        loadClients();
+    });
 
     clientSelect.addEventListener('change', () => {
         const hasClient = clientSelect.value !== '';
@@ -453,10 +659,32 @@ const initializeFatturazione = () => {
 
     if (profileForm && profileForm.dataset.initialized !== 'true') {
         profileForm.dataset.initialized = 'true';
-        profileForm.addEventListener('submit', (event) => {
+        profileForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            document.getElementById('profile-completion').hidden = true;
-            clientCompletion.hidden = false;
+            const submitButton = profileForm.querySelector('[type="submit"]');
+            const status = document.getElementById('profile-completion-status');
+            submitButton.disabled = true;
+            status.textContent = 'Salvataggio profilo...';
+
+            try {
+                const response = await fetch('/auth/process-profile.php', {
+                    method: 'POST',
+                    body: new FormData(profileForm),
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Impossibile salvare il profilo');
+                }
+
+                profileForm.dataset.completed = 'true';
+                document.getElementById('profile-completion').hidden = true;
+                clientCompletion.hidden = false;
+            } catch (error) {
+                status.textContent = error.message || 'Errore durante il salvataggio del profilo';
+                submitButton.disabled = false;
+            }
         });
     }
 };
