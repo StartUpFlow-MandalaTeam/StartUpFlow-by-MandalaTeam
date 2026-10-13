@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS clients (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE invoices (
+CREATE TABLE IF NOT EXISTS invoices (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     client_id INT UNSIGNED NOT NULL,
     user_id INT UNSIGNED NOT NULL,
@@ -181,3 +181,4 @@ CREATE TABLE invoices (
         FOREIGN KEY (user_id)
         REFERENCES users(id)
 );
+
