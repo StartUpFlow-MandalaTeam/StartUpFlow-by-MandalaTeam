@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';            // fornisce $pdo
-require_once __DIR__ . '/includes/nota-spese-logic.php';
+//require_once __DIR__ . '/includes/nota-spese-logic.php';
 
 if (!isLoggedIn()) {
     header('Location: /auth/register.php');
