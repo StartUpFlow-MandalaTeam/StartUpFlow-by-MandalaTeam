@@ -81,7 +81,7 @@ if ($statusMessage !== '') {
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </head>
-    <body>
+    <body class="auth-page">
         <div class="container">
             <!-- Result banner: shows success or error messages to the user -->
             <div id="result" class="result-message <?php echo $statusClass; ?>" role="alert" aria-live="polite" aria-hidden="<?php echo $statusMessage !== '' ? 'false' : 'true'; ?>">
@@ -100,6 +100,9 @@ if ($statusMessage !== '') {
                         <i class='bx bxs-lock-alt' ></i>
                         <input type="password" name="Password" id="login-password" placeholder=" ">
                         <label for="login-password">Password</label>
+                        <button type="button" class="password-toggle" data-password-toggle="login-password" aria-label="Mostra password" aria-pressed="false">
+                            <i class="bx bx-show" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="button">
                         <input type="submit" class="btn" value="Sign in">
