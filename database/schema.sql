@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS users_profiles (
     FOREIGN KEY (user_id)
     REFERENCES users(id)
     ON DELETE CASCADE
-);
+); ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS clients (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -180,5 +180,5 @@ CREATE TABLE IF NOT EXISTS invoices (
     CONSTRAINT fk_invoices_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-);
+); ENGINE=InnoDB;
 
