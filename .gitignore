@@ -33,6 +33,11 @@ storage/*.log
 .vscode/
 .idea/
 
+# Invoices
+storage/invoices/*.xml
+storage/contracts/*.pdf
+storage/contracts/*.docx
+
 # macOS
 .DS_Store
 
