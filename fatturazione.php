@@ -229,7 +229,7 @@ $username = $_SESSION['username'] ?? 'Utente';
 
         <div class="form-fatturazione" id="billing-form" hidden>
             <strong>Modulo Fatturazione Pro-Forma</strong>
-            <form id="invoice-form" method="post" action="/auth/process-invoice.php">
+            <form id="invoice-form" method="post" action="/invoice/process-invoice.php">
                 <?php echo csrfInput(); ?>
                 <div class="dati-fattura">
                     <label for="regime-fiscale">Regime Fiscale valido per la fattura che si sta generando:</label>
