@@ -115,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/auth/login.php';
+                    return;
+                }
                 throw new Error('Pagina non trovata: ' + response.status);
             }
 
@@ -149,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = e.target;
         const action = form.getAttribute('action');
         if (!action) return;
+        if (action.includes('process-logout') || action.startsWith('/auth/')) return;
 
         e.preventDefault();
 

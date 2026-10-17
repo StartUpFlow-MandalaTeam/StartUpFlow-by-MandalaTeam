@@ -5,7 +5,11 @@ require_once __DIR__ . '/includes/auth.php';
 
 // Se non è autenticato, reindirizza
 if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        http_response_code(401);
+        exit;
+    }
+    header('Location: /auth/login.php');
     exit;
 }
 
