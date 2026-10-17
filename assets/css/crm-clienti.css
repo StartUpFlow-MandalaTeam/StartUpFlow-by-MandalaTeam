@@ -1,0 +1,42 @@
+body.dashboard-page {
+    background: #d6a800;
+}
+
+.service-page {
+    background: #ffffff;
+    min-height: calc(100vh - 168px);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.service-page header {
+    margin-bottom: 2rem;
+}
+
+.service-page .service-content {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+/* Stile per il link di ritorno alla dashboard */
+.back-link { 
+    display: inline-block; 
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem; 
+    background-color: #167c80; 
+    border: none;
+    color: #fff; 
+    text-decoration: none; 
+    font-size: 0.9rem; 
+    font-weight: 500; 
+    border-radius: 4px; 
+    
+    transition: all 0.2s;
+}
+    
+.back-link:hover { 
+    background: #0f5f63;
+}

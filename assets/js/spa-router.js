@@ -92,7 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funzione per caricare una pagina
     async function loadPage(path) {
-        const route = routes[path];
+        const urlObj = new URL(path, window.location.origin);
+        let routePath = urlObj.pathname;
+        if (routePath.endsWith('.php')) {
+            routePath = routePath.replace('.php', '');
+        }
+        const route = routes[routePath] || routes[urlObj.pathname] || routes[path];
         if (!route) {
             showDashboard();
             return;
@@ -101,7 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             dynamicContent.innerHTML = '<div class="loading-spinner">Caricamento...</div>';
 
-            const response = await fetch(route.file, {
+            const fetchUrl = route.file + urlObj.search;
+            const response = await fetch(fetchUrl, {
+                credentials: 'include',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -137,10 +144,71 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPage(path);
     });
 
+    // Gestione delle sottomissioni di form SPA
+    document.addEventListener('submit', async (e) => {
+        const form = e.target;
+        const action = form.getAttribute('action');
+        if (!action) return;
+
+        e.preventDefault();
+
+        try {
+            dynamicContent.innerHTML = '<div class="loading-spinner">Caricamento...</div>';
+
+            const formData = new FormData(form);
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            let fetchUrl = action;
+
+            const fetchOptions = {
+                method: method,
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+
+            if (method === 'POST') {
+                fetchOptions.body = formData;
+            } else {
+                const params = new URLSearchParams(formData);
+                fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + params.toString();
+            }
+
+            const response = await fetch(fetchUrl, fetchOptions);
+            if (!response.ok) {
+                throw new Error('Errore nella richiesta: ' + response.status);
+            }
+
+            let targetUrl = '/crm-clienti';
+            if (fetchUrl.includes('action=store') || fetchUrl.includes('action=update') || fetchUrl.includes('action=update_status')) {
+                targetUrl = '/crm-clienti';
+            } else if (formData.has('client_id')) {
+                targetUrl = `/crm-clienti?action=show&id=${formData.get('client_id')}`;
+            } else if (fetchUrl.includes('id=')) {
+                const urlParams = new URLSearchParams(fetchUrl.split('?')[1]);
+                const clientId = urlParams.get('id');
+                if (clientId) {
+                    targetUrl = `/crm-clienti?action=show&id=${clientId}`;
+                }
+            }
+            loadPage(targetUrl);
+        } catch (error) {
+            console.error('Errore form:', error);
+            dynamicContent.innerHTML = `
+                <div class="error-container">
+                    <h2>Errore</h2>
+                    <p>${error.message}</p>
+                    <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
+                </div>
+            `;
+        }
+    });
+
     // Gestione del pulsante back/forward
     window.addEventListener('popstate', (e) => {
-        const path = window.location.pathname;
-        if (routes[path]) {
+        const path = window.location.pathname + window.location.search;
+        const urlObj = new URL(path, window.location.origin);
+        if (routes[urlObj.pathname]) {
             loadPage(path);
         } else {
             showDashboard();
@@ -148,10 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Carica la pagina iniziale
+    const currentPath = window.location.pathname + window.location.search;
+    const initialUrlObj = new URL(currentPath, window.location.origin);
     if (window.location.pathname === '/') {
         showDashboard();
-    } else if (routes[window.location.pathname]) {
-        loadPage(window.location.pathname);
+    } else if (routes[initialUrlObj.pathname]) {
+        loadPage(currentPath);
     } else {
         showDashboard();
     }
