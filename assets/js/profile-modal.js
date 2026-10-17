@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('profile-modal');
     const closeTrigger = document.querySelector('[data-profile-modal-close]');
     const countrySelect = document.querySelector('[data-countries-select]');
+    const profileForm = document.getElementById('profile-form');
+    const profileSave = profileForm ? profileForm.querySelector('.profile-modal__save') : null;
     const countriesUrl = 'assets/data/countries.json';
 
     let countriesCache = null;
@@ -119,6 +121,49 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.addEventListener('close', () => {
         syncExpandedState(false);
     });
+
+    const updateAvatarImages = (avatarUrl) => {
+        document.querySelectorAll('[data-profile-avatar]').forEach((avatar) => {
+            avatar.replaceChildren();
+
+            if (avatarUrl) {
+                const image = document.createElement('img');
+                image.src = avatarUrl;
+                image.alt = '';
+                avatar.append(image);
+                return;
+            }
+
+            const placeholder = document.createElement('span');
+            placeholder.className = 'material-symbols-outlined';
+            placeholder.textContent = 'person';
+            avatar.append(placeholder);
+        });
+    };
+
+    if (profileForm && profileSave) {
+        profileSave.addEventListener('click', () => profileForm.requestSubmit());
+        profileForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            fetch('/auth/process-avatar.php', {
+                method: 'POST',
+                body: new FormData(profileForm),
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    alert(data.message || 'Operazione completata');
+                    if (data.success) {
+                        updateAvatarImages(data.avatar_url);
+                        profileForm.reset();
+                        closeModal();
+                    }
+                })
+                .catch(() => alert('Errore durante il caricamento dell’immagine'));
+        });
+    }
 
     // --- Change Email modal handling (top-level dialog) ---
     const changeEmailModal = document.getElementById('change-email-modal');
