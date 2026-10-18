@@ -29,7 +29,7 @@ if (!$document) {
     exit('Documento non trovato.');
 }
 
-$expectedPrefix = 'storage/contracts/' . $userId . '/' . (int) $document['client_id'] . '/';
+$expectedPrefix = 'storage/contracts/' . $userId . '/';
 if (!str_starts_with((string) $document['file_path'], $expectedPrefix)) {
     http_response_code(404);
     exit('Documento non trovato.');

@@ -3,7 +3,13 @@
     --zc-muted: #64748b;
     --zc-border: #dbe2ea;
     --zc-accent: #2457c5;
+    width: 100%;
     color: var(--zc-ink);
+}
+
+.zero-carta .service-header {
+    align-self: flex-start;
+    text-align: left;
 }
 
 .zero-carta [hidden] {
@@ -32,7 +38,8 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    width: min(100%, 760px);
+    margin: 1.5rem auto;
 }
 
 .zero-carta__card {
@@ -78,18 +85,39 @@
 }
 
 .zero-carta__back {
-    margin-bottom: 1rem;
-    padding: .5rem 0;
-    border: 0;
-    background: none;
-    color: var(--zc-accent);
+    display: grid;
+    width: 54px;
+    height: 54px;
+    margin: 0 0 1rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 11px;
+    background: #fff;
+    color: #171717;
     font: inherit;
-    font-weight: 600;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1;
     cursor: pointer;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    transition: background .2s, box-shadow .2s;
 }
 
-.zero-carta__back:hover {
-    text-decoration: underline;
+.zero-carta__back:hover,
+.zero-carta__back:focus-visible {
+    background: #f8fafc;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 12%);
+}
+
+.zero-carta__back svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
 }
 
 .zero-carta__panel h2 {

@@ -107,9 +107,9 @@ if ($safeStem === '') {
 }
 $safeName = $safeStem . '.' . $extension;
 $fileName = date('Ymd-His') . '-' . bin2hex(random_bytes(8)) . '-' . $safeName;
-$relativePath = 'storage/contracts/' . $userId . '/' . $clientId . '/' . $fileName;
+$relativePath = 'storage/contracts/' . $userId . '/' . $fileName;
 $projectRoot = dirname(__DIR__);
-$destinationDirectory = $projectRoot . '/storage/contracts/' . $userId . '/' . $clientId;
+$destinationDirectory = $projectRoot . '/storage/contracts/' . $userId;
 if (!is_dir($destinationDirectory) && !mkdir($destinationDirectory, 0750, true) && !is_dir($destinationDirectory)) {
     error_log('Zero Carta upload: unable to create the contract storage directory.');
     zeroCartaUploadResponse(500, ['success' => false, 'message' => 'Impossibile preparare l’archivio dei documenti.']);

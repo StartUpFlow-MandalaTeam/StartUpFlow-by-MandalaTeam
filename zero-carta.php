@@ -57,11 +57,13 @@ $storageRoot = realpath(__DIR__ . '/storage/contracts');
 
         <section class="zero-carta__panel" id="zero-carta-panel-archive" role="tabpanel"
             aria-labelledby="zero-carta-tab-archive" data-zero-carta-panel="archive" hidden>
-            <button class="zero-carta__back" type="button" data-zero-carta-back aria-label="Torna alla scelta">← Indietro</button>
+            <button class="zero-carta__back" type="button" data-zero-carta-back aria-label="Torna alla scelta">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m0 0 7-7m-7 7 7 7"></path></svg>
+            </button>
             <?php
             $visibleDocuments = [];
             foreach ($documents as $document) {
-                $expectedPrefix = 'storage/contracts/' . $userId . '/' . (int) $document['client_id'] . '/';
+                $expectedPrefix = 'storage/contracts/' . $userId . '/';
                 if (!str_starts_with((string) $document['file_path'], $expectedPrefix) || $storageRoot === false) {
                     continue;
                 }
@@ -146,7 +148,9 @@ $storageRoot = realpath(__DIR__ . '/storage/contracts');
 
         <section class="zero-carta__panel" id="zero-carta-panel-upload" role="tabpanel"
             aria-labelledby="zero-carta-tab-upload" data-zero-carta-panel="upload" data-zero-carta-upload-panel hidden>
-            <button class="zero-carta__back" type="button" data-zero-carta-back aria-label="Torna alla scelta">← Indietro</button>
+            <button class="zero-carta__back" type="button" data-zero-carta-back aria-label="Torna alla scelta">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m0 0 7-7m-7 7 7 7"></path></svg>
+            </button>
             <div class="zero-carta__upload-content">
                 <h2>Carica un documento</h2>
                 <p class="zero-carta__intro">Scegli il tipo di documento e il cliente a cui associarlo.</p>
