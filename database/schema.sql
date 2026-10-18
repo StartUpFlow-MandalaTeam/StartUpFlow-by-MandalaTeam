@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     CONSTRAINT fk_invoices_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-); ENGINE=InnoDB;
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS documents (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
