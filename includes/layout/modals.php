@@ -156,17 +156,6 @@
 						<option value="GBP">GBP</option>
 					</select>
 				</label>
-				<label class="profile-modal__field">
-					<span>Scadenza</span>
-					<input type="date" name="due_date" class="form-control">
-				</label>
-				<label class="profile-modal__field">
-					<span>Regime fiscale</span>
-					<select name="tax_regime" class="form-control">
-						<option value="forfettario">Forfettario</option>
-						<option value="ordinario">Ordinario</option>
-					</select>
-				</label>
 			</div>
 
 			<input type="hidden" name="client_id" id="order_client_id" value="">

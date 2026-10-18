@@ -17,7 +17,11 @@ if (!$isAjax) {
     exit;
 }
 global $pdo;
-$userId = currentUserId() ?? 1;
+$userId = currentUserId();
+if ($userId === null) {
+    http_response_code(401);
+    exit;
+}
 $username = $_SESSION['username'] ?? 'Utente';
 
 $additionalCss = '<link rel="stylesheet" href="/assets/css/crm-clienti.css">';
@@ -26,16 +30,122 @@ echo $additionalCss;
 // Database connection
 $db = $pdo;
 
+// Helpers: errori, CSRF, accesso al cliente
+function abortWith(int $status, string $message): void {
+    http_response_code($status);
+    echo '<div class="service-page"><p>' . htmlspecialchars($message) . '</p></div>';
+    exit;
+}
+
+function requireWritePost(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        abortWith(405, 'Metodo non consentito');
+    }
+    if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
+        abortWith(403, 'Richiesta non autorizzata');
+    }
+}
+
+function requireClient(PDO $db, int $clientId, int $userId) {
+    $client = Client::find($db, $clientId, $userId);
+    if (!$client) {
+        abortWith(404, 'Cliente non trovato');
+    }
+    return $client;
+}
+
+// Esegue $fn in transazione; se una transazione è già aperta la riusa.
+function dbTransaction(PDO $db, callable $fn) {
+    if ($db->inTransaction()) {
+        return $fn();
+    }
+    $db->beginTransaction();
+    try {
+        $result = $fn();
+        $db->commit();
+        return $result;
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+}
+
+// UNICO punto del codice che scrive crm_status, converted_at e lost_reason.
+class ClientService {
+    // Passaggi manuali ammessi. 'customer' non è mai raggiungibile a mano:
+    // ci si arriva solo con markAsCustomer(), alla conferma di un ordine.
+    private const MANUAL_TRANSITIONS = [
+        'lead'     => ['prospect', 'lost'],
+        'prospect' => ['lead', 'lost'],
+        'lost'     => ['lead', 'prospect'],
+    ];
+
+    // Promozione a customer. Idempotente: se il cliente è già customer non tocca nulla.
+    public static function markAsCustomer(PDO $db, int $clientId, int $userId, int $orderId, string $orderNumber): bool {
+        return dbTransaction($db, function () use ($db, $clientId, $userId, $orderId, $orderNumber): bool {
+            $oldStatus = self::lockStatus($db, $clientId, $userId);
+            if (!in_array($oldStatus, ['lead', 'prospect', 'lost'], true)) {
+                return false;
+            }
+            $upd = $db->prepare("UPDATE clients SET crm_status = 'customer', converted_at = NOW(), lost_reason = NULL WHERE id = ? AND user_id = ?");
+            $upd->execute([$clientId, $userId]);
+            self::logChange($db, $clientId, $userId, $orderId, 'Promosso a customer', 'Da ' . $oldStatus . ' a customer (ordine ' . $orderNumber . ')');
+            return true;
+        });
+    }
+
+    // Cambio di stato manuale (mai verso o da 'customer').
+    public static function changeStatus(PDO $db, int $clientId, int $userId, string $newStatus, ?string $lostReason = null): void {
+        dbTransaction($db, function () use ($db, $clientId, $userId, $newStatus, $lostReason): void {
+            $oldStatus = self::lockStatus($db, $clientId, $userId);
+            if ($oldStatus === $newStatus) {
+                return;
+            }
+            if (!in_array($newStatus, self::MANUAL_TRANSITIONS[$oldStatus] ?? [], true)) {
+                throw new DomainException('Passaggio di stato non consentito: ' . $oldStatus . ' → ' . $newStatus);
+            }
+            $reason = null;
+            if ($newStatus === 'lost') {
+                $reason = trim((string) $lostReason);
+                if ($reason === '' || strlen($reason) > 255) {
+                    throw new DomainException('Indica il motivo della perdita (massimo 255 caratteri).');
+                }
+            }
+            $upd = $db->prepare('UPDATE clients SET crm_status = ?, lost_reason = ? WHERE id = ? AND user_id = ?');
+            $upd->execute([$newStatus, $reason, $clientId, $userId]);
+            self::logChange($db, $clientId, $userId, null, 'Cambio stato', 'Da ' . $oldStatus . ' a ' . $newStatus . ($reason !== null ? ' (motivo: ' . $reason . ')' : ''));
+        });
+    }
+
+    private static function lockStatus(PDO $db, int $clientId, int $userId): string {
+        $sel = $db->prepare('SELECT crm_status FROM clients WHERE id = ? AND user_id = ? FOR UPDATE');
+        $sel->execute([$clientId, $userId]);
+        $status = $sel->fetchColumn();
+        if ($status === false) {
+            throw new DomainException('Cliente non trovato');
+        }
+        return (string) $status;
+    }
+
+    private static function logChange(PDO $db, int $clientId, int $userId, ?int $orderId, string $subject, string $body): void {
+        $stmt = $db->prepare("INSERT INTO crm_activities (client_id, order_id, user_id, type, subject, body, occurred_at) VALUES (?, ?, ?, 'status_change', ?, ?, NOW())");
+        $stmt->execute([$clientId, $orderId, $userId, $subject, $body]);
+    }
+}
+
 // Models
 class Client {
-    public static function all($db) {
-        $stmt = $db->query('SELECT * FROM clients');
+    public static function all($db, int $userId) {
+        $stmt = $db->prepare('SELECT * FROM clients WHERE user_id = ?');
+        $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
-    public static function find($db, $id) {
-        $stmt = $db->prepare('SELECT * FROM clients WHERE id = ?');
-        $stmt->execute([$id]);
+    public static function find($db, int $id, int $userId) {
+        $stmt = $db->prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?');
+        $stmt->execute([$id, $userId]);
         return $stmt->fetch(PDO::FETCH_OBJ);
     }
 
@@ -46,26 +156,25 @@ class Client {
                 $data[$field] = null;
             }
         }
-        $data['crm_status'] = $data['crm_status'] ?? 'lead';
         $data['client_type'] = $data['client_type'] ?? 'individual';
 
         if (isset($data['id']) && !empty($data['id'])) {
-            $stmt = $db->prepare('UPDATE clients SET user_id = ?, client_type = ?, company_name = ?, first_name = ?, last_name = ?, vat_number = ?, cf = ?, address = ?, city = ?, state = ?, postal_code = ?, country = ?, email = ?, phone = ?, pec = ?, sdi_code = ?, crm_status = ?, source = ?, notes = ? WHERE id = ?');
+            $stmt = $db->prepare('UPDATE clients SET client_type = ?, company_name = ?, first_name = ?, last_name = ?, vat_number = ?, cf = ?, address = ?, city = ?, state = ?, postal_code = ?, country = ?, email = ?, phone = ?, pec = ?, sdi_code = ?, source = ?, notes = ? WHERE id = ? AND user_id = ?');
             $stmt->execute([
-                $data['user_id'], $data['client_type'], $data['company_name'] ?? null, $data['first_name'] ?? null, 
+                $data['client_type'], $data['company_name'] ?? null, $data['first_name'] ?? null, 
                 $data['last_name'] ?? null, $data['vat_number'] ?? null, $data['cf'] ?? null, $data['address'] ?? null, 
                 $data['city'] ?? null, $data['state'] ?? null, $data['postal_code'] ?? null, $data['country'] ?? null, 
                 $data['email'] ?? null, $data['phone'] ?? null, $data['pec'] ?? null, $data['sdi_code'] ?? null, 
-                $data['crm_status'], $data['source'] ?? null, $data['notes'] ?? null, $data['id']
+                $data['source'] ?? null, $data['notes'] ?? null, $data['id'], $data['user_id']
             ]);
         } else {
-            $stmt = $db->prepare('INSERT INTO clients (user_id, client_type, company_name, first_name, last_name, vat_number, cf, address, city, state, postal_code, country, email, phone, pec, sdi_code, crm_status, source, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $db->prepare('INSERT INTO clients (user_id, client_type, company_name, first_name, last_name, vat_number, cf, address, city, state, postal_code, country, email, phone, pec, sdi_code, source, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([
                 $data['user_id'], $data['client_type'], $data['company_name'] ?? null, $data['first_name'] ?? null, 
                 $data['last_name'] ?? null, $data['vat_number'] ?? null, $data['cf'] ?? null, $data['address'] ?? null, 
                 $data['city'] ?? null, $data['state'] ?? null, $data['postal_code'] ?? null, $data['country'] ?? null, 
                 $data['email'] ?? null, $data['phone'] ?? null, $data['pec'] ?? null, $data['sdi_code'] ?? null, 
-                $data['crm_status'], $data['source'] ?? null, $data['notes'] ?? null
+                $data['source'] ?? null, $data['notes'] ?? null
             ]);
         }
     }
@@ -98,56 +207,67 @@ class Activity {
 }
 
 class Order {
-    public static function where($db, $client_id) {
-        $stmt = $db->prepare('SELECT * FROM orders WHERE client_id = ? ORDER BY created_at DESC');
-        $stmt->execute([$client_id]);
+    public static function where($db, $client_id, int $userId) {
+        $stmt = $db->prepare('SELECT * FROM orders WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC');
+        $stmt->execute([$client_id, $userId]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
-    public static function save($db, $data) {
-        $orderNumber = trim($data['order_number'] ?? '') !== '' ? $data['order_number'] : 'ORD-' . time();
-        $total = isset($data['total']) && is_numeric($data['total']) ? (float)$data['total'] : 0.00;
-        $currency = $data['currency'] ?? 'EUR';
+    // Crea l'ordine (già confermato) e promuove il cliente, tutto in un'unica transazione:
+    // o passano ordine + promozione + riga di storico, o non passa niente.
+    public static function save($db, $data): int {
+        $userId = (int) $data['user_id'];
+        $clientId = (int) $data['client_id'];
+
+        $orderNumber = trim((string) ($data['order_number'] ?? ''));
+        if ($orderNumber === '') {
+            $orderNumber = 'ORD-' . date('YmdHis') . '-' . strtoupper(bin2hex(random_bytes(2)));
+        }
+        if (strlen($orderNumber) > 50) {
+            throw new DomainException('Il numero ordine supera i 50 caratteri.');
+        }
+        $total = isset($data['total']) && is_numeric($data['total']) ? round((float) $data['total'], 2) : 0.00;
+        if ($total < 0 || $total > 99999999.99) {
+            throw new DomainException('Totale non valido.');
+        }
+        $currency = in_array($data['currency'] ?? 'EUR', ['EUR', 'USD', 'GBP'], true) ? $data['currency'] : 'EUR';
         $dueDate = !empty($data['due_date']) ? $data['due_date'] : null;
         $taxRegime = $data['tax_regime'] ?? 'ordinario';
-        $userId = $data['user_id'];
-        $clientId = $data['client_id'];
 
         $notes = "Regime: {$taxRegime}" . ($dueDate ? ", Scadenza: {$dueDate}" : "");
 
-        $orderId = null;
-        if (isset($data['id']) && !empty($data['id'])) {
-            $stmt = $db->prepare('UPDATE orders SET user_id = ?, client_id = ?, order_number = ?, total = ?, currency = ?, status = ?, notes = ? WHERE id = ?');
-            $stmt->execute([
-                $userId, $clientId, $orderNumber, $total, $currency, 'confirmed', $notes, $data['id']
-            ]);
-            $orderId = $data['id'];
-        } else {
-            $stmt = $db->prepare('INSERT INTO orders (user_id, client_id, order_number, total, currency, status, payment_status, notes, confirmed_at) VALUES (?, ?, ?, ?, ?, \'confirmed\', \'unpaid\', ?, NOW())');
-            $stmt->execute([
-                $userId, $clientId, $orderNumber, $total, $currency, $notes
-            ]);
-            $orderId = $db->lastInsertId();
-        }
+        try {
+            return dbTransaction($db, function () use ($db, $data, $userId, $clientId, $orderNumber, $total, $currency, $notes): int {
+                if (!empty($data['id'])) {
+                    // Modifica: solo bozze. Non cambia stato né confirmed_at e non promuove il cliente.
+                    $orderId = (int) $data['id'];
+                    $cur = $db->prepare('SELECT status FROM orders WHERE id = ? AND user_id = ? AND client_id = ? FOR UPDATE');
+                    $cur->execute([$orderId, $userId, $clientId]);
+                    $status = $cur->fetchColumn();
+                    if ($status === false) {
+                        throw new DomainException('Ordine non trovato.');
+                    }
+                    if ($status !== 'draft') {
+                        throw new DomainException('Solo le bozze sono modificabili.');
+                    }
+                    $stmt = $db->prepare('UPDATE orders SET order_number = ?, total = ?, currency = ?, notes = ? WHERE id = ? AND user_id = ?');
+                    $stmt->execute([$orderNumber, $total, $currency, $notes, $orderId, $userId]);
+                    return $orderId;
+                }
 
-        // Promuovi il cliente a customer se non lo è già e logga l'attività
-        $clientStmt = $db->prepare('SELECT crm_status FROM clients WHERE id = ?');
-        $clientStmt->execute([$clientId]);
-        $clientObj = $clientStmt->fetch(PDO::FETCH_OBJ);
+                $stmt = $db->prepare('INSERT INTO orders (user_id, client_id, order_number, total, currency, status, payment_status, notes, confirmed_at) VALUES (?, ?, ?, ?, ?, \'confirmed\', \'unpaid\', ?, NOW())');
+                $stmt->execute([$userId, $clientId, $orderNumber, $total, $currency, $notes]);
+                $orderId = (int) $db->lastInsertId();
 
-        if ($clientObj && in_array($clientObj->crm_status, ['lead', 'prospect', 'lost'])) {
-            $oldStatus = $clientObj->crm_status;
-            $upd = $db->prepare('UPDATE clients SET crm_status = \'customer\', converted_at = NOW(), lost_reason = NULL WHERE id = ? AND crm_status IN (\'lead\',\'prospect\',\'lost\')');
-            $upd->execute([$clientId]);
-            if ($upd->rowCount() > 0) {
-                $actStmt = $db->prepare('INSERT INTO crm_activities (client_id, order_id, user_id, type, subject, body, occurred_at) VALUES (?, ?, ?, \'status_change\', \'Promosso a customer\', ?, NOW())');
-                $actStmt->execute([
-                    $clientId,
-                    $orderId,
-                    $userId,
-                    'Da ' . $oldStatus . ' a customer (ordine ' . $orderNumber . ')'
-                ]);
+                // Promozione: unico punto di scrittura dello stato = ClientService
+                ClientService::markAsCustomer($db, $clientId, $userId, $orderId, $orderNumber);
+                return $orderId;
+            });
+        } catch (PDOException $e) {
+            if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
+                throw new DomainException('Esiste già un ordine con questo numero.');
             }
+            throw $e;
         }
     }
 }
@@ -164,6 +284,8 @@ function renderIndex($clients) {
             <span class="status-pill status-prospect" onclick="showStatusPopup(\'Prospect\', \'Cliente potenziale qualificato con cui è attiva una trattativa commerciale.\')">Prospect</span>
             <span class="status-pill status-customer" onclick="showStatusPopup(\'Customer\', \'Cliente acquisito ed effettivo, la cui conversione avviene alla conferma di un ordine.\')">Customer</span>
             <span class="status-pill status-lost" onclick="showStatusPopup(\'Lost\', \'Trattativa persa o potenziale cliente che ha rifiutato ogni offerta o interrotto i contatti.\')">Lost</span>
+        </div>
+    </header>
     <div class="service-content">
         <a href="crm-clienti.php?action=create" class="btn btn-primary" data-spa="true">Aggiungi Cliente</a>
         
@@ -226,6 +348,7 @@ function renderCreate() {
     </header>
     <div class="service-content">
         <form action="crm-clienti.php?action=store" method="POST">
+            ' . csrfInput() . '
             <div class="form-group">
                 <label>Tipo Cliente:</label>
                 <select name="client_type" class="form-control">
@@ -290,15 +413,6 @@ function renderCreate() {
                 <input type="text" name="sdi_code" class="form-control">
             </div>
             <div class="form-group">
-                <label>Stato CRM:</label>
-                <select name="crm_status" class="form-control">
-                    <option value="lead">Lead</option>
-                    <option value="prospect">Prospect</option>
-                    <option value="customer">Customer</option>
-                    <option value="lost">Lost</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label>Fonte:</label>
                 <input type="text" name="source" class="form-control">
             </div>
@@ -321,6 +435,7 @@ function renderEdit($client) {
     </header>
     <div class="service-content">
         <form action="crm-clienti.php?action=update&id=' . $client->id . '" method="POST">
+            ' . csrfInput() . '
             <div class="form-group">
                 <label>Tipo Cliente:</label>
                 <select name="client_type" class="form-control">
@@ -386,12 +501,7 @@ function renderEdit($client) {
             </div>
             <div class="form-group">
                 <label>Stato CRM:</label>
-                <select name="crm_status" class="form-control">
-                    <option value="lead" ' . ($client->crm_status === 'lead' ? 'selected' : '') . '>Lead</option>
-                    <option value="prospect" ' . ($client->crm_status === 'prospect' ? 'selected' : '') . '>Prospect</option>
-                    <option value="customer" ' . ($client->crm_status === 'customer' ? 'selected' : '') . '>Customer</option>
-                    <option value="lost" ' . ($client->crm_status === 'lost' ? 'selected' : '') . '>Lost</option>
-                </select>
+                <p>' . htmlspecialchars($client->crm_status ?? '') . ' <small>(si modifica dalla scheda cliente)</small></p>
             </div>
             <div class="form-group">
                 <label>Fonte:</label>
@@ -535,24 +645,16 @@ function renderShow($client, $contacts, $activities, $orders) {
                         <th>N. Ordine</th>
                         <th>Totale</th>
                         <th>Valuta</th>
-                        <th>Scadenza</th>
                         <th>Stato</th>
                         <th>Pagamento</th>
                     </tr>
                 </thead>
                 <tbody>';
     foreach ($orders as $order) {
-        $notes = $order->notes ?? '';
-        $dueDateFormatted = '';
-        if (preg_match('/Scadenza:\s*([^\,]+)/', $notes, $m)) {
-            $rawDate = trim($m[1]);
-            $dueDateFormatted = !empty($rawDate) ? date('d-m-Y', strtotime($rawDate)) : '';
-        }
         echo '<tr>
             <td data-label="N. Ordine">' . htmlspecialchars($order->order_number ?? '') . '</td>
             <td data-label="Totale">' . htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.')) . '</td>
             <td data-label="Valuta">' . htmlspecialchars($order->currency ?? 'EUR') . '</td>
-            <td data-label="Scadenza">' . htmlspecialchars($dueDateFormatted) . '</td>
             <td data-label="Stato">' . htmlspecialchars($order->status ?? '') . '</td>
             <td data-label="Pagamento">' . htmlspecialchars($order->payment_status ?? '') . '</td>
         </tr>';
@@ -564,12 +666,6 @@ function renderShow($client, $contacts, $activities, $orders) {
 
         <div class="mobile-cards-view">';
     foreach ($orders as $order) {
-        $notes = $order->notes ?? '';
-        $oDueDate = '';
-        if (preg_match('/Scadenza:\s*([^\,]+)/', $notes, $m)) {
-            $rawDate = trim($m[1]);
-            $oDueDate = !empty($rawDate) ? htmlspecialchars(date('d-m-Y', strtotime($rawDate))) : '';
-        }
         $oNumber = htmlspecialchars($order->order_number ?? '');
         $oTotal = htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.'));
         $oCurrency = htmlspecialchars($order->currency ?? 'EUR');
@@ -578,28 +674,36 @@ function renderShow($client, $contacts, $activities, $orders) {
         echo '<div class="mobile-card">
             <div class="mobile-card-row"><span class="mobile-card-label">N. Ordine:</span><span class="mobile-card-value">' . $oNumber . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Totale:</span><span class="mobile-card-value">' . $oTotal . ' ' . $oCurrency . '</span></div>
-            <div class="mobile-card-row"><span class="mobile-card-label">Scadenza:</span><span class="mobile-card-value">' . $oDueDate . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $oStatus . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Pagamento:</span><span class="mobile-card-value">' . $oPayment . '</span></div>
         </div>';
     }
     echo '</div>
 
-        <h2>Stato CRM</h2>
-        <form action="crm-clienti.php?action=update_status&id=' . $client->id . '" method="POST">
+        <h2>Stato CRM</h2>';
+    if (($client->crm_status ?? '') === 'customer') {
+        echo '<p>Stato attuale: Customer. La promozione avviene alla conferma di un ordine (immodificabile manualmente).</p>';
+    } else {
+        $statusLabels = ['lead' => 'Lead', 'prospect' => 'Prospect', 'lost' => 'Lost'];
+        echo '<form action="crm-clienti.php?action=update_status&id=' . $client->id . '" method="POST">' . csrfInput() . '
             <div class="form-group">
-                <select name="crm_status" class="form-control">
-                    <option value="lead" ' . ($client->crm_status === 'lead' ? 'selected' : '') . '>Lead</option>
-                    <option value="prospect" ' . ($client->crm_status === 'prospect' ? 'selected' : '') . '>Prospect</option>
-                    <option value="customer" ' . ($client->crm_status === 'customer' ? 'selected' : '') . '>Customer</option>
-                    <option value="lost" ' . ($client->crm_status === 'lost' ? 'selected' : '') . '>Lost</option>
-                </select>
+                <select name="crm_status" class="form-control">';
+        foreach ($statusLabels as $value => $label) {
+            echo '<option value="' . $value . '"' . ($client->crm_status === $value ? ' selected' : '') . '>' . $label . '</option>';
+        }
+        echo '</select>
+            </div>
+            <div class="form-group">
+                <label>Motivo (obbligatorio se Lost):</label>
+                <input type="text" name="lost_reason" class="form-control" maxlength="255">
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
                 <a href="/crm-clienti" class="btn btn-secondary" data-spa="true">Annulla</a>
             </div>
-        </form>
+        </form>';
+    }
+    echo '
     </div>
 </div>';
 }
@@ -612,6 +716,7 @@ function renderCreateContact($client) {
     </header>
     <div class="service-content service-content--narrow">
         <form action="crm-clienti.php?action=store_contact" method="POST">
+            ' . csrfInput() . '
             <div class="form-group">
                 <label>Nome:</label>
                 <input type="text" name="first_name" class="form-control">
@@ -651,6 +756,7 @@ function renderCreateActivity($client) {
     </header>
     <div class="service-content service-content--narrow">
         <form action="crm-clienti.php?action=store_activity" method="POST">
+            ' . csrfInput() . '
             <div class="form-group">
                 <label>Tipo:</label>
                 <select name="type" class="form-control">
@@ -685,100 +791,102 @@ function renderCreateActivity($client) {
 
 // Main logic
 $action = $_GET['action'] ?? 'index';
-$id = $_GET['id'] ?? null;
+$id = (int) ($_GET['id'] ?? 0);
 
 switch ($action) {
     case 'index':
-        $clients = Client::all($db);
+        $clients = Client::all($db, $userId);
         renderIndex($clients);
         break;
     case 'create':
         renderCreate();
         break;
     case 'store':
+        requireWritePost();
         $data = $_POST;
+        unset($data['id']);
         $data['user_id'] = $userId;
         Client::save($db, $data);
-        $clients = Client::all($db);
+        $clients = Client::all($db, $userId);
         renderIndex($clients);
         break;
     case 'show':
-        $client = Client::find($db, $id);
+        $client = requireClient($db, $id, $userId);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        $orders = Order::where($db, $client->id);
+        $orders = Order::where($db, $client->id, $userId);
         renderShow($client, $contacts, $activities, $orders);
         break;
     case 'edit':
-        $client = Client::find($db, $id);
+        $client = requireClient($db, $id, $userId);
         renderEdit($client);
         break;
     case 'update':
+        requireWritePost();
+        requireClient($db, $id, $userId);
         $data = $_POST;
         $data['id'] = $id;
         $data['user_id'] = $userId;
         Client::save($db, $data);
-        $clients = Client::all($db);
+        $clients = Client::all($db, $userId);
         renderIndex($clients);
         break;
     case 'update_status':
-        $client = Client::find($db, $id);
-        $client->crm_status = $_POST['crm_status'];
-        if ($client->crm_status === 'customer') {
-            $client->converted_at = date('Y-m-d H:i:s');
+        requireWritePost();
+        $client = requireClient($db, $id, $userId);
+        try {
+            ClientService::changeStatus($db, (int) $client->id, $userId, (string) ($_POST['crm_status'] ?? ''), $_POST['lost_reason'] ?? null);
+        } catch (DomainException $e) {
+            abortWith(422, $e->getMessage());
         }
-        Client::save($db, (array)$client);
-
-        // Registra il cambio di stato in crm_activities
-        $activityData = [
-            'client_id' => $client->id,
-            'user_id' => $userId,
-            'type' => 'status_change',
-            'subject' => 'Cambio stato',
-            'body' => 'Stato cambiato da ' . $client->crm_status . ' a ' . $_POST['crm_status'],
-            'occurred_at' => date('Y-m-d H:i:s'),
-            'next_action_at' => null
-        ];
-        Activity::save($db, $activityData);
-
-        $clients = Client::all($db);
+        $clients = Client::all($db, $userId);
         renderIndex($clients);
         break;
     case 'create_contact':
-        $client = Client::find($db, $id);
+        $client = requireClient($db, $id, $userId);
         renderCreateContact($client);
         break;
     case 'store_contact':
+        requireWritePost();
+        $client = requireClient($db, (int) ($_POST['client_id'] ?? 0), $userId);
         $data = $_POST;
+        $data['client_id'] = (int) $client->id;
         Contact::save($db, $data);
-        $client = Client::find($db, $data['client_id']);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        $orders = Order::where($db, $client->id);
+        $orders = Order::where($db, $client->id, $userId);
         renderShow($client, $contacts, $activities, $orders);
         break;
     case 'create_activity':
-        $client = Client::find($db, $id);
+        $client = requireClient($db, $id, $userId);
         renderCreateActivity($client);
         break;
     case 'store_activity':
+        requireWritePost();
+        $client = requireClient($db, (int) ($_POST['client_id'] ?? 0), $userId);
         $data = $_POST;
+        $data['client_id'] = (int) $client->id;
         $data['user_id'] = $userId;
         Activity::save($db, $data);
-        $client = Client::find($db, $data['client_id']);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        $orders = Order::where($db, $client->id);
+        $orders = Order::where($db, $client->id, $userId);
         renderShow($client, $contacts, $activities, $orders);
         break;
     case 'store_order':
+        requireWritePost();
+        $client = requireClient($db, (int) ($_POST['client_id'] ?? 0), $userId);
         $data = $_POST;
+        $data['client_id'] = (int) $client->id;
         $data['user_id'] = $userId;
-        Order::save($db, $data);
-        $client = Client::find($db, $data['client_id']);
+        try {
+            Order::save($db, $data);
+        } catch (DomainException $e) {
+            abortWith(422, $e->getMessage());
+        }
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        $orders = Order::where($db, $client->id);
+        $orders = Order::where($db, $client->id, $userId);
         renderShow($client, $contacts, $activities, $orders);
         break;
     default:
