@@ -86,7 +86,7 @@ class Contact {
 
 class Activity {
     public static function where($db, $client_id) {
-        $stmt = $db->prepare('SELECT * FROM crm_activities WHERE client_id = ?');
+        $stmt = $db->prepare('SELECT * FROM crm_activities WHERE client_id = ? AND type != "status_change"');
         $stmt->execute([$client_id]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
@@ -97,31 +97,96 @@ class Activity {
     }
 }
 
+class Order {
+    public static function where($db, $client_id) {
+        $stmt = $db->prepare('SELECT * FROM orders WHERE client_id = ? ORDER BY created_at DESC');
+        $stmt->execute([$client_id]);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public static function save($db, $data) {
+        $orderNumber = trim($data['order_number'] ?? '') !== '' ? $data['order_number'] : 'ORD-' . time();
+        $total = isset($data['total']) && is_numeric($data['total']) ? (float)$data['total'] : 0.00;
+        $currency = $data['currency'] ?? 'EUR';
+        $dueDate = !empty($data['due_date']) ? $data['due_date'] : null;
+        $taxRegime = $data['tax_regime'] ?? 'ordinario';
+        $userId = $data['user_id'];
+        $clientId = $data['client_id'];
+
+        $notes = "Regime: {$taxRegime}" . ($dueDate ? ", Scadenza: {$dueDate}" : "");
+
+        $orderId = null;
+        if (isset($data['id']) && !empty($data['id'])) {
+            $stmt = $db->prepare('UPDATE orders SET user_id = ?, client_id = ?, order_number = ?, total = ?, currency = ?, status = ?, notes = ? WHERE id = ?');
+            $stmt->execute([
+                $userId, $clientId, $orderNumber, $total, $currency, 'confirmed', $notes, $data['id']
+            ]);
+            $orderId = $data['id'];
+        } else {
+            $stmt = $db->prepare('INSERT INTO orders (user_id, client_id, order_number, total, currency, status, payment_status, notes, confirmed_at) VALUES (?, ?, ?, ?, ?, \'confirmed\', \'unpaid\', ?, NOW())');
+            $stmt->execute([
+                $userId, $clientId, $orderNumber, $total, $currency, $notes
+            ]);
+            $orderId = $db->lastInsertId();
+        }
+
+        // Promuovi il cliente a customer se non lo è già e logga l'attività
+        $clientStmt = $db->prepare('SELECT crm_status FROM clients WHERE id = ?');
+        $clientStmt->execute([$clientId]);
+        $clientObj = $clientStmt->fetch(PDO::FETCH_OBJ);
+
+        if ($clientObj && in_array($clientObj->crm_status, ['lead', 'prospect', 'lost'])) {
+            $oldStatus = $clientObj->crm_status;
+            $upd = $db->prepare('UPDATE clients SET crm_status = \'customer\', converted_at = NOW(), lost_reason = NULL WHERE id = ? AND crm_status IN (\'lead\',\'prospect\',\'lost\')');
+            $upd->execute([$clientId]);
+            if ($upd->rowCount() > 0) {
+                $actStmt = $db->prepare('INSERT INTO crm_activities (client_id, order_id, user_id, type, subject, body, occurred_at) VALUES (?, ?, ?, \'status_change\', \'Promosso a customer\', ?, NOW())');
+                $actStmt->execute([
+                    $clientId,
+                    $orderId,
+                    $userId,
+                    'Da ' . $oldStatus . ' a customer (ordine ' . $orderNumber . ')'
+                ]);
+            }
+        }
+    }
+}
+
 // Views
 function renderIndex($clients) {
     echo '<div class="service-page">
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Dashboard</a>
         <h1>CRM clienti</h1>
-        <p>Questo è il modulo per la gestione dei potenziali clienti.</p>
-    </header>
+        <div class="crm-legend">
+            <span class="legend-label">Legenda (clicca per info):</span>
+            <span class="status-pill status-lead" onclick="showStatusPopup(\'Lead\', \'Contatto iniziale o potenziale cliente appena acquisito con interesse generico.\')">Lead</span>
+            <span class="status-pill status-prospect" onclick="showStatusPopup(\'Prospect\', \'Cliente potenziale qualificato con cui è attiva una trattativa commerciale.\')">Prospect</span>
+            <span class="status-pill status-customer" onclick="showStatusPopup(\'Customer\', \'Cliente acquisito ed effettivo, la cui conversione avviene alla conferma di un ordine.\')">Customer</span>
+            <span class="status-pill status-lost" onclick="showStatusPopup(\'Lost\', \'Trattativa persa o potenziale cliente che ha rifiutato ogni offerta o interrotto i contatti.\')">Lost</span>
     <div class="service-content">
         <a href="crm-clienti.php?action=create" class="btn btn-primary" data-spa="true">Aggiungi Cliente</a>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Stato</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody>';
+        
+        <div class="desktop-table-view">
+            <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>';
     foreach ($clients as $client) {
+        $cName = htmlspecialchars($client->client_type === 'company' ? ($client->company_name ?? '') : (($client->first_name ?? '') . ' ' . ($client->last_name ?? '')));
+        $cEmail = htmlspecialchars($client->email ?? '');
+        $cStatus = htmlspecialchars($client->crm_status ?? '');
         echo '<tr>
-            <td>' . htmlspecialchars($client->client_type === 'company' ? ($client->company_name ?? '') : (($client->first_name ?? '') . ' ' . ($client->last_name ?? ''))) . '</td>
-            <td>' . htmlspecialchars($client->email ?? '') . '</td>
-            <td>' . htmlspecialchars($client->crm_status ?? '') . '</td>
+            <td>' . $cName . '</td>
+            <td>' . $cEmail . '</td>
+            <td>' . $cStatus . '</td>
             <td>
                 <a href="crm-clienti.php?action=show&id=' . $client->id . '" class="btn btn-info" data-spa="true">Visualizza</a>
                 <a href="crm-clienti.php?action=edit&id=' . $client->id . '" class="btn btn-warning" data-spa="true">Modifica</a>
@@ -129,7 +194,26 @@ function renderIndex($clients) {
         </tr>';
     }
     echo '</tbody>
-        </table>
+            </table>
+            </div>
+        </div>
+
+        <div class="mobile-cards-view">';
+    foreach ($clients as $client) {
+        $cName = htmlspecialchars($client->client_type === 'company' ? ($client->company_name ?? '') : (($client->first_name ?? '') . ' ' . ($client->last_name ?? '')));
+        $cEmail = htmlspecialchars($client->email ?? '');
+        $cStatus = htmlspecialchars($client->crm_status ?? '');
+        echo '<div class="mobile-card">
+            <div class="mobile-card-row"><span class="mobile-card-label">Nome:</span><span class="mobile-card-value">' . $cName . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Email:</span><span class="mobile-card-value">' . $cEmail . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $cStatus . '</span></div>
+            <div class="mobile-card-row" style="margin-top:0.75rem; justify-content:flex-end; gap:0.5rem; border-bottom:none;">
+                <a href="crm-clienti.php?action=show&id=' . $client->id . '" class="btn btn-info" data-spa="true">Visualizza</a>
+                <a href="crm-clienti.php?action=edit&id=' . $client->id . '" class="btn btn-warning" data-spa="true">Modifica</a>
+            </div>
+        </div>';
+    }
+    echo '</div>
     </div>
 </div>';
 }
@@ -324,7 +408,7 @@ function renderEdit($client) {
 </div>';
 }
 
-function renderShow($client, $contacts, $activities) {
+function renderShow($client, $contacts, $activities, $orders) {
     echo '<div class="service-page">
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Dashboard</a>
@@ -353,55 +437,157 @@ function renderShow($client, $contacts, $activities) {
 
         <h2>Contatti</h2>
         <a href="crm-clienti.php?action=create_contact&id=' . $client->id . '" class="btn btn-primary" data-spa="true">Aggiungi Contatto</a>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Telefono</th>
-                    <th>Ruolo</th>
-                    <th>Primario</th>
-                </tr>
-            </thead>
-            <tbody>';
+        <div class="desktop-table-view">
+            <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Ruolo</th>
+                        <th>Primario</th>
+                    </tr>
+                </thead>
+                <tbody>';
     foreach ($contacts as $contact) {
         echo '<tr>
-            <td>' . htmlspecialchars(($contact->first_name ?? '') . ' ' . ($contact->last_name ?? '')) . '</td>
-            <td>' . htmlspecialchars($contact->email ?? '') . '</td>
-            <td>' . htmlspecialchars($contact->phone ?? '') . '</td>
-            <td>' . htmlspecialchars($contact->role ?? '') . '</td>
-            <td>' . (($contact->is_primary ?? 0) ? 'Sì' : 'No') . '</td>
+            <td data-label="Nome">' . htmlspecialchars(($contact->first_name ?? '') . ' ' . ($contact->last_name ?? '')) . '</td>
+            <td data-label="Email">' . htmlspecialchars($contact->email ?? '') . '</td>
+            <td data-label="Telefono">' . htmlspecialchars($contact->phone ?? '') . '</td>
+            <td data-label="Ruolo">' . htmlspecialchars($contact->role ?? '') . '</td>
+            <td data-label="Primario">' . (($contact->is_primary ?? 0) ? 'Sì' : 'No') . '</td>
         </tr>';
     }
     echo '</tbody>
-        </table>
+            </table>
+            </div>
+        </div>
+
+        <div class="mobile-cards-view">';
+    foreach ($contacts as $contact) {
+        $cContactName = htmlspecialchars(($contact->first_name ?? '') . ' ' . ($contact->last_name ?? ''));
+        $cEmail = htmlspecialchars($contact->email ?? '');
+        $cPhone = htmlspecialchars($contact->phone ?? '');
+        $cRole = htmlspecialchars($contact->role ?? '');
+        $cPrimary = (($contact->is_primary ?? 0) ? 'Sì' : 'No');
+        echo '<div class="mobile-card">
+            <div class="mobile-card-row"><span class="mobile-card-label">Nome:</span><span class="mobile-card-value">' . $cContactName . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Email:</span><span class="mobile-card-value">' . $cEmail . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Telefono:</span><span class="mobile-card-value">' . $cPhone . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Ruolo:</span><span class="mobile-card-value">' . $cRole . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Primario:</span><span class="mobile-card-value">' . $cPrimary . '</span></div>
+        </div>';
+    }
+    echo '</div>
 
         <h2>Attività</h2>
         <a href="crm-clienti.php?action=create_activity&id=' . $client->id . '" class="btn btn-primary" data-spa="true">Aggiungi Attività</a>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Oggetto</th>
-                    <th>Data</th>
-                    <th>Prossima Azione</th>
-                </tr>
-            </thead>
-            <tbody>';
+        <div class="desktop-table-view">
+            <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Oggetto</th>
+                        <th>Data</th>
+                        <th>Prossima Azione</th>
+                    </tr>
+                </thead>
+                <tbody>';
     foreach ($activities as $activity) {
+        $occurredFormatted = !empty($activity->occurred_at) ? date('d-m-Y / H:i', strtotime($activity->occurred_at)) : '';
+        $nextActionFormatted = !empty($activity->next_action_at) ? date('d-m-Y / H:i', strtotime($activity->next_action_at)) : '';
         echo '<tr>
-            <td>' . htmlspecialchars($activity->type ?? '') . '</td>
-            <td>' . htmlspecialchars($activity->subject ?? '') . '</td>
-            <td>' . htmlspecialchars($activity->occurred_at ?? '') . '</td>
-            <td>' . htmlspecialchars($activity->next_action_at ?? '') . '</td>
+            <td data-label="Tipo">' . htmlspecialchars($activity->type ?? '') . '</td>
+            <td data-label="Oggetto">' . htmlspecialchars($activity->subject ?? '') . '</td>
+            <td data-label="Data">' . htmlspecialchars($occurredFormatted) . '</td>
+            <td data-label="Prossima Azione">' . htmlspecialchars($nextActionFormatted) . '</td>
         </tr>';
     }
     echo '</tbody>
-        </table>
+            </table>
+            </div>
+        </div>
 
+        <div class="mobile-cards-view">';
+    foreach ($activities as $activity) {
+        $aType = htmlspecialchars($activity->type ?? '');
+        $aSubject = htmlspecialchars($activity->subject ?? '');
+        $aOccurred = !empty($activity->occurred_at) ? htmlspecialchars(date('d-m-Y H:i', strtotime($activity->occurred_at))) : '';
+        $aNextAction = !empty($activity->next_action_at) ? htmlspecialchars(date('d-m-Y H:i', strtotime($activity->next_action_at))) : '';
+        echo '<div class="mobile-card">
+            <div class="mobile-card-row"><span class="mobile-card-label">Tipo:</span><span class="mobile-card-value">' . $aType . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Oggetto:</span><span class="mobile-card-value">' . $aSubject . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Data:</span><span class="mobile-card-value">' . $aOccurred . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Prossima Azione:</span><span class="mobile-card-value">' . $aNextAction . '</span></div>
+        </div>';
+    }
+    echo '</div>
+
+        <h2>Ordini</h2>
+        <button type="button" class="btn btn-primary" data-order-modal-open data-client-id="' . $client->id . '">Crea Ordine</button>
+        <div class="desktop-table-view">
+            <div class="table-container orders-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>N. Ordine</th>
+                        <th>Totale</th>
+                        <th>Valuta</th>
+                        <th>Scadenza</th>
+                        <th>Stato</th>
+                        <th>Pagamento</th>
+                    </tr>
+                </thead>
+                <tbody>';
+    foreach ($orders as $order) {
+        $notes = $order->notes ?? '';
+        $dueDateFormatted = '';
+        if (preg_match('/Scadenza:\s*([^\,]+)/', $notes, $m)) {
+            $rawDate = trim($m[1]);
+            $dueDateFormatted = !empty($rawDate) ? date('d-m-Y', strtotime($rawDate)) : '';
+        }
+        echo '<tr>
+            <td data-label="N. Ordine">' . htmlspecialchars($order->order_number ?? '') . '</td>
+            <td data-label="Totale">' . htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.')) . '</td>
+            <td data-label="Valuta">' . htmlspecialchars($order->currency ?? 'EUR') . '</td>
+            <td data-label="Scadenza">' . htmlspecialchars($dueDateFormatted) . '</td>
+            <td data-label="Stato">' . htmlspecialchars($order->status ?? '') . '</td>
+            <td data-label="Pagamento">' . htmlspecialchars($order->payment_status ?? '') . '</td>
+        </tr>';
+    }
+    echo '</tbody>
+            </table>
+            </div>
+        </div>
+
+        <div class="mobile-cards-view">';
+    foreach ($orders as $order) {
+        $notes = $order->notes ?? '';
+        $oDueDate = '';
+        if (preg_match('/Scadenza:\s*([^\,]+)/', $notes, $m)) {
+            $rawDate = trim($m[1]);
+            $oDueDate = !empty($rawDate) ? htmlspecialchars(date('d-m-Y', strtotime($rawDate))) : '';
+        }
+        $oNumber = htmlspecialchars($order->order_number ?? '');
+        $oTotal = htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.'));
+        $oCurrency = htmlspecialchars($order->currency ?? 'EUR');
+        $oStatus = htmlspecialchars($order->status ?? '');
+        $oPayment = htmlspecialchars($order->payment_status ?? '');
+        echo '<div class="mobile-card">
+            <div class="mobile-card-row"><span class="mobile-card-label">N. Ordine:</span><span class="mobile-card-value">' . $oNumber . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Totale:</span><span class="mobile-card-value">' . $oTotal . ' ' . $oCurrency . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Scadenza:</span><span class="mobile-card-value">' . $oDueDate . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $oStatus . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Pagamento:</span><span class="mobile-card-value">' . $oPayment . '</span></div>
+        </div>';
+    }
+    echo '</div>
+
+        <h2>Stato CRM</h2>
         <form action="crm-clienti.php?action=update_status&id=' . $client->id . '" method="POST">
             <div class="form-group">
-                <label>Cambia Stato:</label>
                 <select name="crm_status" class="form-control">
                     <option value="lead" ' . ($client->crm_status === 'lead' ? 'selected' : '') . '>Lead</option>
                     <option value="prospect" ' . ($client->crm_status === 'prospect' ? 'selected' : '') . '>Prospect</option>
@@ -409,10 +595,11 @@ function renderShow($client, $contacts, $activities) {
                     <option value="lost" ' . ($client->crm_status === 'lost' ? 'selected' : '') . '>Lost</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
+                <a href="/crm-clienti" class="btn btn-secondary" data-spa="true">Annulla</a>
+            </div>
         </form>
-
-        <a href="/crm-clienti" class="btn btn-secondary" data-spa="true">Annulla</a>
     </div>
 </div>';
 }
@@ -423,7 +610,7 @@ function renderCreateContact($client) {
         <a href="/" data-spa="true" class="back-link">← Dashboard</a>
         <h1>Aggiungi Contatto</h1>
     </header>
-    <div class="service-content">
+    <div class="service-content service-content--narrow">
         <form action="crm-clienti.php?action=store_contact" method="POST">
             <div class="form-group">
                 <label>Nome:</label>
@@ -462,7 +649,7 @@ function renderCreateActivity($client) {
         <a href="/" data-spa="true" class="back-link">← Dashboard</a>
         <h1>Aggiungi Attività</h1>
     </header>
-    <div class="service-content">
+    <div class="service-content service-content--narrow">
         <form action="crm-clienti.php?action=store_activity" method="POST">
             <div class="form-group">
                 <label>Tipo:</label>
@@ -471,7 +658,6 @@ function renderCreateActivity($client) {
                     <option value="email">Email</option>
                     <option value="meeting">Riunione</option>
                     <option value="note">Nota</option>
-                    <option value="status_change">Cambio Stato</option>
                 </select>
             </div>
             <div class="form-group">
@@ -520,7 +706,8 @@ switch ($action) {
         $client = Client::find($db, $id);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        renderShow($client, $contacts, $activities);
+        $orders = Order::where($db, $client->id);
+        renderShow($client, $contacts, $activities, $orders);
         break;
     case 'edit':
         $client = Client::find($db, $id);
@@ -567,7 +754,8 @@ switch ($action) {
         $client = Client::find($db, $data['client_id']);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        renderShow($client, $contacts, $activities);
+        $orders = Order::where($db, $client->id);
+        renderShow($client, $contacts, $activities, $orders);
         break;
     case 'create_activity':
         $client = Client::find($db, $id);
@@ -580,7 +768,18 @@ switch ($action) {
         $client = Client::find($db, $data['client_id']);
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);
-        renderShow($client, $contacts, $activities);
+        $orders = Order::where($db, $client->id);
+        renderShow($client, $contacts, $activities, $orders);
+        break;
+    case 'store_order':
+        $data = $_POST;
+        $data['user_id'] = $userId;
+        Order::save($db, $data);
+        $client = Client::find($db, $data['client_id']);
+        $contacts = Contact::where($db, $client->id);
+        $activities = Activity::where($db, $client->id);
+        $orders = Order::where($db, $client->id);
+        renderShow($client, $contacts, $activities, $orders);
         break;
     default:
         header('Location: /crm-clienti');
