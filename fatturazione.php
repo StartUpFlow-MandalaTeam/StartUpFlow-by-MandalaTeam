@@ -184,7 +184,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                 </label>
                 <label class="profile-modal__field" data-individual-field hidden>
                     <span>Codice fiscale</span>
-                    <input type="text" name="tax_code" placeholder="Inserisci il codice fiscale" maxlength="16">
+                    <input type="text" name="cf" placeholder="Inserisci il codice fiscale" maxlength="16">
                 </label>
                 <label class="profile-modal__field profile-modal__field--full">
                     <span>Indirizzo</span>
@@ -214,13 +214,13 @@ $username = $_SESSION['username'] ?? 'Utente';
                     <span>Telefono</span>
                     <input type="tel" name="phone" placeholder="Inserisci il telefono" required>
                 </label>
-                <label class="profile-modal__field">
+                <!-- <label class="profile-modal__field">
                     <span>Status CRM</span>
                     <select name="crm_status" required>
                         <option value="lead" selected>Lead</option>
                         <option value="customer">Cliente</option>
                     </select>
-                </label>
+                </label> -->
                 <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
                     <button type="submit" class="profile-modal__save">Salva e continua</button>
                 </footer>
