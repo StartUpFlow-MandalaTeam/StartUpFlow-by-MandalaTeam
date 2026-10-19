@@ -74,7 +74,7 @@ function dbTransaction(PDO $db, callable $fn) {
 
 // UNICO punto del codice che scrive crm_status, converted_at e lost_reason.
 class ClientService {
-    // Passaggi manuali ammessi. 'customer' non è mai raggiungibile a mano:
+    // Passaggi manuali ammessi.'customer' non è mai raggiungibile a mano:
     // ci si arriva solo con markAsCustomer(), alla conferma di un ordine.
     private const MANUAL_TRANSITIONS = [
         'lead'     => ['prospect', 'lost'],
@@ -273,6 +273,7 @@ class Order {
 }
 
 // Views
+// Renderizza la lista dei clienti in tabella (desktop) o card (mobile).
 function renderIndex($clients) {
     echo '<div class="service-page">
     <header class="service-header">
@@ -297,6 +298,7 @@ function renderIndex($clients) {
                         <th>Nome</th>
                         <th>Email</th>
                         <th>Stato</th>
+                        <th>Pipeline Age</th>
                         <th>Azioni</th>
                     </tr>
                 </thead>
@@ -305,10 +307,22 @@ function renderIndex($clients) {
         $cName = htmlspecialchars($client->client_type === 'company' ? ($client->company_name ?? '') : (($client->first_name ?? '') . ' ' . ($client->last_name ?? '')));
         $cEmail = htmlspecialchars($client->email ?? '');
         $cStatus = htmlspecialchars($client->crm_status ?? '');
+        $cCreatedAt = $client->created_at ?? '';
+        $cConvertedAt = $client->converted_at ?? '';
+        // Pipeline Age: numero di giorni di calendario dalla creazione del cliente (ora) a now()
+        // Per customer: differenza tra created_at e converted_at
+        $pipelineAge = '';
+        if (!empty($cCreatedAt)) {
+            $created = new DateTime($cCreatedAt);
+            $today = ($client->crm_status === 'customer' && !empty($cConvertedAt)) ? new DateTime($cConvertedAt) : new DateTime();
+            $interval = $created->diff($today);
+            $pipelineAge = $interval->days . ' gg.';
+        }
         echo '<tr>
             <td>' . $cName . '</td>
             <td>' . $cEmail . '</td>
             <td>' . $cStatus . '</td>
+            <td>' . $pipelineAge . '</td>
             <td>
                 <a href="crm-clienti.php?action=show&id=' . $client->id . '" class="btn btn-info" data-spa="true">Visualizza</a>
                 <a href="crm-clienti.php?action=edit&id=' . $client->id . '" class="btn btn-warning" data-spa="true">Modifica</a>
@@ -325,10 +339,22 @@ function renderIndex($clients) {
         $cName = htmlspecialchars($client->client_type === 'company' ? ($client->company_name ?? '') : (($client->first_name ?? '') . ' ' . ($client->last_name ?? '')));
         $cEmail = htmlspecialchars($client->email ?? '');
         $cStatus = htmlspecialchars($client->crm_status ?? '');
+        $cCreatedAt = $client->created_at ?? '';
+        $cConvertedAt = $client->converted_at ?? '';
+        // Pipeline Age: giorni a partire dalla creazione del cliente (ora - created_at, diviso per giorno intero)
+        // Per customer: differenza tra created_at e converted_at
+        $pipelineAge = '';
+        if (!empty($cCreatedAt)) {
+            $created = new DateTime($cCreatedAt);
+            $today = ($client->crm_status === 'customer' && !empty($cConvertedAt)) ? new DateTime($cConvertedAt) : new DateTime();
+            $interval = $created->diff($today);
+            $pipelineAge = $interval->days . ' gg.';
+        }
         echo '<div class="mobile-card">
             <div class="mobile-card-row"><span class="mobile-card-label">Nome:</span><span class="mobile-card-value">' . $cName . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Email:</span><span class="mobile-card-value">' . $cEmail . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $cStatus . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Pipeline Age:</span><span class="mobile-card-value">' . $pipelineAge . '</span></div>
             <div class="mobile-card-row" style="margin-top:0.75rem; justify-content:flex-end; gap:0.5rem; border-bottom:none;">
                 <a href="crm-clienti.php?action=show&id=' . $client->id . '" class="btn btn-info" data-spa="true">Visualizza</a>
                 <a href="crm-clienti.php?action=edit&id=' . $client->id . '" class="btn btn-warning" data-spa="true">Modifica</a>
@@ -340,10 +366,21 @@ function renderIndex($clients) {
 </div>';
 }
 
+// Renderizza il form di creazione di un nuovo cliente.
 function renderCreate() {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Aggiungi Cliente</span>
+        </nav>
         <h1>Aggiungi Cliente</h1>
     </header>
     <div class="service-content">
@@ -427,10 +464,21 @@ function renderCreate() {
 </div>';
 }
 
+// Renderizza il form di modifica di un cliente esistente.
 function renderEdit($client) {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Modifica Cliente</span>
+        </nav>
         <h1>Modifica Cliente</h1>
     </header>
     <div class="service-content">
@@ -518,10 +566,21 @@ function renderEdit($client) {
 </div>';
 }
 
+// Funzione per renderizzare il dettaglio di un cliente.
 function renderShow($client, $contacts, $activities, $orders) {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Dettagli Cliente</span>
+        </nav>
         <h1>Dettagli Cliente</h1>
     </header>
     <div class="service-content">
@@ -708,6 +767,7 @@ function renderShow($client, $contacts, $activities, $orders) {
 </div>';
 }
 
+// Funzione per renderizzare il form di inserimento di un nuovo contatto per un cliente esistente.
 function renderCreateContact($client) {
     echo '<div class="service-page">
     <header class="service-header">
@@ -748,6 +808,7 @@ function renderCreateContact($client) {
 </div>';
 }
 
+// Funzione per renderizzare il form di inserimento di una nuova attività per un cliente esistente.
 function renderCreateActivity($client) {
     echo '<div class="service-page">
     <header class="service-header">

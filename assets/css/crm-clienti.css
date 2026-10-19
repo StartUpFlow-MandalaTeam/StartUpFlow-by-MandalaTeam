@@ -64,6 +64,44 @@ body.dashboard-page {
     background: #0f5f63;
 }
 
+/* Breadcrumb */
+.crm-breadcrumb {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.crm-breadcrumb__item {
+  display: flex;
+  align-items: center;
+}
+
+.crm-breadcrumb__link {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.crm-breadcrumb__link:hover {
+  color: #217dbd;
+  text-decoration: underline;
+}
+
+.crm-breadcrumb__separator {
+  color: #999;
+  margin: 0 0.35rem;
+  user-select: none;
+}
+
+.crm-breadcrumb__current {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -146,9 +184,12 @@ body.dashboard-page {
 }
 
 .table th {
+    position: sticky;
+    top: 0;
     background-color: #f4f6f7;
     color: #2c3e50;
     font-weight: 600;
+    z-index: 1;
 }
 
 .table tbody tr:hover {
