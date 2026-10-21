@@ -19,6 +19,6 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
 // Clear the user's session and any "remember me" tokens to log them out securely
 logoutUser();
 
-// Redirect the user to the registration page after logging out
-header('Location: register.php');
+// Redirect the user to the login page after logging out
+header('Location: login.php');
 exit;

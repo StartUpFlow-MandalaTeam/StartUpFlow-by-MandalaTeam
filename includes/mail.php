@@ -23,12 +23,14 @@ function appBaseUrlFromRequest(): string
  */
 function smtpSendEmail(string $toEmail, string $subject, string $bodyText, string $bodyHtml, string $toName = ''): array
 {
-    $host = SMTP_HOST ?? '127.0.0.1';
-    $port = SMTP_PORT ?? 25;
-    $user = SMTP_USER ?? '';
-    $pass = SMTP_PASS ?? '';
-    $from = SMTP_FROM ?? 'no-reply@local.test';
-    $fromName = SMTP_FROM_NAME ?? APP_NAME ?? 'App';
+    $host = defined('SMTP_HOST') ? SMTP_HOST : '127.0.0.1';
+    $port = defined('SMTP_PORT') ? SMTP_PORT : 25;
+    $user = defined('SMTP_USER') ? SMTP_USER : '';
+    $pass = defined('SMTP_PASS') ? SMTP_PASS : '';
+    $from = defined('SMTP_FROM') ? SMTP_FROM : 'no-reply@local.test';
+    $fromName = defined('SMTP_FROM_NAME')
+        ? SMTP_FROM_NAME
+        : (defined('APP_NAME') ? APP_NAME : 'App');
 
     $boundary = 'b_' . bin2hex(random_bytes(8));
     $date = date('r');

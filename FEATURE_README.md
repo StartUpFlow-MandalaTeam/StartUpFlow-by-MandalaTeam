@@ -1,22 +1,23 @@
-# Feature: Nota Spese
+# Feature: Fatturazione
 
 ## Descrizione
-Modulo per la registrazione delle uscite aziendali.
+Modulo per l'emissione delle fatture.
 
 ## Compiti
-- [ ] Implementare form registrazione spesa
-- [ ] Categorizzazione spese
-- [ ] Allegato scontrini (upload file)
-- [ ] Report mensili/annuali
+- [ ] Implementare interfaccia creazione fattura
+- [ ] Integrare con backend API
+- [ ] Gestione clienti e numerazione fatture
+- [ ] Export PDF fatture
 
 ## Route
-- `/nota-spese` - Pagina principale
+-  - Pagina principale
 
 ## Dipendenze
 - React Router (già incluso in main)
-- Libreria per upload file (es: react-dropzone)
+- Eventuali librerie specifiche per PDF (es: react-pdf, jspdf)
 
 ## Note
-- Lavorare solo su file in `client/src/pages/NotaSpesePage.jsx` e componenti correlati
+- Lavorare solo su file in  e componenti correlati
 - Non modificare file condivisi (navbar, layout, router)
-- Fare merge da main prima di iniziare: `git merge main`
+- Fare merge da main prima di iniziare: Già aggiornato.
+

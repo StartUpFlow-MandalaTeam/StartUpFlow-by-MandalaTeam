@@ -32,7 +32,7 @@ try {
 
     if ($existingUser) {
         // Update existing user
-        $update = $pdo->prepare(''
+        $update = $pdo->prepare('
             UPDATE users 
             SET 
                 email = :email,
@@ -42,7 +42,7 @@ try {
                 locked_until = NULL,
                 updated_at = NOW()
             WHERE username = :username
-        '');
+        ');
         $update->execute([
             ':email' => $email,
             ':password_hash' => $passwordHash,
@@ -51,15 +51,24 @@ try {
         echo "Test user '$username' updated successfully.\n";
     } else {
         // Insert new user
-        $insert = $pdo->prepare(''
+        $insert = $pdo->prepare('
             INSERT INTO users 
             (username, email, password_hash, is_active, created_at, updated_at)
             VALUES (:username, :email, :password_hash, 1, NOW(), NOW())
-        '');
+        ');
         $insert->execute([
             ':username' => $username,
             ':email' => $email,
             ':password_hash' => $passwordHash,
+        ]);
+        // Creation of user's profile
+        $userId = (int) $pdo->lastInsertId();
+        $profileCreation = $pdo->prepare('
+            INSERT INTO users_profiles (user_id)
+            VALUES (:user_id)
+        ');
+        $profileCreation->execute([
+            ':user_id' => $userId
         ]);
         echo "Test user '$username' created successfully.\n";
     }
