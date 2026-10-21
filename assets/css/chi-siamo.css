@@ -32,3 +32,10 @@
 	font-size: 0.9rem;
 	margin-bottom: 0;
 }
+
+@media (max-width: 768px) {
+	.team-card img {
+		width: 100px;
+		height: 100px;
+	}
+}
