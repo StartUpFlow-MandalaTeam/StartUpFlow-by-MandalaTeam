@@ -7,10 +7,10 @@ const NS_CARTELLA_RELATIVA = 'uploads/spese';
 const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
 const NS_MIME_AMMESSI      = ['image/jpeg', 'image/png', 'application/pdf'];
 
-/** Restituisce il percorso assoluto dello scontrino se la spesa appartiene all'utente, altrimenti null. */
+/** Percorso assoluto dello scontrino se la spesa appartiene all'utente, altrimenti null. */
 function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
 {
-    $stmt = $pdo->prepare('SELECT scontrino_path FROM spese WHERE id = :id AND user_id = :uid');
+    $stmt = $pdo->prepare('SELECT receipt_path FROM expenses WHERE id = :id AND user_id = :uid');
     $stmt->execute([':id' => $idSpesa, ':uid' => $userId]);
     $relativo = $stmt->fetchColumn();
     if (!$relativo) {
@@ -62,7 +62,7 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
 
     // Apri: invia il file
     if (isset($_GET['scontrino'])) {
-        $id = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
+        $id       = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
         $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
         if ($percorso === null) {
             http_response_code(404);
@@ -72,14 +72,14 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
     }
 
     // Anteprima: pagina HTML con il file incorporato
-    $id = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
+    $id       = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
     $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
     if ($percorso === null) {
         http_response_code(404);
         exit('Scontrino non trovato.');
     }
 
-    $mime   = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
+    $mime    = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
     $urlFile = '/nota-spese.php?scontrino=' . $id;
     ?>
 <!DOCTYPE html>
@@ -164,7 +164,7 @@ if ($isPost) {
     }
 
     if (!$errori) {
-        $percorsoDb   = null; // valore salvato nel DB: es. uploads/spese/abc.jpg
+        $percorsoDb   = null; // valore salvato in receipt_path, es. uploads/spese/abc.jpg
         $destinazione = null; // percorso assoluto sul disco
         try {
             $file = $_FILES['scontrino'] ?? null;
@@ -201,16 +201,16 @@ if ($isPost) {
             }
 
             $stmt = $pdo->prepare(
-                'INSERT INTO spese (user_id, data_spesa, descrizione, categoria, importo, scontrino_path)
-                 VALUES (:user_id, :data, :descrizione, :categoria, :importo, :scontrino_path)'
+                'INSERT INTO expenses (user_id, expense_date, description, category, amount, receipt_path)
+                 VALUES (:user_id, :expense_date, :description, :category, :amount, :receipt_path)'
             );
             $stmt->execute([
-                ':user_id'        => $userId,
-                ':data'           => $dataSpesa,
-                ':descrizione'    => $descrizione,
-                ':categoria'      => $categoria,
-                ':importo'        => sprintf('%.2f', $importoFatturato),
-                ':scontrino_path' => $percorsoDb,
+                ':user_id'      => $userId,
+                ':expense_date' => $dataSpesa,
+                ':description'  => $descrizione,
+                ':category'     => $categoria,
+                ':amount'       => sprintf('%.2f', $importoFatturato),
+                ':receipt_path' => $percorsoDb,
             ]);
 
             $messaggi[] = 'Spesa salvata con successo.';
@@ -236,10 +236,10 @@ if ($isPost) {
 
 // ---------- ELENCO SPESE ----------
 $stmt = $pdo->prepare(
-    'SELECT id, data_spesa, descrizione, categoria, importo, scontrino_path
-     FROM spese
+    'SELECT id, expense_date, description, category, amount, receipt_path
+     FROM expenses
      WHERE user_id = :user_id
-     ORDER BY data_spesa DESC, id DESC'
+     ORDER BY expense_date DESC, id DESC'
 );
 $stmt->execute([':user_id' => $userId]);
 $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -327,12 +327,12 @@ $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <?php else: ?>
                             <?php foreach ($spese as $s): ?>
                                 <tr>
-                                    <td data-label="Data"><?= htmlspecialchars($s['data_spesa'], ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td data-label="Descrizione"><?= htmlspecialchars($s['descrizione'], ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td data-label="Categoria"><?= htmlspecialchars($s['categoria'], ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td data-label="Importo" class="ns-importo"><?= number_format((float)$s['importo'], 2, ',', '.') ?> €</td>
+                                    <td data-label="Data"><?= htmlspecialchars($s['expense_date'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Descrizione"><?= htmlspecialchars($s['description'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Categoria"><?= htmlspecialchars($s['category'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Importo" class="ns-importo"><?= number_format((float)$s['amount'], 2, ',', '.') ?> €</td>
                                     <td data-label="Scontrino">
-                                        <?php if ($s['scontrino_path']): ?>
+                                        <?php if ($s['receipt_path']): ?>
                                             <a href="/nota-spese.php?anteprima=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Anteprima</a>
                                             · <a href="/nota-spese.php?scontrino=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Apri</a>
                                         <?php else: ?>
