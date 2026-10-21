@@ -1,3 +1,7 @@
+body.dashboard-page {
+    background: #daac01;
+}
+
 .fatturazione .service-content {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);

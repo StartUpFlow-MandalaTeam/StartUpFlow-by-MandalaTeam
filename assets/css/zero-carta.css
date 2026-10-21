@@ -1,3 +1,7 @@
+body.dashboard-page {
+    background: #daac01;
+}
+
 .zero-carta {
     --zc-ink: #172033;
     --zc-muted: #64748b;
