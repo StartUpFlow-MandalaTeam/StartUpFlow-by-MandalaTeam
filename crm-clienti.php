@@ -72,6 +72,43 @@ function dbTransaction(PDO $db, callable $fn) {
     }
 }
 
+// MODIFICA: helper per la campanella di notifica della prossima azione.
+// Restituisce stringa vuota se il cliente non ha una prossima azione.
+function renderNextActionBell($client): string {
+    if (empty($client->next_action_at)) {
+        return '';
+    }
+    $ts  = strtotime($client->next_action_at);
+    $now = time();
+    if ($ts < $now) {
+        $state = 'overdue'; $status = 'Scaduta';
+    } elseif ($ts - $now <= 86400) {
+        $state = 'soon';    $status = 'Entro 24 ore';
+    } else {
+        $state = 'ok';      $status = 'Programmata';
+    }
+ 
+    $types = ['call' => 'Chiamata', 'email' => 'Email', 'meeting' => 'Riunione', 'note' => 'Nota'];
+    $type  = $types[$client->na_type ?? ''] ?? (string) ($client->na_type ?? '');
+ 
+    $name = $client->client_type === 'company'
+        ? ($client->company_name ?? '')
+        : trim(($client->first_name ?? '') . ' ' . ($client->last_name ?? ''));
+ 
+    $title = 'Prossima azione — ' . $name;
+    $text  = $status . ': ' . date('d-m-Y H:i', $ts)
+           . ' — Da fare dopo: ' . $type
+           . (!empty($client->na_subject) ? ' · ' . $client->na_subject : '');
+ 
+    $flags = JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP;
+    return ' <button type="button" class="next-action-bell next-action-bell--' . $state . '"'
+         . ' title="' . htmlspecialchars($status . ': ' . date('d-m-Y H:i', $ts), ENT_QUOTES) . '"'
+         . ' aria-label="Prossima azione"'
+         . ' onclick="showStatusPopup(' . htmlspecialchars(json_encode($title, $flags), ENT_QUOTES)
+         . ', ' . htmlspecialchars(json_encode($text, $flags), ENT_QUOTES) . ')">🔔</button>';
+}
+
+
 // UNICO punto del codice che scrive crm_status, converted_at e lost_reason.
 class ClientService {
     // Passaggi manuali ammessi.'customer' non è mai raggiungibile a mano:
@@ -137,11 +174,27 @@ class ClientService {
 
 // Models
 class Client {
-    public static function all($db, int $userId) {
-        $stmt = $db->prepare('SELECT * FROM clients WHERE user_id = ?');
+        public static function all($db, int $userId) {
+        $stmt = $db->prepare("
+            SELECT c.*,
+                   na.type           AS na_type,
+                   na.subject        AS na_subject,
+                   na.next_action_at AS next_action_at
+              FROM clients c
+              LEFT JOIN crm_activities na
+                     ON na.id = (SELECT a.id
+                                   FROM crm_activities a
+                                  WHERE a.client_id = c.id
+                                    AND a.type != 'status_change'
+                                  ORDER BY a.occurred_at DESC, a.id DESC
+                                  LIMIT 1)
+                    AND na.next_action_at IS NOT NULL
+             WHERE c.user_id = ?
+        ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
+
 
     public static function find($db, int $id, int $userId) {
         $stmt = $db->prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?');
@@ -195,7 +248,7 @@ class Contact {
 
 class Activity {
     public static function where($db, $client_id) {
-        $stmt = $db->prepare('SELECT * FROM crm_activities WHERE client_id = ? AND type != "status_change"');
+        $stmt = $db->prepare('SELECT * FROM crm_activities WHERE client_id = ? AND type != "status_change" ORDER BY occurred_at DESC, id DESC');
         $stmt->execute([$client_id]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
@@ -207,13 +260,140 @@ class Activity {
 }
 
 class Order {
+    private const MAX_ITEMS = 50;
+    private const MAX_AMOUNT = 99999999.99;
+    // Aliquote IVA ammesse nelle righe (0 per chi è in regime forfettario).
+    private const VAT_RATES = ['0', '4', '5', '10', '22'];
+
+    // Ordini del cliente, ciascuno con le proprie righe in $order->items.
     public static function where($db, $client_id, int $userId) {
         $stmt = $db->prepare('SELECT * FROM orders WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC');
         $stmt->execute([$client_id, $userId]);
-        return $stmt->fetchAll(PDO::FETCH_OBJ);
+        $orders = $stmt->fetchAll(PDO::FETCH_OBJ);
+        if (!$orders) {
+            return $orders;
+        }
+        $ids = array_map(static fn($o) => (int) $o->id, $orders);
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $itemsStmt = $db->prepare("SELECT * FROM order_items WHERE order_id IN ($in) ORDER BY order_id, position, id");
+        $itemsStmt->execute($ids);
+        $byOrder = [];
+        foreach ($itemsStmt->fetchAll(PDO::FETCH_OBJ) as $item) {
+            $byOrder[(int) $item->order_id][] = $item;
+        }
+        foreach ($orders as $order) {
+            $order->items = $byOrder[(int) $order->id] ?? [];
+        }
+        return $orders;
     }
 
-    // Crea l'ordine (già confermato) e promuove il cliente, tutto in un'unica transazione:
+    // Valida e calcola le righe arrivate dal modale. Il server ricalcola sempre tutto:
+    // i totali mostrati dal browser sono solo un'anteprima.
+    // Per riga: imponibile = quantità x prezzo; IVA = imponibile x aliquota; totale riga = imponibile + IVA.
+    public static function parseItems(array $post): array {
+        $fields = ['item_description', 'item_quantity', 'item_unit_price', 'item_vat_rate'];
+        $cols = [];
+        foreach ($fields as $field) {
+            $value = $post[$field] ?? [];
+            if (!is_array($value)) {
+                throw new DomainException('Righe dell\'ordine non valide.');
+            }
+            $cols[$field] = array_values($value);
+        }
+        $count = count($cols['item_description']);
+        foreach ($cols as $value) {
+            if (count($value) !== $count) {
+                throw new DomainException('Righe dell\'ordine incomplete.');
+            }
+        }
+        if ($count > self::MAX_ITEMS) {
+            throw new DomainException('Massimo ' . self::MAX_ITEMS . ' righe per ordine.');
+        }
+
+        $items = [];
+        $subtotal = 0.0;
+        $tax = 0.0;
+        for ($i = 0; $i < $count; $i++) {
+            $row = [];
+            foreach ($fields as $field) {
+                if (!is_scalar($cols[$field][$i])) {
+                    throw new DomainException('Righe dell\'ordine non valide.');
+                }
+                $row[$field] = trim((string) $cols[$field][$i]);
+            }
+            if ($row['item_description'] === '' && $row['item_unit_price'] === '') {
+                continue; // riga lasciata vuota nel modale
+            }
+            $n = $i + 1;
+            $length = function_exists('mb_strlen') ? mb_strlen($row['item_description'], 'UTF-8') : strlen($row['item_description']);
+            if ($row['item_description'] === '' || $length > 500) {
+                throw new DomainException("Riga $n: descrizione obbligatoria (massimo 500 caratteri).");
+            }
+            if (!preg_match('/^\d{1,8}(\.\d{1,2})?$/', $row['item_quantity']) || (float) $row['item_quantity'] <= 0) {
+                throw new DomainException("Riga $n: quantità non valida (maggiore di zero, massimo 2 decimali).");
+            }
+            if (!preg_match('/^\d{1,8}(\.\d{1,2})?$/', $row['item_unit_price'])) {
+                throw new DomainException("Riga $n: prezzo unitario non valido (massimo 2 decimali).");
+            }
+            if (!in_array($row['item_vat_rate'], self::VAT_RATES, true)) {
+                throw new DomainException("Riga $n: aliquota IVA non valida.");
+            }
+            $quantity = round((float) $row['item_quantity'], 2);
+            $unitPrice = round((float) $row['item_unit_price'], 2);
+            $rate = (int) $row['item_vat_rate'];
+            $taxable = round($quantity * $unitPrice, 2);
+            $taxAmount = round($taxable * $rate / 100, 2);
+            $lineTotal = round($taxable + $taxAmount, 2);
+            if ($lineTotal > self::MAX_AMOUNT) {
+                throw new DomainException("Riga $n: importo oltre il limite consentito.");
+            }
+            $subtotal = round($subtotal + $taxable, 2);
+            $tax = round($tax + $taxAmount, 2);
+            $items[] = [
+                'description' => $row['item_description'],
+                'quantity'    => number_format($quantity, 2, '.', ''),
+                'unit_price'  => number_format($unitPrice, 2, '.', ''),
+                'vat_rate'    => number_format($rate, 2, '.', ''),
+                'line_total'  => number_format($lineTotal, 2, '.', ''),
+            ];
+        }
+        if (!$items) {
+            throw new DomainException('Aggiungi almeno una riga all\'ordine.');
+        }
+        $total = round($subtotal + $tax, 2);
+        if ($total > self::MAX_AMOUNT) {
+            throw new DomainException('Il totale dell\'ordine supera il limite consentito.');
+        }
+        return ['items' => $items, 'subtotal' => $subtotal, 'tax' => $tax, 'total' => $total];
+    }
+
+    // Scrive le righe dell'ordine. I valori arrivano già validati e ricalcolati dal server
+    // (parseItems): qui si persiste solo, senza ricalcolare nulla.
+    public static function insertItems(PDO $db, int $orderId, array $items): void {
+        $stmt = $db->prepare('INSERT INTO order_items (order_id, position, description, quantity, unit_price, vat_rate, line_total) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $position = 1;
+        foreach ($items as $item) {
+            $stmt->execute([
+                $orderId,
+                $position++,
+                $item['description'],
+                $item['quantity'],
+                $item['unit_price'],
+                $item['vat_rate'],
+                $item['line_total'],
+            ]);
+        }
+    }
+
+    // Sostituisce integralmente le righe di un ordine: usato in modifica, dove il totale
+    // viene ricalcolato e le righe precedenti non sono più valide.
+    public static function replaceItems(PDO $db, int $orderId, array $items): void {
+        $del = $db->prepare('DELETE FROM order_items WHERE order_id = ?');
+        $del->execute([$orderId]);
+        self::insertItems($db, $orderId, $items);
+    }
+
+    // Crea l'ordine (già confermato) con le sue righe e promuove il cliente, tutto in un'unica transazione:
     // o passano ordine + promozione + riga di storico, o non passa niente.
     public static function save($db, $data): int {
         $userId = (int) $data['user_id'];
@@ -226,18 +406,24 @@ class Order {
         if (strlen($orderNumber) > 50) {
             throw new DomainException('Il numero ordine supera i 50 caratteri.');
         }
-        $total = isset($data['total']) && is_numeric($data['total']) ? round((float) $data['total'], 2) : 0.00;
-        if ($total < 0 || $total > 99999999.99) {
-            throw new DomainException('Totale non valido.');
+        // Le note dell'ordine diventeranno la causale della fattura.
+        $notes = trim((string) ($data['notes'] ?? ''));
+        if (strlen($notes) > 2000) {
+            throw new DomainException('Le note superano i 2000 caratteri.');
         }
-        $currency = in_array($data['currency'] ?? 'EUR', ['EUR', 'USD', 'GBP'], true) ? $data['currency'] : 'EUR';
-        $dueDate = !empty($data['due_date']) ? $data['due_date'] : null;
-        $taxRegime = $data['tax_regime'] ?? 'ordinario';
+        $notes = $notes !== '' ? $notes : null;
 
-        $notes = "Regime: {$taxRegime}" . ($dueDate ? ", Scadenza: {$dueDate}" : "");
+        $currency = (string) ($data['currency'] ?? 'EUR');
+        if (!in_array($currency, ['EUR', 'USD', 'GBP'], true)) {
+            $currency = 'EUR';
+        }
+
+        // Il totale è sempre calcolato dalle righe: l'eventuale 'total' del POST viene ignorato.
+        $parsed = self::parseItems($data);
+        $total = number_format($parsed['total'], 2, '.', '');
 
         try {
-            return dbTransaction($db, function () use ($db, $data, $userId, $clientId, $orderNumber, $total, $currency, $notes): int {
+            return dbTransaction($db, function () use ($db, $data, $userId, $clientId, $orderNumber, $total, $currency, $notes, $parsed): int {
                 if (!empty($data['id'])) {
                     // Modifica: solo bozze. Non cambia stato né confirmed_at e non promuove il cliente.
                     $orderId = (int) $data['id'];
@@ -252,12 +438,15 @@ class Order {
                     }
                     $stmt = $db->prepare('UPDATE orders SET order_number = ?, total = ?, currency = ?, notes = ? WHERE id = ? AND user_id = ?');
                     $stmt->execute([$orderNumber, $total, $currency, $notes, $orderId, $userId]);
+                    // Il totale è ricalcolato sulle righe nuove: le vecchie vanno sostituite.
+                    self::replaceItems($db, $orderId, $parsed['items']);
                     return $orderId;
                 }
 
                 $stmt = $db->prepare('INSERT INTO orders (user_id, client_id, order_number, total, currency, status, payment_status, notes, confirmed_at) VALUES (?, ?, ?, ?, ?, \'confirmed\', \'unpaid\', ?, NOW())');
                 $stmt->execute([$userId, $clientId, $orderNumber, $total, $currency, $notes]);
                 $orderId = (int) $db->lastInsertId();
+                self::insertItems($db, $orderId, $parsed['items']);
 
                 // Promozione: unico punto di scrittura dello stato = ClientService
                 ClientService::markAsCustomer($db, $clientId, $userId, $orderId, $orderNumber);
@@ -278,7 +467,7 @@ function renderIndex($clients) {
     echo '<div class="service-page">
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Dashboard</a>
-        <h1>CRM clienti</h1>
+        <h1>Customer Relationship Management (CRM)</h1>
         <div class="crm-legend">
             <span class="legend-label">Legenda (clicca per info):</span>
             <span class="status-pill status-lead" onclick="showStatusPopup(\'Lead\', \'Contatto iniziale o potenziale cliente appena acquisito con interesse generico.\')">Lead</span>
@@ -289,7 +478,6 @@ function renderIndex($clients) {
     </header>
     <div class="service-content">
         <a href="crm-clienti.php?action=create" class="btn btn-primary" data-spa="true">Aggiungi Cliente</a>
-        
         <div class="desktop-table-view">
             <div class="table-container">
             <table class="table">
@@ -319,7 +507,7 @@ function renderIndex($clients) {
             $pipelineAge = $interval->days . ' gg.';
         }
         echo '<tr>
-            <td>' . $cName . '</td>
+            <td>' . $cName . renderNextActionBell($client) . '</td>
             <td>' . $cEmail . '</td>
             <td>' . $cStatus . '</td>
             <td>' . $pipelineAge . '</td>
@@ -351,7 +539,7 @@ function renderIndex($clients) {
             $pipelineAge = $interval->days . ' gg.';
         }
         echo '<div class="mobile-card">
-            <div class="mobile-card-row"><span class="mobile-card-label">Nome:</span><span class="mobile-card-value">' . $cName . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Nome:</span><span class="mobile-card-value">' . $cName . renderNextActionBell($client) . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Email:</span><span class="mobile-card-value">' . $cEmail . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $cStatus . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Pipeline Age:</span><span class="mobile-card-value">' . $pipelineAge . '</span></div>
@@ -376,10 +564,8 @@ function renderCreate() {
             </span>
             <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
             <span class="crm-breadcrumb__item">
-                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM</a>
             </span>
-            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
-            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Aggiungi Cliente</span>
         </nav>
         <h1>Aggiungi Cliente</h1>
     </header>
@@ -474,10 +660,8 @@ function renderEdit($client) {
             </span>
             <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
             <span class="crm-breadcrumb__item">
-                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM</a>
             </span>
-            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
-            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Modifica Cliente</span>
         </nav>
         <h1>Modifica Cliente</h1>
     </header>
@@ -576,10 +760,8 @@ function renderShow($client, $contacts, $activities, $orders) {
             </span>
             <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
             <span class="crm-breadcrumb__item">
-                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM clienti</a>
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM</a>
             </span>
-            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
-            <span class="crm-breadcrumb__item crm-breadcrumb__current" aria-current="page">Dettagli Cliente</span>
         </nav>
         <h1>Dettagli Cliente</h1>
     </header>
@@ -599,6 +781,7 @@ function renderShow($client, $contacts, $activities, $orders) {
                 <p class="card-text"><strong>PEC:</strong> ' . htmlspecialchars($client->pec ?? '') . '</p>
                 <p class="card-text"><strong>SDI Code:</strong> ' . htmlspecialchars($client->sdi_code ?? '') . '</p>
                 <p class="card-text"><strong>Stato CRM:</strong> ' . htmlspecialchars($client->crm_status ?? '') . '</p>
+                ' . (($client->crm_status ?? '') === 'lost' && !empty($client->lost_reason) ? '<p class="card-text"><strong>Motivo:</strong> ' . htmlspecialchars($client->lost_reason) . '</p>' : '') . '
                 <p class="card-text"><strong>Fonte:</strong> ' . htmlspecialchars($client->source ?? '') . '</p>
                 <p class="card-text"><strong>Note:</strong> ' . htmlspecialchars($client->notes ?? '') . '</p>
             </div>
@@ -717,6 +900,17 @@ function renderShow($client, $contacts, $activities, $orders) {
             <td data-label="Stato">' . htmlspecialchars($order->status ?? '') . '</td>
             <td data-label="Pagamento">' . htmlspecialchars($order->payment_status ?? '') . '</td>
         </tr>';
+        $orderLines = '';
+        foreach (($order->items ?? []) as $item) {
+            $orderLines .= '<li>' . htmlspecialchars((string)($item->description ?? ''))
+                . ' — ' . htmlspecialchars(number_format((float)($item->quantity ?? 0), 2, ',', '.'))
+                . ' × ' . htmlspecialchars(number_format((float)($item->unit_price ?? 0), 2, ',', '.'))
+                . ' (IVA ' . htmlspecialchars(number_format((float)($item->vat_rate ?? 0), 0))
+                . '%) = ' . htmlspecialchars(number_format((float)($item->line_total ?? 0), 2, ',', '.')) . '</li>';
+        }
+        if ($orderLines !== '') {
+            echo '<tr class="order-lines"><td colspan="5"><ul>' . $orderLines . '</ul></td></tr>';
+        }
     }
     echo '</tbody>
             </table>
@@ -734,33 +928,59 @@ function renderShow($client, $contacts, $activities, $orders) {
             <div class="mobile-card-row"><span class="mobile-card-label">N. Ordine:</span><span class="mobile-card-value">' . $oNumber . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Totale:</span><span class="mobile-card-value">' . $oTotal . ' ' . $oCurrency . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $oStatus . '</span></div>
-            <div class="mobile-card-row"><span class="mobile-card-label">Pagamento:</span><span class="mobile-card-value">' . $oPayment . '</span></div>
-        </div>';
+            <div class="mobile-card-row"><span class="mobile-card-label">Pagamento:</span><span class="mobile-card-value">' . $oPayment . '</span></div>';
+        $oLines = '';
+        foreach (($order->items ?? []) as $item) {
+            $oLines .= '<li>' . htmlspecialchars((string)($item->description ?? ''))
+                . ' — ' . htmlspecialchars(number_format((float)($item->quantity ?? 0), 2, ',', '.'))
+                . ' × ' . htmlspecialchars(number_format((float)($item->unit_price ?? 0), 2, ',', '.'))
+                . ' (IVA ' . htmlspecialchars(number_format((float)($item->vat_rate ?? 0), 0))
+                . '%) = ' . htmlspecialchars(number_format((float)($item->line_total ?? 0), 2, ',', '.')) . '</li>';
+        }
+        if ($oLines !== '') {
+            echo '<ul class="order-lines__list">' . $oLines . '</ul>';
+        }
+        echo '</div>';
     }
     echo '</div>
 
         <h2>Stato CRM</h2>';
     if (($client->crm_status ?? '') === 'customer') {
-        echo '<p>Stato attuale: Customer. La promozione avviene alla conferma di un ordine (immodificabile manualmente).</p>';
+        echo '<p>CUSTOMER (promozione automatica, alla conferma di un ordine).</p>';
     } else {
         $statusLabels = ['lead' => 'Lead', 'prospect' => 'Prospect', 'lost' => 'Lost'];
         echo '<form action="crm-clienti.php?action=update_status&id=' . $client->id . '" method="POST">' . csrfInput() . '
             <div class="form-group">
-                <select name="crm_status" class="form-control">';
+                <select name="crm_status" class="form-control" id="crmStatusSelect">';
         foreach ($statusLabels as $value => $label) {
             echo '<option value="' . $value . '"' . ($client->crm_status === $value ? ' selected' : '') . '>' . $label . '</option>';
         }
         echo '</select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="lostReasonGroup" style="' . (($client->crm_status ?? '') === 'lost' ? '' : 'display:none;') . '">
                 <label>Motivo (obbligatorio se Lost):</label>
-                <input type="text" name="lost_reason" class="form-control" maxlength="255">
+                <input type="text" name="lost_reason" class="form-control" maxlength="255" value="' . htmlspecialchars($client->lost_reason ?? '') . '">
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
                 <a href="/crm-clienti" class="btn btn-secondary" data-spa="true">Annulla</a>
             </div>
-        </form>';
+        </form>
+        <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const select = document.getElementById("crmStatusSelect");
+            const group = document.getElementById("lostReasonGroup");
+            if (select && group) {
+                select.addEventListener("change", () => {
+                    if (select.value === "lost") {
+                        group.style.display = "block";
+                    } else {
+                        group.style.display = "none";
+                    }
+                });
+            }
+        });
+        </script>';
     }
     echo '
     </div>
@@ -771,7 +991,19 @@ function renderShow($client, $contacts, $activities, $orders) {
 function renderCreateContact($client) {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php?action=show&id=' . $client->id . '" data-spa="true" class="crm-breadcrumb__link">Dettagli Cliente</a>
+            </span>
+        </nav>
         <h1>Aggiungi Contatto</h1>
     </header>
     <div class="service-content service-content--narrow">
@@ -812,7 +1044,19 @@ function renderCreateContact($client) {
 function renderCreateActivity($client) {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php" data-spa="true" class="crm-breadcrumb__link">CRM</a>
+            </span>
+            <span class="crm-breadcrumb__separator" aria-hidden="true">/</span>
+            <span class="crm-breadcrumb__item">
+                <a href="crm-clienti.php?action=show&id=' . $client->id . '" data-spa="true" class="crm-breadcrumb__link">Dettagli Cliente</a>
+            </span>
+        </nav>
         <h1>Aggiungi Attività</h1>
     </header>
     <div class="service-content service-content--narrow">
@@ -836,7 +1080,7 @@ function renderCreateActivity($client) {
                 <textarea name="body" class="form-control"></textarea>
             </div>
             <div class="form-group">
-                <label>Data:</label>
+                <label>Attività svolta il:</label>
                 <input type="datetime-local" name="occurred_at" class="form-control">
             </div>
             <div class="form-group">

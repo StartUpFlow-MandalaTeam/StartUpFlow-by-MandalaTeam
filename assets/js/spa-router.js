@@ -181,20 +181,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(fetchUrl, fetchOptions);
             if (!response.ok) {
-                throw new Error('Errore nella richiesta: ' + response.status);
+                // Il server risponde con un messaggio leggibile (es. 422 di validazione): lo si mostra.
+                let message = 'Errore nella richiesta: ' + response.status;
+                try {
+                    const body = await response.text();
+                    const match = body.match(/<p>([\s\S]*?)<\/p>/);
+                    if (match) {
+                        message = match[1].replace(/<[^>]+>/g, '').trim() || message;
+                    }
+                } catch (e) {
+                    // Corpo non leggibile: resta il messaggio generico.
+                }
+                throw new Error(message);
             }
 
+            // Azione del form letta dalla query string e confrontata per intero:
+            // 'action=store' come prefisso includerebbe 'action=store_order' e 'action=store_contact'.
+            const query = fetchUrl.includes('?') ? fetchUrl.split('?').slice(1).join('?') : '';
+            const urlParams = new URLSearchParams(query);
+            const formAction = urlParams.get('action') || '';
+
             let targetUrl = '/crm-clienti';
-            if (fetchUrl.includes('action=store') || fetchUrl.includes('action=update') || fetchUrl.includes('action=update_status')) {
+            if (formAction === 'store' || formAction === 'update' || formAction === 'update_status') {
+                // Creazione/modifica cliente e cambio stato: si torna alla lista.
                 targetUrl = '/crm-clienti';
             } else if (formData.has('client_id')) {
+                // Contatto, attivita e ordine: si torna alla scheda del cliente.
                 targetUrl = `/crm-clienti?action=show&id=${formData.get('client_id')}`;
-            } else if (fetchUrl.includes('id=')) {
-                const urlParams = new URLSearchParams(fetchUrl.split('?')[1]);
-                const clientId = urlParams.get('id');
-                if (clientId) {
-                    targetUrl = `/crm-clienti?action=show&id=${clientId}`;
-                }
+            } else if (urlParams.get('id')) {
+                targetUrl = `/crm-clienti?action=show&id=${urlParams.get('id')}`;
             }
             loadPage(targetUrl);
         } catch (error) {

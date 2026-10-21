@@ -145,10 +145,6 @@
 					<input type="text" name="order_number" class="form-control" placeholder="N. Ordine" required>
 				</label>
 				<label class="profile-modal__field">
-					<span>Totale (€)</span>
-					<input type="number" name="total" class="form-control" placeholder="0.00" step="0.01" min="0">
-				</label>
-				<label class="profile-modal__field">
 					<span>Valuta</span>
 					<select name="currency" class="form-control">
 						<option value="EUR">EUR</option>
@@ -156,6 +152,18 @@
 						<option value="GBP">GBP</option>
 					</select>
 				</label>
+				<div class="profile-modal__field profile-modal__field--full">
+					<span>Righe dell'ordine</span>
+					<div id="order-items" class="order-items"></div>
+					<button type="button" class="profile-modal__cancel" data-order-add-item>+ Aggiungi riga</button>
+				</div>
+				<label class="profile-modal__field profile-modal__field--full">
+					<span>Causale / note (riportata in fattura)</span>
+					<textarea name="notes" class="form-control" rows="3" maxlength="2000"></textarea>
+				</label>
+				<p class="profile-modal__field profile-modal__field--full order-totals" aria-live="polite">
+					Imponibile <strong id="order-subtotal">0,00</strong> · IVA <strong id="order-tax">0,00</strong> · Totale <strong id="order-total">0,00</strong>
+				</p>
 			</div>
 
 			<input type="hidden" name="client_id" id="order_client_id" value="">
@@ -204,6 +212,91 @@
 			}, 300);
 		}
 	});
+	</script>
+
+	<template id="order-item-template">
+		<div class="order-item">
+			<input type="text" name="item_description[]" class="form-control" placeholder="Descrizione" maxlength="500" required aria-label="Descrizione">
+			<input type="number" name="item_quantity[]" class="form-control" value="1" step="0.01" min="0.01" required aria-label="Quantità">
+			<input type="number" name="item_unit_price[]" class="form-control" placeholder="0.00" step="0.01" min="0" required aria-label="Prezzo unitario">
+			<select name="item_vat_rate[]" class="form-control" aria-label="Aliquota IVA">
+				<option value="22" selected>IVA 22%</option>
+				<option value="10">IVA 10%</option>
+				<option value="5">IVA 5%</option>
+				<option value="4">IVA 4%</option>
+				<option value="0">IVA 0%</option>
+			</select>
+			<output class="order-item__total" aria-label="Totale riga">0,00</output>
+			<button type="button" data-order-remove-item aria-label="Rimuovi riga">✕</button>
+		</div>
+	</template>
+
+	<script>
+	(function () {
+		const box = () => document.getElementById('order-items');
+		const tpl = () => document.getElementById('order-item-template');
+		const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+		const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+		function addRow() {
+			if (!box() || !tpl()) return;
+			box().appendChild(tpl().content.firstElementChild.cloneNode(true));
+		}
+
+		function recalc() {
+			let subtotal = 0, tax = 0;
+			document.querySelectorAll('#order-items .order-item').forEach((row) => {
+				const q = parseFloat(row.querySelector('[name="item_quantity[]"]').value) || 0;
+				const p = parseFloat(row.querySelector('[name="item_unit_price[]"]').value) || 0;
+				const rate = parseFloat(row.querySelector('[name="item_vat_rate[]"]').value) || 0;
+				const taxable = round2(q * p);
+				const vat = round2(taxable * rate / 100);
+				row.querySelector('.order-item__total').textContent = fmt(round2(taxable + vat));
+				subtotal = round2(subtotal + taxable);
+				tax = round2(tax + vat);
+			});
+			const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = fmt(value); };
+			set('order-subtotal', subtotal);
+			set('order-tax', tax);
+			set('order-total', round2(subtotal + tax));
+		}
+
+		function resetRows() {
+			if (!box()) return;
+			box().innerHTML = '';
+			addRow();
+			recalc();
+		}
+
+		document.addEventListener('click', (event) => {
+			if (event.target.closest('[data-order-add-item]')) {
+				addRow();
+				recalc();
+			}
+			const removeBtn = event.target.closest('[data-order-remove-item]');
+			if (removeBtn) {
+				if (box().children.length > 1) {
+					removeBtn.closest('.order-item').remove();
+				} else {
+					resetRows();
+				}
+				recalc();
+			}
+			if (event.target.closest('[data-order-modal-open]')) {
+				resetRows();
+			}
+		});
+		document.addEventListener('input', (event) => {
+			if (event.target.closest('#order-items')) recalc();
+		});
+		document.addEventListener('change', (event) => {
+			if (event.target.closest('#order-items')) recalc();
+		});
+		document.addEventListener('submit', (event) => {
+			if (event.target && event.target.id === 'order-form') setTimeout(resetRows, 350);
+		});
+		resetRows();
+	})();
 	</script>
 
 

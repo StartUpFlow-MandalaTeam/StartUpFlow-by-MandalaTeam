@@ -44,6 +44,12 @@ body.dashboard-page {
     border: 1px solid #e1e8ed;
 }
 
+.service-content--narrow {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+
 /* Stile per il link di ritorno alla dashboard */
 .back-link { 
     display: inline-block; 
@@ -228,8 +234,30 @@ body.dashboard-page {
     color: #2c3e50;
 }
 
+/* Bell icon*/
+.next-action-bell {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 .25rem;
+    vertical-align: middle;
+}
+.next-action-bell--overdue { filter: sepia(1) saturate(6) hue-rotate(-20deg); animation: bell-ring 1.5s infinite; }
+.next-action-bell--soon    { filter: sepia(1) saturate(4) hue-rotate(5deg); }
+.next-action-bell--ok      { opacity: .6; }
+
+@keyframes bell-ring {
+    0%, 100% { transform: rotate(0); }
+    10%, 30% { transform: rotate(-12deg); }
+    20%, 40% { transform: rotate(12deg); }
+    50%      { transform: rotate(0); }
+}
+
 /* Forms */
 .form-group {
+    width: 90%;
+    margin-left: 5%;
     margin-bottom: 1.25rem;
 }
 
@@ -419,4 +447,64 @@ dialog.profile-modal {
 .orders-table-container {
     max-height: 145px;
     overflow-y: auto;
+}
+
+/* ============== Ordine Modale ============== */
+.order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.order-item {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1.2fr 1.1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.order-item__total {
+    font-weight: 600;
+    color: #333;
+    text-align: right;
+}
+
+.order-totals {
+    margin: 0;
+}
+
+/* Bottone "+ Aggiungi riga" (usa stile profile-modal__cancel per coerenza) */
+[data-order-add-item] {
+    margin-top: 0.5rem;
+}
+
+/* Righe di dettaglio degli ordini (desktop: riga under la tabella, mobile: lista nella card) */
+.order-lines td {
+    background: #f7f9fb;
+    font-size: 0.85rem;
+    color: #55606b;
+}
+
+.order-lines ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.order-lines__list {
+    margin: 0.5rem 0 0;
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+    color: #55606b;
+}
+
+/* Mobile: righe ordine in colonna compatta */
+@media (max-width: 640px) {
+    .order-item {
+        grid-template-columns: 1fr 1fr;
+    }
+    .order-item input[name="item_description[]"] {
+        grid-column: 1 / -1;
+    }
 }
