@@ -113,79 +113,6 @@ CREATE TABLE IF NOT EXISTS remember_me_tokens (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS users_profiles (
-  user_id INT UNSIGNED PRIMARY KEY,
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  birth_date DATE,
-  birth_place VARCHAR(100),
-  birth_country VARCHAR(100),
-  cf VARCHAR(16) UNIQUE,
-  address VARCHAR(255),
-  city VARCHAR(100),
-  postal_code VARCHAR(10),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_users_profiles_user
-    FOREIGN KEY (user_id)
-    REFERENCES users(id)
-    ON DELETE CASCADE
-); ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS clients (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id INT UNSIGNED NOT NULL,
-  client_type ENUM('individual', 'company') NOT NULL,
-  company_name VARCHAR(255) NULL,
-  first_name VARCHAR(100) NULL,
-  last_name VARCHAR(100) NULL,
-  vat_number VARCHAR(20) NULL,
-  cf VARCHAR(16) NULL,
-  address VARCHAR(255) NULL,
-  city VARCHAR(100) NULL,
-  state VARCHAR(10) NULL,
-  postal_code VARCHAR(10) NULL,
-  country VARCHAR(100) NULL,
-  email VARCHAR(255) NULL,
-  phone VARCHAR(30) NULL,
-  crm_status ENUM('lead', 'customer') NOT NULL DEFAULT 'lead',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_clients_user_id (user_id),
-  CONSTRAINT fk_clients_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS invoices (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    client_id INT UNSIGNED NOT NULL,
-    user_id INT UNSIGNED NOT NULL,
-    document_number VARCHAR(50) NOT NULL,
-    issue_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
-    tax_regime ENUM(
-        'forfettario',
-        'ordinario'
-    ) NOT NULL,
-    total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    is_paid BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_invoices_document_number (document_number),
-    CONSTRAINT fk_invoices_client
-        FOREIGN KEY (client_id)
-        REFERENCES clients(id),
-    CONSTRAINT fk_invoices_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(id)
-) ENGINE=InnoDB;
-
 CREATE TABLE IF NOT EXISTS documents (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   client_id INT UNSIGNED NOT NULL,
@@ -219,32 +146,6 @@ CREATE TABLE IF NOT EXISTS users_profiles (
     ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS clients (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id INT UNSIGNED NOT NULL,
-  client_type ENUM('individual', 'company') NOT NULL,
-  company_name VARCHAR(255) NULL,
-  first_name VARCHAR(100) NULL,
-  last_name VARCHAR(100) NULL,
-  vat_number VARCHAR(20) NULL,
-  cf VARCHAR(16) NULL,
-  address VARCHAR(255) NULL,
-  city VARCHAR(100) NULL,
-  state VARCHAR(10) NULL,
-  postal_code VARCHAR(10) NULL,
-  country VARCHAR(100) NULL,
-  email VARCHAR(255) NULL,
-  phone VARCHAR(30) NULL,
-  crm_status ENUM('lead', 'customer') NOT NULL DEFAULT 'lead',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_clients_user_id (user_id),
-  CONSTRAINT fk_clients_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS invoices (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
