@@ -116,6 +116,10 @@ document.addEventListener('submit', async (event) => {
     if (!form) return;
 
     event.preventDefault();
+    event.stopImmediatePropagation();
+    if (form.dataset.uploading === 'true') return;
+
+    form.dataset.uploading = 'true';
     const status = form.querySelector('.zero-carta__status');
     const submit = form.querySelector('.zero-carta__submit');
     submit.disabled = true;
@@ -136,5 +140,6 @@ document.addEventListener('submit', async (event) => {
     } catch (error) {
         status.textContent = error.message || 'Errore durante il caricamento.';
         submit.disabled = false;
+        delete form.dataset.uploading;
     }
 });

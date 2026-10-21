@@ -2,14 +2,46 @@
     --zc-ink: #172033;
     --zc-muted: #64748b;
     --zc-border: #dbe2ea;
-    --zc-accent: #2457c5;
+    --zc-accent: #d6a800;
     width: 100%;
     color: var(--zc-ink);
 }
 
+.zero-carta .service-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+    align-items: start;
+    gap: 3rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
 .zero-carta .service-header {
-    align-self: flex-start;
-    text-align: left;
+    position: relative;
+    display: flex;
+    min-height: 140px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 3.5rem 1rem 1rem;
+    text-align: center;
+}
+
+.zero-carta .service-header .back-link {
+    position: absolute;
+    top: 1rem;
+    left: 0;
+    margin: 0;
+}
+
+.zero-carta .service-header h1,
+.zero-carta .service-header p {
+    margin: 0;
+}
+
+.zero-carta .service-header p {
+    margin-top: 0.35rem;
 }
 
 .zero-carta [hidden] {
@@ -18,96 +50,100 @@
 
 .zero-carta .back-link {
     display: inline-block;
-    margin-top: 1rem;
     padding: .5rem 1rem;
-    background: #000;
+    background: #111;
     color: #fff;
     text-decoration: none;
     font-size: .9rem;
     font-weight: 500;
-    border-radius: 4px;
-    border: 1px solid #000;
-    transition: background .2s;
+    border-radius: 8px;
+    border: 1px solid #111;
+    transition: background .2s, border-color .2s;
 }
 
 .zero-carta .back-link:hover {
     background: #333;
+    border-color: #333;
 }
 
 .zero-carta__cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-column: 1 / -1;
     gap: 1rem;
     width: min(100%, 760px);
     margin: 1.5rem auto;
 }
 
 .zero-carta__card {
-    display: grid;
-    align-content: start;
-    gap: .5rem;
-    min-height: 120px;
-    padding: 1.25rem;
-    border: 1px solid var(--zc-border);
-    border-radius: 10px;
+    display: flex;
+    min-height: 124px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 1rem;
+    border: 1px solid rgba(17, 17, 17, 0.14);
+    border-radius: 8px;
     background: #fff;
-    color: var(--zc-ink);
-    text-align: left;
+    color: #111;
+    text-align: center;
     font: inherit;
+    font-weight: 700;
     cursor: pointer;
-    transition: border-color .2s, box-shadow .2s, background .2s;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .zero-carta__card:hover,
 .zero-carta__card:focus-visible {
     border-color: var(--zc-accent);
-    box-shadow: 0 3px 12px rgb(36 87 197 / 12%);
+    background: #fff9df;
+    transform: translateY(-2px);
 }
 
 .zero-carta__card.is-active {
     border-color: var(--zc-accent);
-    background: #f4f7ff;
-    box-shadow: 0 0 0 1px var(--zc-accent);
+    background: #fff9df;
+    box-shadow: inset 0 0 0 1px var(--zc-accent);
 }
 
 .zero-carta__card-title {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1rem;
 }
 
 .zero-carta__card-description {
     color: var(--zc-muted);
     font-size: .9rem;
+    font-weight: 400;
 }
 
 .zero-carta__panel {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, 900px);
     padding: 1.25rem 0;
 }
 
 .zero-carta__back {
     display: grid;
-    width: 54px;
-    height: 54px;
+    width: 42px;
+    height: 42px;
     margin: 0 0 1rem;
     padding: 0;
     place-items: center;
-    border: 1px solid #e5e7eb;
-    border-radius: 11px;
+    border: 1px solid rgba(17, 17, 17, 0.16);
+    border-radius: 8px;
     background: #fff;
-    color: #171717;
+    color: #111;
     font: inherit;
-    font-size: 2rem;
-    font-weight: 400;
-    line-height: 1;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
-    transition: background .2s, box-shadow .2s;
+    transition: background-color 160ms ease, border-color 160ms ease;
 }
 
 .zero-carta__back:hover,
 .zero-carta__back:focus-visible {
-    background: #f8fafc;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 12%);
+    border-color: var(--zc-accent);
+    background: #fff9df;
 }
 
 .zero-carta__back svg {
@@ -131,7 +167,7 @@
 
 .zero-carta__empty {
     padding: 1.25rem;
-    border: 1px dashed var(--zc-border);
+    border: 1px dashed rgba(17, 17, 17, 0.2);
     border-radius: 8px;
     color: var(--zc-muted);
 }
@@ -140,28 +176,37 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin: 1.5rem 0;
 }
 
 .zero-carta__filter {
     display: grid;
-    gap: .4rem;
-    color: var(--zc-ink);
-    font-size: .9rem;
-    font-weight: 600;
+    gap: 8px;
+    color: #3f4657;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .zero-carta__filter input,
 .zero-carta__filter select {
+    box-sizing: border-box;
     width: 100%;
-    min-height: 42px;
-    padding: .6rem .7rem;
-    border: 1px solid var(--zc-border);
-    border-radius: 6px;
+    min-height: 48px;
+    padding: 13px 14px;
+    border: 1px solid rgba(17, 17, 17, 0.12);
+    border-radius: 14px;
     background: #fff;
-    color: var(--zc-ink);
+    color: #111;
     font: inherit;
     font-weight: 400;
+}
+
+.zero-carta__filter input:focus-visible,
+.zero-carta__filter select:focus-visible,
+.zero-carta__field select:focus-visible,
+.zero-carta__dropzone:focus-within {
+    outline: 2px solid var(--zc-accent);
+    outline-offset: 2px;
 }
 
 .zero-carta__list {
@@ -175,18 +220,17 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.15rem;
-    border: 1px solid transparent;
+    border: 1px solid rgba(17, 17, 17, 0.14);
     border-radius: 8px;
+    background: #fff;
 }
 
 .zero-carta__document--nda {
-    border-color: #5279cf;
-    background: #9bb5ef;
+    border-left: 4px solid #d6a800;
 }
 
 .zero-carta__document--contract {
-    border-color: #4b9b64;
-    background: #9bd2aa;
+    border-left: 4px solid #7a847f;
 }
 
 .zero-carta__document h3 {
@@ -242,48 +286,40 @@
 .zero-carta__badge {
     padding: .15rem .5rem;
     border-radius: 999px;
-    background: #edf2ff;
-    color: var(--zc-accent);
+    background: #fff2bf;
+    color: #725700;
     font-size: .8rem;
     font-weight: 600;
 }
 
-.zero-carta__document--nda .zero-carta__badge {
-    background: #dce7ff;
-    color: #183b87;
-}
-
-.zero-carta__document--contract .zero-carta__badge {
-    background: #d8f0df;
-    color: #18552d;
-}
-
-.zero-carta__document--nda .zero-carta__document-info p {
-    color: #263d70;
-}
-
-.zero-carta__document--contract .zero-carta__document-info p {
-    color: #245535;
-}
-
 .zero-carta__download,
 .zero-carta__submit {
-    display: inline-block;
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
     padding: .65rem 1rem;
     border: 0;
-    border-radius: 6px;
-    background: var(--zc-accent);
+    border-radius: 8px;
+    background: #111;
     color: #fff;
     font: inherit;
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.zero-carta__download:hover,
+.zero-carta__submit:hover:not(:disabled) {
+    background: var(--zc-accent);
+    color: #111;
 }
 
 .zero-carta__form {
     display: grid;
     gap: 1rem;
-    max-width: 620px;
+    max-width: 760px;
     margin: 0 auto;
     text-align: left;
 }
@@ -300,18 +336,23 @@
 
 .zero-carta__field {
     display: grid;
-    gap: .4rem;
+    gap: 8px;
+    color: #3f4657;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .zero-carta__field select {
+    box-sizing: border-box;
     width: 100%;
-    padding: .7rem;
-    border: 1px solid var(--zc-border);
-    border-radius: 6px;
+    min-height: 48px;
+    padding: 13px 14px;
+    border: 1px solid rgba(17, 17, 17, 0.12);
+    border-radius: 14px;
     background: #fff;
-    color: var(--zc-ink);
+    color: #111;
     font: inherit;
+    font-weight: 400;
 }
 
 .zero-carta__dropzone {
@@ -319,15 +360,16 @@
     justify-items: center;
     gap: .55rem;
     padding: 2rem 1rem;
-    border: 2px dashed var(--zc-border);
+    border: 2px dashed rgba(17, 17, 17, 0.2);
     border-radius: 8px;
     text-align: center;
     cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .zero-carta__dropzone.is-dragging {
     border-color: var(--zc-accent);
-    background: #f4f7ff;
+    background: #fff9df;
 }
 
 .zero-carta__file {
@@ -354,9 +396,27 @@
     cursor: wait;
 }
 
-@media (max-width: 600px) {
-    .zero-carta__cards {
+@media (max-width: 700px) {
+    .zero-carta .service-header {
+        min-height: 132px;
+        padding: 3.75rem 1rem 1rem;
+    }
+
+    .zero-carta .service-header .back-link {
+        left: 0.75rem;
+    }
+
+    .zero-carta .service-content {
         grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .zero-carta__cards {
+        gap: 0.75rem;
+    }
+
+    .zero-carta__card {
+        min-height: 108px;
     }
 
     .zero-carta__filters {
@@ -366,5 +426,9 @@
     .zero-carta__document {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .zero-carta__download {
+        align-self: flex-start;
     }
 }
