@@ -1,23 +1,23 @@
-# Feature: Fatturazione
+# Feature: Zero carta
 
 ## Descrizione
-Modulo per l'emissione delle fatture.
+Repository documentale digitale per eliminare la carta.
 
 ## Compiti
-- [ ] Implementare interfaccia creazione fattura
-- [ ] Integrare con backend API
-- [ ] Gestione clienti e numerazione fatture
-- [ ] Export PDF fatture
+- [ ] Implementare upload e categorizzazione documenti
+- [ ] Motore di ricerca documenti
+- [ ] Anteprima documenti (PDF, immagini)
+- [ ] Gestione permessi accesso
+- [ ] Versioning documenti
 
 ## Route
--  - Pagina principale
+- `/zero-carta` - Pagina principale
 
 ## Dipendenze
 - React Router (già incluso in main)
-- Eventuali librerie specifiche per PDF (es: react-pdf, jspdf)
+- Libreria per visualizzazione PDF (es: react-pdf)
 
 ## Note
-- Lavorare solo su file in  e componenti correlati
+- Lavorare solo su file in `client/src/pages/ZeroCartaPage.jsx` e componenti correlati
 - Non modificare file condivisi (navbar, layout, router)
-- Fare merge da main prima di iniziare: Già aggiornato.
-
+- Fare merge da main prima di iniziare: `git merge main`

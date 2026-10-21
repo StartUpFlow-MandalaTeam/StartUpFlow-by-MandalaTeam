@@ -14,7 +14,7 @@ $bodyClass = 'dashboard-page';
 $hideOverlay = isset($_GET['no-overlay']) && $_GET['no-overlay'] === '1';
 
 // Add overlay CSS for non-logged-in users
-$additionalCss = '<link rel="stylesheet" href="/assets/css/startup-overlay.css">';
+$additionalCss = '<link rel="stylesheet" href="/assets/css/startup-overlay.css"><link rel="stylesheet" href="/assets/css/zero-carta.css">';
 
 require_once __DIR__ . '/includes/layout/header.php';
 
@@ -56,5 +56,6 @@ require_once __DIR__ . '/includes/layout/header.php';
 require_once __DIR__ . '/includes/layout/footer.php';
 ?>
 <?php if (isLoggedIn()): ?>
+	<script src="/assets/js/zero-carta.js"></script>
 	<script src="/assets/js/spa-router.js"></script>
 <?php endif; ?>
