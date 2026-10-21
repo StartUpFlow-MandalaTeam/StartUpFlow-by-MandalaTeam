@@ -1,74 +1,242 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/db.php';            // fornisce $pdo
-//require_once __DIR__ . '/includes/nota-spese-logic.php';
+require_once __DIR__ . '/includes/db.php'; // Fornisce $pdo
 
-if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
+const NS_CARTELLA_RELATIVA = 'uploads/spese';
+const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
+const NS_MIME_AMMESSI      = ['image/jpeg', 'image/png', 'application/pdf'];
+
+/** Restituisce il percorso assoluto dello scontrino se la spesa appartiene all'utente, altrimenti null. */
+function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
+{
+    $stmt = $pdo->prepare('SELECT scontrino_path FROM spese WHERE id = :id AND user_id = :uid');
+    $stmt->execute([':id' => $idSpesa, ':uid' => $userId]);
+    $relativo = $stmt->fetchColumn();
+    if (!$relativo) {
+        return null;
+    }
+
+    // Accetta sia il percorso completo sia il vecchio formato con solo il nome file
+    if (!str_contains($relativo, '/')) {
+        $relativo = NS_CARTELLA_RELATIVA . '/' . $relativo;
+    }
+
+    // Impedisce di uscire dalla cartella degli upload
+    $assoluto = realpath(__DIR__ . '/' . $relativo);
+    $base     = realpath(NS_CARTELLA_UPLOAD);
+    if ($assoluto === false || $base === false || !str_starts_with($assoluto, $base . DIRECTORY_SEPARATOR)) {
+        return null;
+    }
+
+    return is_file($assoluto) ? $assoluto : null;
+}
+
+/** Invia il file al browser con il tipo MIME reale. */
+function inviaFile(string $percorso, int $id): never
+{
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
+    if (!in_array($mime, NS_MIME_AMMESSI, true)) {
+        http_response_code(415);
+        exit('Formato non supportato.');
+    }
+
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($percorso));
+    header('Content-Disposition: inline; filename="scontrino-' . $id . '"');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, no-store');
+    readfile($percorso);
     exit;
 }
 
+// ---------- VISUALIZZAZIONE SCONTRINO (GET, pagine separate) ----------
+
+if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
+    if (!isLoggedIn()) {
+        http_response_code(403);
+        exit('Accesso negato.');
+    }
+
+    $userId = (int)currentUserId();
+
+    // Apri: invia il file
+    if (isset($_GET['scontrino'])) {
+        $id = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
+        $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
+        if ($percorso === null) {
+            http_response_code(404);
+            exit('Scontrino non trovato.');
+        }
+        inviaFile($percorso, $id);
+    }
+
+    // Anteprima: pagina HTML con il file incorporato
+    $id = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
+    $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
+    if ($percorso === null) {
+        http_response_code(404);
+        exit('Scontrino non trovato.');
+    }
+
+    $mime   = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
+    $urlFile = '/nota-spese.php?scontrino=' . $id;
+    ?>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scontrino #<?= (int)$id ?></title>
+    <link rel="stylesheet" href="/assets/css/nota-spese.css">
+</head>
+<body>
+<div class="ns">
+    <header class="ns-header">
+        <a href="/nota-spese" class="back-link">← Torna alle spese</a>
+        <h1>Scontrino #<?= (int)$id ?></h1>
+        <p><a href="<?= htmlspecialchars($urlFile, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Apri a schermo intero</a></p>
+    </header>
+    <section class="ns-card">
+        <?php if ($mime === 'application/pdf'): ?>
+            <iframe class="ns-preview-frame" src="<?= htmlspecialchars($urlFile, ENT_QUOTES, 'UTF-8') ?>" title="Scontrino"></iframe>
+        <?php else: ?>
+            <img class="ns-preview-img" src="<?= htmlspecialchars($urlFile, ENT_QUOTES, 'UTF-8') ?>" alt="Scontrino #<?= (int)$id ?>">
+        <?php endif; ?>
+    </section>
+</div>
+</body>
+</html>
+    <?php
+    exit;
+}
+
+// ---------- CONTROLLI DI ACCESSO (SPA e form) ----------
+
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-if (!$isAjax) {
+$isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+
+if (!isLoggedIn()) {
+    if ($isAjax) {
+        http_response_code(401);
+        exit;
+    }
+    header('Location: /auth/login.php');
+    exit;
+}
+
+// Un GET diretto fuori dalla SPA torna alla dashboard
+if (!$isAjax && !$isPost) {
     header('Location: /');
     exit;
 }
 
-const NS_CARTELLA_UPLOAD = __DIR__ . '/uploads/spese';
-
 $userId   = (int)currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
-$messaggi = [];
-$errori   = [];
 
-// Salvataggio della spesa
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $risultato = validaSpesa($_POST);
-    $errori = $risultato['errori'];
+// Messaggi lasciati dall'invio precedente (form senza JavaScript)
+$flash    = $_SESSION['ns_flash'] ?? null;
+unset($_SESSION['ns_flash']);
+$messaggi = $flash['ok']  ?? [];
+$errori   = $flash['err'] ?? [];
+
+// ---------- SALVATAGGIO ----------
+if ($isPost) {
+    $dataSpesa   = trim($_POST['data_spesa'] ?? '');
+    $descrizione = trim($_POST['descrizione'] ?? '');
+    $categoria   = trim($_POST['categoria'] ?? '');
+    $importoStr  = trim($_POST['importo'] ?? '');
+
+    if (empty($dataSpesa)) {
+        $errori[] = 'La data è obbligatoria.';
+    }
+    if (empty($descrizione) || mb_strlen($descrizione) > 255) {
+        $errori[] = 'La descrizione è obbligatoria e non può superare i 255 caratteri.';
+    }
+    if (!in_array($categoria, ['Cibo', 'Trasporti', 'Software', 'Altro'], true)) {
+        $errori[] = 'Seleziona una categoria valida.';
+    }
+    if (!is_numeric($importoStr) || (float)$importoStr <= 0) {
+        $errori[] = "L'importo deve essere un numero maggiore di zero.";
+    } else {
+        $importoFatturato = (float)$importoStr;
+    }
 
     if (!$errori) {
-        $nomeFile = null;
+        $percorsoDb   = null; // valore salvato nel DB: es. uploads/spese/abc.jpg
+        $destinazione = null; // percorso assoluto sul disco
         try {
-            // Salva lo scontrino (se presente) e ottiene il nome casuale del file
-            $nomeFile = salvaScontrino(
-                $_FILES['scontrino'] ?? ['error' => UPLOAD_ERR_NO_FILE],
-                NS_CARTELLA_UPLOAD
-            );
+            $file = $_FILES['scontrino'] ?? null;
+            if ($file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('Errore durante il caricamento del file.');
+                }
+                if ($file['size'] > 5 * 1024 * 1024) {
+                    throw new RuntimeException('Il file supera la dimensione massima consentita (5MB).');
+                }
 
-            $dati = $risultato['dati'];
+                $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                if (!in_array($mimeType, NS_MIME_AMMESSI, true)) {
+                    throw new RuntimeException('Formato file non valido. Sono accettati solo JPG, PNG e PDF.');
+                }
+
+                if (!is_dir(NS_CARTELLA_UPLOAD)) {
+                    mkdir(NS_CARTELLA_UPLOAD, 0755, true);
+                }
+
+                $ext = match ($mimeType) {
+                    'image/jpeg'      => 'jpg',
+                    'image/png'       => 'png',
+                    'application/pdf' => 'pdf',
+                };
+
+                $nomeFile     = bin2hex(random_bytes(16)) . '.' . $ext;
+                $destinazione = NS_CARTELLA_UPLOAD . '/' . $nomeFile;
+                $percorsoDb   = NS_CARTELLA_RELATIVA . '/' . $nomeFile;
+
+                if (!move_uploaded_file($file['tmp_name'], $destinazione)) {
+                    throw new RuntimeException('Impossibile salvare il file sul server.');
+                }
+            }
+
             $stmt = $pdo->prepare(
                 'INSERT INTO spese (user_id, data_spesa, descrizione, categoria, importo, scontrino_path)
                  VALUES (:user_id, :data, :descrizione, :categoria, :importo, :scontrino_path)'
             );
             $stmt->execute([
                 ':user_id'        => $userId,
-                ':data'           => $dati['data'],
-                ':descrizione'    => $dati['descrizione'],
-                ':categoria'      => $dati['categoria'],
-                ':importo'        => sprintf('%.2f', $dati['importo_centesimi'] / 100),
-                ':scontrino_path' => $nomeFile,
+                ':data'           => $dataSpesa,
+                ':descrizione'    => $descrizione,
+                ':categoria'      => $categoria,
+                ':importo'        => sprintf('%.2f', $importoFatturato),
+                ':scontrino_path' => $percorsoDb,
             ]);
 
-            $messaggi[] = 'Spesa salvata.';
+            $messaggi[] = 'Spesa salvata con successo.';
         } catch (RuntimeException $e) {
-            // File non valido (tipo, dimensione, errore di upload)
             $errori[] = $e->getMessage();
         } catch (PDOException $e) {
-            // Il file è già stato salvato: se il DB fallisce, lo cancelliamo
-            if ($nomeFile !== null && is_file(NS_CARTELLA_UPLOAD . '/' . $nomeFile)) {
-                unlink(NS_CARTELLA_UPLOAD . '/' . $nomeFile);
+            // Il file è già stato scritto: se il DB fallisce, lo eliminiamo
+            if ($destinazione !== null && is_file($destinazione)) {
+                unlink($destinazione);
             }
-            error_log('Errore salvataggio spesa: ' . $e->getMessage());
-            $errori[] = 'Impossibile salvare la spesa. Riprova.';
+            error_log('Errore salvataggio spesa DB: ' . $e->getMessage());
+            $errori[] = 'Impossibile salvare la spesa nel database.';
         }
+    }
+
+    // Form senza JavaScript: il messaggio va in sessione e si torna alla pagina precedente
+    if (!$isAjax) {
+        $_SESSION['ns_flash'] = ['ok' => $messaggi, 'err' => $errori];
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '/'));
+        exit;
     }
 }
 
-// Elenco delle spese dell'utente
+// ---------- ELENCO SPESE ----------
 $stmt = $pdo->prepare(
-    'SELECT data_spesa, descrizione, categoria, importo, scontrino_path
+    'SELECT id, data_spesa, descrizione, categoria, importo, scontrino_path
      FROM spese
      WHERE user_id = :user_id
      ORDER BY data_spesa DESC, id DESC'
@@ -76,8 +244,10 @@ $stmt = $pdo->prepare(
 $stmt->execute([':user_id' => $userId]);
 $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-<div class="service-page">
-    <header class="service-header">
+<link rel="stylesheet" href="/assets/css/nota-spese.css">
+
+<div class="service-page ns">
+    <header class="service-header ns-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Nota Spese</h1>
         <p>Benvenuto, <?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>!</p>
@@ -85,59 +255,96 @@ $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <div class="service-content">
         <?php foreach ($messaggi as $m): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($m, ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="ns-alert ns-alert--ok"><?= htmlspecialchars($m, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endforeach; ?>
         <?php foreach ($errori as $e): ?>
-            <div class="alert alert-error"><?= htmlspecialchars($e, ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="ns-alert ns-alert--err"><?= htmlspecialchars($e, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endforeach; ?>
 
-        <form method="post" action="/nota-spese" enctype="multipart/form-data">
-            <label for="data_spesa">Data</label>
-            <input type="date" id="data_spesa" name="data_spesa" required>
+        <section class="ns-card">
+            <h2>Nuova spesa</h2>
 
-            <label for="descrizione">Descrizione</label>
-            <input type="text" id="descrizione" name="descrizione" maxlength="255" required>
+            <form method="post" action="/nota-spese.php" enctype="multipart/form-data">
+                <div class="ns-grid">
+                    <div class="ns-field">
+                        <label for="data_spesa">Data</label>
+                        <input type="date" id="data_spesa" name="data_spesa" required>
+                    </div>
 
-            <label for="categoria">Categoria</label>
-            <select id="categoria" name="categoria" required>
-                <option value="">Scegli...</option>
-                <option value="Cibo">Cibo</option>
-                <option value="Trasporti">Trasporti</option>
-                <option value="Software">Software</option>
-                <option value="Altro">Altro</option>
-            </select>
+                    <div class="ns-field">
+                        <label for="importo">Importo (€)</label>
+                        <input type="number" id="importo" name="importo" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required>
+                    </div>
 
-            <label for="importo">Importo (€)</label>
-            <input type="number" id="importo" name="importo" step="0.01" min="0.01" required>
+                    <div class="ns-field">
+                        <label for="categoria">Categoria</label>
+                        <select id="categoria" name="categoria" required>
+                            <option value="">Scegli...</option>
+                            <option value="Cibo">Cibo</option>
+                            <option value="Trasporti">Trasporti</option>
+                            <option value="Software">Software</option>
+                            <option value="Altro">Altro</option>
+                        </select>
+                    </div>
 
-            <label for="scontrino">Foto dello scontrino (facoltativa)</label>
-            <input type="file" id="scontrino" name="scontrino" accept="image/jpeg,image/png,application/pdf">
+                    <div class="ns-field ns-full">
+                        <label for="descrizione">Descrizione</label>
+                        <input type="text" id="descrizione" name="descrizione" maxlength="255" placeholder="Es. Pranzo con il cliente" required>
+                    </div>
 
-            <button type="submit">Salva spesa</button>
-        </form>
+                    <div class="ns-field">
+                        <label for="scontrino">Foto dello scontrino (facoltativa)</label>
+                        <input type="file" id="scontrino" name="scontrino" accept="image/jpeg,image/png,application/pdf">
+                        <small class="ns-hint">JPG, PNG o PDF, massimo 5 MB</small>
+                    </div>
+                </div>
 
-        <h2>Elenco spese</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Descrizione</th>
-                    <th>Categoria</th>
-                    <th>Importo</th>
-                    <th>Scontrino</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($spese as $s): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($s['data_spesa'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($s['descrizione'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($s['categoria'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= number_format((float)$s['importo'], 2, ',', '.') ?> €</td>
-                        <td><?= $s['scontrino_path'] ? 'Sì' : '—' ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                <div class="ns-actions">
+                    <button type="submit" class="ns-btn">Salva spesa</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="ns-card">
+            <h2>Elenco spese</h2>
+
+            <div class="ns-table-wrap">
+                <table class="ns-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrizione</th>
+                            <th>Categoria</th>
+                            <th>Importo</th>
+                            <th>Scontrino</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($spese)): ?>
+                            <tr class="ns-vuoto">
+                                <td colspan="5" class="ns-empty">Nessuna spesa registrata.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($spese as $s): ?>
+                                <tr>
+                                    <td data-label="Data"><?= htmlspecialchars($s['data_spesa'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Descrizione"><?= htmlspecialchars($s['descrizione'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Categoria"><?= htmlspecialchars($s['categoria'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Importo" class="ns-importo"><?= number_format((float)$s['importo'], 2, ',', '.') ?> €</td>
+                                    <td data-label="Scontrino">
+                                        <?php if ($s['scontrino_path']): ?>
+                                            <a href="/nota-spese.php?anteprima=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Anteprima</a>
+                                            · <a href="/nota-spese.php?scontrino=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Apri</a>
+                                        <?php else: ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 </div>

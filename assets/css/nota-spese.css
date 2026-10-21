@@ -1,0 +1,294 @@
+.main:has(.ns),
+.main:has(.ns) #app,
+.main:has(.ns) #dynamic-content {
+    background: none !important;
+    background-image: none !important;
+    max-width: none;
+}
+
+.service-page.ns,
+.ns {
+    display: block;
+    background: #ffffff47 !important;
+    background-image: none !important;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+    border-radius: 12px;
+    color: #1f2937;
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    float: none;
+    position: static;
+}
+
+.ns *,
+.ns *::before,
+.ns *::after {
+    box-sizing: border-box;
+}
+
+.ns .service-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+/* ---------- 2. VARIABILI E INTESTAZIONE ---------- */
+
+.ns {
+    --ns-border: #dfe3ea;
+    --ns-muted: #6b7280;
+    --ns-accent: #2563eb;
+    --ns-accent-hover: #1d4ed8;
+}
+
+.ns .ns-header h1 {
+    margin: .5rem 0 .25rem;
+    font-size: 1.6rem;
+    color: #111827;
+}
+.ns .ns-header p {
+    margin: 0 0 1rem;
+    color: var(--ns-muted);
+}
+
+.ns .back-link {
+    display: inline-block;
+    margin-top: .5rem;
+    padding: .5rem 1rem;
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+    font-size: .9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid #000;
+}
+.ns .back-link:hover {
+    background: #333;
+    border-color: #000;
+}
+
+/* ---------- 3. MESSAGGI ---------- */
+
+.ns .ns-alert {
+    padding: .7rem 1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    margin: 0;
+}
+.ns .ns-alert--ok  { background: #dcfce7; color: #14532d; border-color: #bbf7d0; }
+.ns .ns-alert--err { background: #fee2e2; color: #7f1d1d; border-color: #fecaca; }
+
+/* ---------- 4. CARD ---------- */
+
+.ns .ns-card {
+    display: block;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 0;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+    float: none;
+    position: static;
+}
+.ns .ns-card h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+    color: #111827;
+}
+
+/* ---------- 5. FORM ---------- */
+
+.ns .ns-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+.ns .ns-field {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    min-width: 0;
+    width: 100%;
+}
+.ns .ns-field label {
+    font-weight: 600;
+    font-size: .9rem;
+    color: #1f2937;
+}
+
+.ns .ns-field input:not([type="file"]),
+.ns .ns-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: .6rem .75rem;
+    border: 1px solid var(--ns-border);
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    color: #1f2937;
+}
+
+/* Input file: largo quanto il campo, il pulsante del browser resta leggibile */
+.ns .ns-field input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    padding: .45rem;
+    border: 1px dashed var(--ns-border);
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: .9rem;
+}
+
+.ns .ns-field input:focus-visible,
+.ns .ns-field select:focus-visible,
+.ns .ns-btn:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .35);
+    outline-offset: 1px;
+}
+
+.ns .ns-full { grid-column: 1 / -1; }
+
+.ns .ns-hint {
+    color: var(--ns-muted);
+    font-size: .8rem;
+}
+
+.ns .ns-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ns .ns-btn {
+    width: 100%;
+    min-height: 44px;
+    padding: .6rem 1.25rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--ns-accent);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ns .ns-btn:hover { background: var(--ns-accent-hover); }
+
+/* ---------- 6. TOTALE ---------- */
+
+.ns .ns-totale {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+}
+.ns .ns-totale strong { font-variant-numeric: tabular-nums; }
+
+/* ---------- 7. TABELLA ---------- */
+
+.ns .ns-table-wrap { overflow-x: auto; }
+
+.ns .ns-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .95rem;
+    background: #fff;
+}
+.ns .ns-table th,
+.ns .ns-table td {
+    padding: .7rem .6rem;
+    border-bottom: 1px solid var(--ns-border);
+    text-align: left;
+    vertical-align: middle;
+    color: #1f2937;
+}
+.ns .ns-table th {
+    background: #f9fafb;
+    color: var(--ns-muted);
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.ns .ns-importo {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+.ns .ns-empty {
+    text-align: center;
+    color: var(--ns-muted);
+    padding: 1.5rem 0;
+}
+
+/* ---------- 8. BADGE CATEGORIA ---------- */
+
+.ns .ns-badge {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 600;
+}
+.ns .ns-badge--cibo      { background: #ffedd5; color: #9a3412; }
+.ns .ns-badge--trasporti { background: #dbeafe; color: #1e40af; }
+.ns .ns-badge--software  { background: #ede9fe; color: #5b21b6; }
+.ns .ns-badge--altro     { background: #f3f4f6; color: #374151; }
+
+/* ---------- 9. RESPONSIVE ---------- */
+
+/* Mobile (<640px): ogni spesa diventa una scheda */
+@media (max-width: 639px) {
+    .ns .ns-table thead { display: none; }
+
+    .ns .ns-table tr:not(.ns-vuoto) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem .75rem;
+        padding: .75rem 0;
+        border-bottom: 1px solid var(--ns-border);
+    }
+    .ns .ns-table tr:not(.ns-vuoto) td {
+        border: 0;
+        padding: 0;
+    }
+    .ns .ns-table td[data-label="Descrizione"] {
+        grid-column: 1 / -1;
+        font-weight: 600;
+    }
+    .ns .ns-table td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: .72rem;
+        color: var(--ns-muted);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .ns .ns-importo { text-align: left; }
+}
+
+/* Tablet (≥640px): due colonne nel form */
+@media (min-width: 640px) {
+    .ns .ns-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ns .ns-btn { width: auto; min-width: 180px; }
+    .ns .ns-table th,
+    .ns .ns-table td { padding: .75rem .9rem; }
+    .ns .ns-table tbody tr:hover { background: #f9fafb; }
+}
+
+/* Desktop (≥900px): tre colonne nel form */
+@media (min-width: 900px) {
+    .ns .ns-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
