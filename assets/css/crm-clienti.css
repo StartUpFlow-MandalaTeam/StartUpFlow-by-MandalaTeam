@@ -282,6 +282,25 @@ body.dashboard-page {
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
+.form-control[name="item_unit_price[]"] {
+  width: 130px;
+}
+
+.form-control[name="item_vat_rate[]"] {
+  width: fit-content;
+}
+
+.form-control[name="item_quantity[]"] {
+  width: 70px;
+}
+
+#order-modal .form-control::placeholder {
+  font-size: 0.85rem;
+    color: #999;
+  opacity: 1; 
+}
+
+
 .form-control:focus {
     border-color: #3498db;
     outline: 0;
