@@ -7,6 +7,28 @@ const NS_CARTELLA_RELATIVA = 'uploads/spese';
 const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
 const NS_MIME_AMMESSI      = ['image/jpeg', 'image/png', 'application/pdf'];
 
+/** Riconosce JPG, PNG o PDF dalla firma dei primi byte. Restituisce il MIME o null. */
+function rilevaMime(string $percorso): ?string
+{
+    $h = @fopen($percorso, 'rb');
+    if ($h === false) {
+        return null;
+    }
+    $inizio = (string)fread($h, 8);
+    fclose($h);
+
+    if (str_starts_with($inizio, "\xFF\xD8\xFF")) {
+        return 'image/jpeg';
+    }
+    if (str_starts_with($inizio, "\x89PNG\r\n\x1a\n")) {
+        return 'image/png';
+    }
+    if (str_starts_with($inizio, '%PDF')) {
+        return 'application/pdf';
+    }
+    return null;
+}
+
 /** Percorso assoluto dello scontrino se la spesa appartiene all'utente, altrimenti null. */
 function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
 {
@@ -17,12 +39,10 @@ function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
         return null;
     }
 
-    // Accetta sia il percorso completo sia il vecchio formato con solo il nome file
     if (!str_contains($relativo, '/')) {
         $relativo = NS_CARTELLA_RELATIVA . '/' . $relativo;
     }
 
-    // Impedisce di uscire dalla cartella degli upload
     $assoluto = realpath(__DIR__ . '/' . $relativo);
     $base     = realpath(NS_CARTELLA_UPLOAD);
     if ($assoluto === false || $base === false || !str_starts_with($assoluto, $base . DIRECTORY_SEPARATOR)) {
@@ -35,8 +55,8 @@ function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
 /** Invia il file al browser con il tipo MIME reale. */
 function inviaFile(string $percorso, int $id): never
 {
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
-    if (!in_array($mime, NS_MIME_AMMESSI, true)) {
+    $mime = rilevaMime($percorso);
+    if ($mime === null || !in_array($mime, NS_MIME_AMMESSI, true)) {
         http_response_code(415);
         exit('Formato non supportato.');
     }
@@ -60,9 +80,8 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
 
     $userId = (int)currentUserId();
 
-    // Apri: invia il file
     if (isset($_GET['scontrino'])) {
-        $id       = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
+        $id        = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
         $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
         if ($percorso === null) {
             http_response_code(404);
@@ -71,15 +90,14 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
         inviaFile($percorso, $id);
     }
 
-    // Anteprima: pagina HTML con il file incorporato
-    $id       = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
+    $id        = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
     $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
     if ($percorso === null) {
         http_response_code(404);
         exit('Scontrino non trovato.');
     }
 
-    $mime    = (new finfo(FILEINFO_MIME_TYPE))->file($percorso);
+    $mime    = rilevaMime($percorso);
     $urlFile = '/nota-spese.php?scontrino=' . $id;
     ?>
 <!DOCTYPE html>
@@ -126,7 +144,6 @@ if (!isLoggedIn()) {
     exit;
 }
 
-// Un GET diretto fuori dalla SPA torna alla dashboard
 if (!$isAjax && !$isPost) {
     header('Location: /');
     exit;
@@ -135,7 +152,6 @@ if (!$isAjax && !$isPost) {
 $userId   = (int)currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
 
-// Messaggi lasciati dall'invio precedente (form senza JavaScript)
 $flash    = $_SESSION['ns_flash'] ?? null;
 unset($_SESSION['ns_flash']);
 $messaggi = $flash['ok']  ?? [];
@@ -164,8 +180,8 @@ if ($isPost) {
     }
 
     if (!$errori) {
-        $percorsoDb   = null; // valore salvato in receipt_path, es. uploads/spese/abc.jpg
-        $destinazione = null; // percorso assoluto sul disco
+        $percorsoDb   = null;
+        $destinazione = null;
         try {
             $file = $_FILES['scontrino'] ?? null;
             if ($file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -176,8 +192,9 @@ if ($isPost) {
                     throw new RuntimeException('Il file supera la dimensione massima consentita (5MB).');
                 }
 
-                $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-                if (!in_array($mimeType, NS_MIME_AMMESSI, true)) {
+                // Sostituito finfo con la funzione rilevaMime per compatibilità universale
+                $mimeType = rilevaMime($file['tmp_name']);
+                if ($mimeType === null || !in_array($mimeType, NS_MIME_AMMESSI, true)) {
                     throw new RuntimeException('Formato file non valido. Sono accettati solo JPG, PNG e PDF.');
                 }
 
@@ -217,7 +234,6 @@ if ($isPost) {
         } catch (RuntimeException $e) {
             $errori[] = $e->getMessage();
         } catch (PDOException $e) {
-            // Il file è già stato scritto: se il DB fallisce, lo eliminiamo
             if ($destinazione !== null && is_file($destinazione)) {
                 unlink($destinazione);
             }
@@ -226,7 +242,6 @@ if ($isPost) {
         }
     }
 
-    // Form senza JavaScript: il messaggio va in sessione e si torna alla pagina precedente
     if (!$isAjax) {
         $_SESSION['ns_flash'] = ['ok' => $messaggi, 'err' => $errori];
         header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '/'));
