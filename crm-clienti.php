@@ -25,7 +25,7 @@ if ($userId === null) {
 $username = $_SESSION['username'] ?? 'Utente';
 
 $additionalCss = '<link rel="stylesheet" href="/assets/css/crm-clienti.css">';
-echo $additionalCss;
+
 
 // Database connection
 $db = $pdo;

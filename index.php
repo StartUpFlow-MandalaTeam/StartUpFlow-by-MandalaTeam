@@ -14,7 +14,7 @@ $bodyClass = 'dashboard-page';
 $hideOverlay = isset($_GET['no-overlay']) && $_GET['no-overlay'] === '1';
 
 // Add overlay CSS for non-logged-in users
-$additionalCss = '<link rel="stylesheet" href="/assets/css/startup-overlay.css"><link rel="stylesheet" href="/assets/css/zero-carta.css">';
+$additionalCss = '<link rel="stylesheet" href="/assets/css/startup-overlay.css">';
 
 require_once __DIR__ . '/includes/layout/header.php';
 

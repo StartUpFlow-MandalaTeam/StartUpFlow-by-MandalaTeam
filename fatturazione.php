@@ -58,7 +58,7 @@ global $pdo;
 $userId = currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
 ?>
-<div class="service-page">
+<div class="service-page fatturazione">
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Fatturazione</h1>

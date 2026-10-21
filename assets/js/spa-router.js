@@ -6,22 +6,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mappa dei percorsi alle pagine
     const routes = {
         // Servizi
-        '/fatturazione': { file: '/fatturazione.php', title: 'Fatturazione - StartUpFlow' },
-        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow' },
-        '/nota-spese': { file: '/nota-spese.php', title: 'Nota Spese - StartUpFlow' },
-        '/burn-rate-meter': { file: '/burn-rate-meter.php', title: 'Burn Rate Meter - StartUpFlow' },
-        '/time-tracker': { file: '/time-tracker.php', title: 'Time Tracker - StartUpFlow' },
-        '/zero-carta': { file: '/zero-carta.php', title: 'Zero Carta - StartUpFlow' },
-        '/crm-clienti': { file: '/crm-clienti.php', title: 'CRM Clienti - StartUpFlow' },
+        '/fatturazione': { file: '/fatturazione.php', title: 'Fatturazione - StartUpFlow', css: '/assets/css/fatturazione.css' },
+        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow', css: '/assets/css/scadenzario.css' },
+        '/nota-spese': { file: '/nota-spese.php', title: 'Nota Spese - StartUpFlow', css: '/assets/css/nota-spese.css' },
+        '/burn-rate-meter': { file: '/burn-rate-meter.php', title: 'Burn Rate Meter - StartUpFlow', css: '/assets/css/burn-rate-meter.css' },
+        '/time-tracker': { file: '/time-tracker.php', title: 'Time Tracker - StartUpFlow', css: '/assets/css/time-tracker.css' },
+        '/zero-carta': { file: '/zero-carta.php', title: 'Zero Carta - StartUpFlow', css: '/assets/css/zero-carta.css' },
+        '/crm-clienti': { file: '/crm-clienti.php', title: 'CRM Clienti - StartUpFlow', css: '/assets/css/crm-clienti.css' },
 
         // Pagine statiche
-        '/chi-siamo.php': { file: '/chi-siamo.php', title: 'Chi Siamo - StartUpFlow' },
-        '/servizi.php': { file: '/servizi.php', title: 'Servizi - StartUpFlow' },
-        '/contatti.php': { file: '/contatti.php', title: 'Contatti - StartUpFlow' },
+        '/chi-siamo': { file: '/chi-siamo.php', title: 'Chi Siamo - StartUpFlow', css: '/assets/css/chi-siamo.css' },
+        '/servizi': { file: '/servizi.php', title: 'Servizi - StartUpFlow', css: '/assets/css/servizi.css' },
+        '/contatti': { file: '/contatti.php', title: 'Contatti - StartUpFlow', css: '/assets/css/contatti.css' },
     };
 
     // Funzione per mostrare la dashboard
     function showDashboard() {
+        removeRouteCss();
         dynamicContent.innerHTML = `
             <div class="card-container">
                 <div class="card-row card-row--top">
@@ -81,13 +82,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h3 class="card-title">CRM clienti</h3>
                             <p class="card-description">Ciclo di acquisizione clienti</p>
                             <a href="/crm-clienti" class="card-button" data-spa="true">Vai!</a>
-                        </div>
                     </div>
                 </div>
             </div>
         `;
         document.title = 'Dashboard - StartUpFlow';
         history.pushState({ path: '/' }, '', '/');
+    }
+
+    // Rimuove i CSS per-rotta caricati in precedenza
+    function removeRouteCss() {
+        document.querySelectorAll('link[data-route-css]').forEach(el => el.remove());
+    }
+
+    // Carica il CSS della rotta corrente, attendendo che sia pronto
+    function loadRouteCss(href) {
+        return new Promise((resolve) => {
+            if (document.querySelector(`link[data-route-css="${href}"]`)) {
+                resolve();
+                return;
+            }
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            link.setAttribute('data-route-css', href);
+            link.onload = resolve;
+            link.onerror = () => resolve(); // non bloccare la pagina se il CSS manca
+            document.head.appendChild(link);
+        });
     }
 
     // Funzione per caricare una pagina
@@ -101,6 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!route) {
             showDashboard();
             return;
+        }
+
+        // Rimuove il CSS della rotta precedente e carica quello della rotta corrente
+        removeRouteCss();
+        if (route.css) {
+            await loadRouteCss(route.css);
         }
 
         try {
