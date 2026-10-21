@@ -31,41 +31,41 @@
 				<div class="profile-modal__divider" aria-hidden="true"></div>
 				<label class="profile-modal__field">
 					<span>Nome</span>
-					<input type="text" name="nome" value="" placeholder="Inserisci il nome">
+					<input type="text" name="nome" value="<?php echo $firstName ?? ''; ?>" placeholder="Inserisci il nome" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Cognome</span>
-					<input type="text" name="cognome" value="" placeholder="Inserisci il cognome">
+					<input type="text" name="cognome" value="<?php echo $lastName ?? ''; ?>" placeholder="Inserisci il cognome" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Data di nascita</span>
-					<input type="date" name="data_di_nascita" value="">
+					<input type="date" name="data_di_nascita" value="<?php echo $birthDate ?? ''; ?>" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Luogo di nascita</span>
-					<input type="text" name="luogo_di_nascita" value="" placeholder="Inserisci il luogo di nascita">
+					<input type="text" name="luogo_di_nascita" value="<?php echo $birthPlace ?? ''; ?>" placeholder="Inserisci il luogo di nascita" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Stato di nascita</span>
-					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select>
-						<option value="" selected>Seleziona uno Stato</option>
+					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select data-selected-country="<?php echo $birthCountry ?? ''; ?>" required>
+						<option value="<?php echo $birthCountry ?? ''; ?>" selected>Seleziona uno Stato</option>
 					</select>
 				</label>
 				<label class="profile-modal__field">
 					<span>Codice fiscale</span>
-					<input type="text" name="codice_fiscale" value="" placeholder="Inserisci il codice fiscale">
+					<input type="text" name="codice_fiscale" value="<?php echo $cf ?? ''; ?>" placeholder="Inserisci il codice fiscale" maxlength="16" required>
 				</label>
 				<label class="profile-modal__field profile-modal__field--full">
 					<span>Indirizzo</span>
-					<input type="text" name="indirizzo" value="" placeholder="Inserisci l'indirizzo">
+					<input type="text" name="indirizzo" value="<?php echo $address ?? ''; ?>" placeholder="Inserisci l'indirizzo" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Città</span>
-					<input type="text" name="citta" value="" placeholder="Inserisci la città">
+					<input type="text" name="citta" value="<?php echo $city ?? ''; ?>" placeholder="Inserisci la città" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>CAP</span>
-					<input type="text" name="cap" value="" placeholder="Inserisci il CAP" inputmode="numeric" maxlength="5">
+					<input type="text" name="cap" value="<?php echo $postalCode ?? ''; ?>" placeholder="Inserisci il CAP" inputmode="numeric" maxlength="5" required>
 				</label>
 			</div>
 

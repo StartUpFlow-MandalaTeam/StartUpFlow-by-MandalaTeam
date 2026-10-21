@@ -1,23 +1,23 @@
-# Feature: CRM clienti
+# Feature: Fatturazione
 
 ## Descrizione
-Modulo per la gestione del ciclo di acquisizione clienti.
+Modulo per l'emissione delle fatture.
 
 ## Compiti
-- [ ] Implementare anagrafica clienti
-- [ ] Gestione lead e pipeline vendite
-- [ ] Tracking comunicazioni (email, chiamate)
-- [ ] Report stato clienti
-- [ ] Integrazione con modulo fatturazione
+- [ ] Implementare interfaccia creazione fattura
+- [ ] Integrare con backend API
+- [ ] Gestione clienti e numerazione fatture
+- [ ] Export PDF fatture
 
 ## Route
-- `/crm-clienti` - Pagina principale
+-  - Pagina principale
 
 ## Dipendenze
 - React Router (già incluso in main)
-- Eventuali librerie per form complessi
+- Eventuali librerie specifiche per PDF (es: react-pdf, jspdf)
 
 ## Note
-- Lavorare solo su file in `client/src/pages/CrmClientiPage.jsx` e componenti correlati
+- Lavorare solo su file in  e componenti correlati
 - Non modificare file condivisi (navbar, layout, router)
-- Fare merge da main prima di iniziare: `git merge main`
+- Fare merge da main prima di iniziare: Già aggiornato.
+

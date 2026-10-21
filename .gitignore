@@ -38,3 +38,7 @@ storage/*.log
 
 # Windows
 Thumbs.db
+
+# Invoices
+storage/invoices/*.xml
+storage/contracts/*

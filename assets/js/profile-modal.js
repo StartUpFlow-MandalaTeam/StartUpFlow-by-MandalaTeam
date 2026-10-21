@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileForm = document.getElementById('profile-form');
     const profileSave = profileForm ? profileForm.querySelector('.profile-modal__save') : null;
     const countriesUrl = 'assets/data/countries.json';
+    const selectedCountry = countrySelect?.dataset.selectedCountry?.trim() || '';
 
     let countriesCache = null;
     let countriesPromise = null;
@@ -31,7 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
             countrySelect.append(option);
         });
 
-        countrySelect.value = '';
+        const savedCountry = countries.find((country) =>
+            country.code.toLowerCase() === selectedCountry.toLowerCase()
+            || country.name.toLowerCase() === selectedCountry.toLowerCase()
+        );
+        countrySelect.value = savedCountry?.code || '';
 
         countrySelect.dataset.countriesLoaded = 'true';
         countrySelect.disabled = false;
@@ -146,22 +151,49 @@ document.addEventListener('DOMContentLoaded', () => {
         profileForm.addEventListener('submit', (event) => {
             event.preventDefault();
 
-            fetch('/auth/process-avatar.php', {
+            const formData = new FormData(profileForm);
+            const avatarFile = profileForm.elements.avatar?.files[0];
+            const requestOptions = {
                 method: 'POST',
-                body: new FormData(profileForm),
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            };
+
+            fetch('/auth/process-profile.php', {
+                ...requestOptions,
+                body: formData
             })
                 .then((response) => response.json())
-                .then((data) => {
-                    alert(data.message || 'Operazione completata');
-                    if (data.success) {
-                        updateAvatarImages(data.avatar_url);
-                        profileForm.reset();
-                        closeModal();
+                .then((profileData) => {
+                    if (!profileData.success) {
+                        throw new Error(profileData.message || 'Impossibile salvare il profilo');
                     }
+
+                    if (!avatarFile) {
+                        return null;
+                    }
+
+                    const avatarData = new FormData();
+                    avatarData.append('csrf_token', formData.get('csrf_token'));
+                    avatarData.append('avatar', avatarFile);
+
+                    return fetch('/auth/process-avatar.php', {
+                        ...requestOptions,
+                        body: avatarData
+                    }).then((response) => response.json());
                 })
-                .catch(() => alert('Errore durante il caricamento dell’immagine'));
+                .then((avatarData) => {
+                    if (avatarData && !avatarData.success) {
+                        throw new Error(avatarData.message || 'Impossibile salvare l’immagine');
+                    }
+
+                    if (avatarData?.avatar_url) {
+                        updateAvatarImages(avatarData.avatar_url);
+                    }
+                    alert('Profilo aggiornato');
+                    closeModal();
+                })
+                .catch((error) => alert(error.message || 'Impossibile aggiornare il profilo'));
         });
     }
 
