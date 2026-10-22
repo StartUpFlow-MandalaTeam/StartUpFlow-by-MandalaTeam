@@ -113,19 +113,6 @@ CREATE TABLE IF NOT EXISTS remember_me_tokens (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS documents (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  client_id INT UNSIGNED NOT NULL,
-  type ENUM('NDA', 'Contract') NOT NULL,
-  file_path VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (id),
-  FOREIGN KEY (client_id) REFERENCES clients(id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS users_profiles (
   user_id INT UNSIGNED PRIMARY KEY,
   first_name VARCHAR(100),
@@ -145,35 +132,6 @@ CREATE TABLE IF NOT EXISTS users_profiles (
     REFERENCES users(id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
-
-CREATE TABLE IF NOT EXISTS invoices (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    client_id INT UNSIGNED NOT NULL,
-    user_id INT UNSIGNED NOT NULL,
-    document_number VARCHAR(50) NOT NULL,
-    issue_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
-    tax_regime ENUM(
-        'forfettario',
-        'ordinario'
-    ) NOT NULL,
-    total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    is_paid BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_invoices_document_number (document_number),
-    CONSTRAINT fk_invoices_client
-        FOREIGN KEY (client_id)
-        REFERENCES clients(id),
-    CONSTRAINT fk_invoices_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(id)
-) ENGINE=InnoDB;
-
-
 
 -- =====================================================================
 -- CRM CLIENTI
@@ -217,6 +175,46 @@ CREATE TABLE IF NOT EXISTS clients (
     FOREIGN KEY (user_id) REFERENCES users (id)
     ON DELETE CASCADE
     ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS documents (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id INT UNSIGNED NOT NULL,
+  type ENUM('NDA', 'Contract') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    document_number VARCHAR(50) NOT NULL,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
+    tax_regime ENUM(
+        'forfettario',
+        'ordinario'
+    ) NOT NULL,
+    total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_invoices_document_number (document_number),
+    CONSTRAINT fk_invoices_client
+        FOREIGN KEY (client_id)
+        REFERENCES clients(id),
+    CONSTRAINT fk_invoices_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Persone di riferimento di un cliente/azienda

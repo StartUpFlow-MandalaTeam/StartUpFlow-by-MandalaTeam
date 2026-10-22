@@ -553,7 +553,7 @@ const initializeFatturazione = () => {
     const populateClients = (clientList) => {
         clientSelect.replaceChildren(new Option('Seleziona un cliente', ''));
         clients.clear();
-        clientList.forEach((client) => {
+        clientList.filter((client) => client.crm_status === 'customer').forEach((client) => {
             const name = client.client_type === 'company'
                 ? client.company_name
                 : `${client.first_name} ${client.last_name}`.trim();
