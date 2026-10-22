@@ -40,31 +40,35 @@ if ($profile['birth_date'] !== '') {
 }
 
 try {
-    $stmt = $pdo->prepare("UPDATE users_profiles SET first_name = :first_name, last_name = :last_name, birth_date = NULLIF(:birth_date, ''), birth_place = :birth_place, birth_country = :birth_country, cf = NULLIF(:cf, ''), address = :address, city = :city, postal_code = :postal_code WHERE user_id = :user_id");
+    // UPSERT: inserisce se non esiste, altrimenti aggiorna
+    $stmt = $pdo->prepare("
+        INSERT INTO users_profiles
+            (user_id, first_name, last_name, birth_date, birth_place, birth_country, cf, address, city, postal_code)
+        VALUES
+            (:user_id, :first_name, :last_name, NULLIF(:birth_date, ''), :birth_place, :birth_country, NULLIF(:cf, ''), :address, :city, :postal_code)
+        ON DUPLICATE KEY UPDATE
+            first_name   = VALUES(first_name),
+            last_name    = VALUES(last_name),
+            birth_date   = VALUES(birth_date),
+            birth_place  = VALUES(birth_place),
+            birth_country= VALUES(birth_country),
+            cf           = VALUES(cf),
+            address      = VALUES(address),
+            city         = VALUES(city),
+            postal_code  = VALUES(postal_code)
+    ");
     $stmt->execute([
-        ':user_id' => $userId,
-        ':first_name' => $profile['first_name'],
-        ':last_name' => $profile['last_name'],
-        ':birth_date' => $profile['birth_date'],
-        ':birth_place' => $profile['birth_place'],
-        ':birth_country' => $profile['birth_country'],
-        ':cf' => $profile['cf'],
-        ':address' => $profile['address'],
-        ':city' => $profile['city'],
-        ':postal_code' => $profile['postal_code'],
+        ':user_id'      => $userId,
+        ':first_name'   => $profile['first_name'],
+        ':last_name'    => $profile['last_name'],
+        ':birth_date'   => $profile['birth_date'],
+        ':birth_place'  => $profile['birth_place'],
+        ':birth_country'=> $profile['birth_country'],
+        ':cf'           => $profile['cf'],
+        ':address'      => $profile['address'],
+        ':city'         => $profile['city'],
+        ':postal_code'  => $profile['postal_code'],
     ]);
-
-    $profileFound = true;
-    if ($stmt->rowCount() === 0) {
-        $profileExists = $pdo->prepare('SELECT user_id FROM users_profiles WHERE user_id = :user_id LIMIT 1');
-        $profileExists->execute([':user_id' => $userId]);
-        $profileFound = (bool) $profileExists->fetchColumn();
-    }
-
-    if (!$profileFound) {
-        echo json_encode(['success' => false, 'message' => 'Profilo utente non trovato']);
-        exit;
-    }
 
     $_SESSION['user_info_set'] = true;
     foreach ($profile as $field => $value) {
