@@ -224,6 +224,7 @@ const initializeFatturazione = () => {
         });
         invoiceForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            event.stopPropagation();
             saveInvoiceButton.disabled = true;
             invoiceSaveStatus.textContent = 'Salvataggio fattura...';
 
