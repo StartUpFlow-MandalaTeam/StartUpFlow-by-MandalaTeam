@@ -1,4 +1,8 @@
-.service-content {
+body.dashboard-page {
+    background: #daac01;
+}
+
+.fatturazione .service-content {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
 	align-items: start;
@@ -7,7 +11,7 @@
 	margin: 0 auto;
 }
 
-.service-page .service-header {
+.fatturazione .service-header {
 	position: relative;
 	display: flex;
 	min-height: 140px;
@@ -19,19 +23,19 @@
 	text-align: center;
 }
 
-.service-page .service-header .back-link {
+.fatturazione .service-header .back-link {
 	position: absolute;
 	top: 1rem;
 	left: 0;
 	margin: 0;
 }
 
-.service-page .service-header h1,
-.service-page .service-header p {
+.fatturazione .service-header h1,
+.fatturazione .service-header p {
 	margin: 0;
 }
 
-.service-page .service-header p {
+.fatturazione .service-header p {
 	margin-top: 0.35rem;
 }
 
@@ -666,16 +670,16 @@
 }
 
 @media (max-width: 700px) {
-	.service-page .service-header {
+	.fatturazione .service-header {
 		min-height: 132px;
 		padding: 3.75rem 1rem 1rem;
 	}
 
-	.service-page .service-header .back-link {
+	.fatturazione .service-header .back-link {
 		left: 0.75rem;
 	}
 
-	.service-content {
+	.fatturazione .service-content {
 		grid-template-columns: 1fr;
 		gap: 2rem;
 	}

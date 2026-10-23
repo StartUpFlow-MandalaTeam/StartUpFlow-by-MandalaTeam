@@ -30,6 +30,8 @@ try {
     $stmt->execute([':username' => $username]);
     $existingUser = $stmt->fetch();
 
+    $userId = null;
+
     if ($existingUser) {
         // Update existing user
         $update = $pdo->prepare('
@@ -48,6 +50,7 @@ try {
             ':password_hash' => $passwordHash,
             ':username' => $username,
         ]);
+        $userId = (int) $existingUser['id'];
         echo "Test user '$username' updated successfully.\n";
     } else {
         // Insert new user
@@ -61,17 +64,20 @@ try {
             ':email' => $email,
             ':password_hash' => $passwordHash,
         ]);
-        // Creation of user's profile
         $userId = (int) $pdo->lastInsertId();
-        $profileCreation = $pdo->prepare('
-            INSERT INTO users_profiles (user_id)
-            VALUES (:user_id)
-        ');
-        $profileCreation->execute([
-            ':user_id' => $userId
-        ]);
         echo "Test user '$username' created successfully.\n";
     }
+
+    // Creation of user's profile (idempotente: inserisce solo se manca)
+    $profileCreation = $pdo->prepare('
+        INSERT INTO users_profiles (user_id)
+        VALUES (:user_id)
+        ON DUPLICATE KEY UPDATE user_id = user_id
+    ');
+    $profileCreation->execute([
+        ':user_id' => $userId,
+    ]);
+    echo "User profile for '$username' ensured (user_id = $userId).\n";
 
     echo "\nTest user credentials:\n";
     echo "  Username: $username\n";

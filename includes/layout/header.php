@@ -82,7 +82,6 @@ if (isLoggedIn()) {
 	<link rel="stylesheet" href="/assets/css/card-container.css">
 	<link rel="stylesheet" href="/assets/css/page-common.css">
 	<link rel="stylesheet" href="/assets/css/style.css">
-	<link rel="stylesheet" href="/assets/css/fatturazione.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300..700&family=Montserrat:wght@400;500;600&display=swap">
 	<?php echo ($additionalCss ?? ''); ?>
 	<script src="/assets/js/mobile-nav.js" defer></script>

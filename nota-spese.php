@@ -2,6 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php'; // Fornisce $pdo
+if (!isLoggedIn()) {
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        http_response_code(401);
+        exit;
+    }
+    header('Location: /auth/login.php');
+    exit;
+}
 
 const NS_CARTELLA_RELATIVA = 'uploads/spese';
 const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
@@ -47,7 +55,6 @@ function inviaFile(string $percorso, int $id): never
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
     readfile($percorso);
-    exit;
 }
 
 // ---------- VISUALIZZAZIONE SCONTRINO (GET, pagine separate) ----------

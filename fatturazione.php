@@ -5,7 +5,11 @@ require_once __DIR__ . '/includes/auth.php';
 
 // Se non è autenticato, reindirizza
 if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        http_response_code(401);
+        exit;
+    }
+    header('Location: /auth/login.php');
     exit;
 }
 
@@ -54,11 +58,11 @@ global $pdo;
 $userId = currentUserId();
 $username = $_SESSION['username'] ?? 'Utente';
 ?>
-<div class="service-page">
+<div class="service-page fatturazione">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
+        
         <h1>Fatturazione</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
+        <p>Crea e visualizza le tue fatture pro-forma</p>
     </header>
 
     <div class="service-content">
@@ -147,7 +151,7 @@ $username = $_SESSION['username'] ?? 'Utente';
             <div class="client-mode-buttons" role="tablist" aria-label="Gestione cliente">
                 <button type="button" class="client-mode-button is-active" data-client-mode="select">Seleziona Cliente</button>
                 <button type="button" class="client-mode-button" data-client-mode="add">Aggiungi Cliente</button>
-                <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button>
+                <!-- <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button> -->
             </div>
 
             <div class="client-select-panel" data-client-panel="select">
@@ -184,7 +188,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                 </label>
                 <label class="profile-modal__field" data-individual-field hidden>
                     <span>Codice fiscale</span>
-                    <input type="text" name="tax_code" placeholder="Inserisci il codice fiscale" maxlength="16">
+                    <input type="text" name="cf" placeholder="Inserisci il codice fiscale" maxlength="16">
                 </label>
                 <label class="profile-modal__field profile-modal__field--full">
                     <span>Indirizzo</span>
@@ -214,13 +218,13 @@ $username = $_SESSION['username'] ?? 'Utente';
                     <span>Telefono</span>
                     <input type="tel" name="phone" placeholder="Inserisci il telefono" required>
                 </label>
-                <label class="profile-modal__field">
+                <!-- <label class="profile-modal__field">
                     <span>Status CRM</span>
                     <select name="crm_status" required>
                         <option value="lead" selected>Lead</option>
                         <option value="customer">Cliente</option>
                     </select>
-                </label>
+                </label> -->
                 <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
                     <button type="submit" class="profile-modal__save">Salva e continua</button>
                 </footer>
@@ -229,7 +233,7 @@ $username = $_SESSION['username'] ?? 'Utente';
 
         <div class="form-fatturazione" id="billing-form" hidden>
             <strong>Modulo Fatturazione Pro-Forma</strong>
-            <form id="invoice-form" method="post" action="/auth/process-invoice.php">
+            <form id="invoice-form" method="post" action="/invoice/process-invoice.php">
                 <?php echo csrfInput(); ?>
                 <div class="dati-fattura">
                     <label for="regime-fiscale">Regime Fiscale valido per la fattura che si sta generando:</label>

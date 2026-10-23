@@ -32,7 +32,7 @@ const initializeFatturazione = () => {
         documentNumberInput.value = '';
         documentNumberInput.placeholder = 'Generazione numero...';
 
-        fetch('/auth/generate-invoice-number.php', {
+        fetch('/invoice/generate-invoice-number.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ csrf_token: csrfToken })
@@ -169,7 +169,7 @@ const initializeFatturazione = () => {
             invoicesLoading = true;
             invoiceListStatus.textContent = 'Caricamento fatture...';
             try {
-                const response = await fetch('/auth/list-invoices.php', { credentials: 'same-origin' });
+                const response = await fetch('/invoice/list-invoices.php', { credentials: 'same-origin' });
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.message || 'Impossibile caricare le fatture');
                 renderInvoices(data.invoices);
@@ -224,6 +224,7 @@ const initializeFatturazione = () => {
         });
         invoiceForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            event.stopPropagation();
             saveInvoiceButton.disabled = true;
             invoiceSaveStatus.textContent = 'Salvataggio fattura...';
 
@@ -490,7 +491,7 @@ const initializeFatturazione = () => {
     }
 
     clientCompletion.dataset.initialized = 'true';
-    const clientsUrl = '/auth/process-client.php';
+    const clientsUrl = '/invoice/process-client.php';
     const clients = new Map();
     const fields = ['id', 'client_type', 'company_name', 'first_name', 'last_name', 'vat_number', 'tax_code', 'address', 'city', 'state', 'postal_code', 'country', 'email', 'phone', 'crm_status'];
     const modeButton = (mode) => clientCompletion.querySelector(`[data-client-mode="${mode}"]`);
@@ -553,7 +554,7 @@ const initializeFatturazione = () => {
     const populateClients = (clientList) => {
         clientSelect.replaceChildren(new Option('Seleziona un cliente', ''));
         clients.clear();
-        clientList.forEach((client) => {
+        clientList.filter((client) => client.crm_status === 'customer').forEach((client) => {
             const name = client.client_type === 'company'
                 ? client.company_name
                 : `${client.first_name} ${client.last_name}`.trim();

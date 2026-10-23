@@ -17,7 +17,8 @@ $userId = currentUserId();
 $fields = [
 	'client_type', 'company_name', 'first_name', 'last_name', 'vat_number',
 	'cf', 'address', 'city', 'state', 'postal_code', 'country',
-	'email', 'phone', 'crm_status',
+	'email', 'phone', 
+	//'crm_status',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -72,9 +73,9 @@ foreach ($fields as $field) {
 $client['client_type'] = in_array($client['client_type'], ['individual', 'company'], true)
 	? $client['client_type']
 	: 'company';
-$client['crm_status'] = in_array($client['crm_status'], ['lead', 'customer', 'inactive'], true)
-	? $client['crm_status']
-	: 'lead';
+// $client['crm_status'] = in_array($client['crm_status'], ['lead', 'customer', ''], true)
+// 	? $client['crm_status']
+// 	: 'lead';
 
 $requiredClientFields = ['address', 'city', 'state', 'postal_code', 'country', 'email', 'phone'];
 if ($client['client_type'] === 'company') {
@@ -82,7 +83,7 @@ if ($client['client_type'] === 'company') {
 } else {
 	$requiredClientFields[] = 'first_name';
 	$requiredClientFields[] = 'last_name';
-	$requiredClientFields[] = 'tax_code';
+	$requiredClientFields[] = 'cf';
 }
 
 foreach ($requiredClientFields as $requiredField) {
