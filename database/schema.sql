@@ -372,11 +372,11 @@ CREATE TABLE IF NOT EXISTS crm_activities (
 CREATE TABLE IF NOT EXISTS spese (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id INT UNSIGNED NOT NULL,
-  data_spesa DATE NOT NULL,
-  descrizione VARCHAR(255) NOT NULL,
-  categoria ENUM('Cibo','Trasporti','Software','Altro') NOT NULL,
-  importo DECIMAL(12,2) NOT NULL,
-  scontrino_path VARCHAR(255) NULL,
+  expense_date DATE NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  category ENUM('Cibo','Trasporti','Software','Altro') NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  receipt_path VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_spese_user_data (user_id, data_spesa),
@@ -399,3 +399,4 @@ CREATE TABLE IF NOT EXISTS expenses (
   CONSTRAINT fk_expenses_user FOREIGN KEY (user_id) REFERENCES users (id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
