@@ -60,9 +60,9 @@ $username = $_SESSION['username'] ?? 'Utente';
 ?>
 <div class="service-page fatturazione">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
+        
         <h1>Fatturazione</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
+        <p>Crea e visualizza le tue fatture pro-forma</p>
     </header>
 
     <div class="service-content">
@@ -151,7 +151,7 @@ $username = $_SESSION['username'] ?? 'Utente';
             <div class="client-mode-buttons" role="tablist" aria-label="Gestione cliente">
                 <button type="button" class="client-mode-button is-active" data-client-mode="select">Seleziona Cliente</button>
                 <button type="button" class="client-mode-button" data-client-mode="add">Aggiungi Cliente</button>
-                <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button>
+                <!-- <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button> -->
             </div>
 
             <div class="client-select-panel" data-client-panel="select">
