@@ -58,5 +58,6 @@ require_once __DIR__ . '/includes/layout/footer.php';
 <?php if (isLoggedIn()): ?>
 	<script src="/assets/js/zero-carta.js"></script>
 	<script src="/assets/js/nota-spese.js"></script>
+	<script src="/assets/js/scadenzario.js"></script>
 	<script src="/assets/js/spa-router.js"></script>
 <?php endif; ?>
