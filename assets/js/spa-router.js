@@ -137,6 +137,38 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPage(path);
     });
 
+    // Invia i moduli del Time-Tracker via AJAX per mantenere la navigazione SPA.
+    document.addEventListener('submit', async (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement) || !form.matches('.tracker-form, .delete-form')) return;
+
+        e.preventDefault();
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            });
+
+            if (!response.ok) {
+                throw new Error('Errore durante il salvataggio: ' + response.status);
+            }
+
+            dynamicContent.innerHTML = await response.text();
+        } catch (error) {
+            console.error('Errore Time-Tracker:', error);
+            dynamicContent.innerHTML = `
+                <div class="error-container">
+                    <h2>Errore</h2>
+                    <p>Non è stato possibile aggiornare il Time-Tracker. Riprova.</p>
+                </div>
+            `;
+        }
+    });
+
     // Gestione del pulsante back/forward
     window.addEventListener('popstate', (e) => {
         const path = window.location.pathname;
