@@ -25,6 +25,31 @@ $password = 'password123';
 $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 
 try {
+    // Bring older local databases up to date with the authentication schema.
+    $requiredUserColumns = [
+        'failed_login_attempts' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+        'locked_until' => 'DATETIME NULL',
+        'last_login_at' => 'DATETIME NULL',
+    ];
+    $columnCheck = $pdo->prepare('
+        SELECT COUNT(*)
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = :table_name
+          AND column_name = :column_name
+    ');
+
+    foreach ($requiredUserColumns as $columnName => $definition) {
+        $columnCheck->execute([
+            ':table_name' => 'users',
+            ':column_name' => $columnName,
+        ]);
+
+        if ((int) $columnCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN `$columnName` $definition");
+        }
+    }
+
     // Check if user already exists
     $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username LIMIT 1');
     $stmt->execute([':username' => $username]);

@@ -74,6 +74,8 @@ Per creare o aggiornare un utente attivo di test:
 php scripts/seed-test-user.php
 ```
 
+Se il database esiste gia e manca una tabella aggiunta di recente, rieseguire il comando MySQL dello schema qui sopra: le tabelle sono create con `IF NOT EXISTS`.
+
 Il flusso completo di registrazione, verifica email, login, reset password e cambio email e descritto in [README_LOGIN.md](README_LOGIN.md).
 
 ## Avvio locale
@@ -105,7 +107,8 @@ In questo caso il servizio email deve essere configurato separatamente. `start-d
 - log di audit e rate limiting;
 - verifiche email e richieste di cambio email;
 - reset password;
-- token Remember Me.
+- token Remember Me;
+- registrazioni del Time Tracker (`time_entries`).
 
 La connessione PDO e centralizzata in `includes/db.php`. Le query applicative devono usare statement preparati.
 

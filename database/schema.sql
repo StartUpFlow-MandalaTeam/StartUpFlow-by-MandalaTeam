@@ -28,6 +28,23 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB;
 
+-- Time tracker entries: work-hour records owned by each user
+CREATE TABLE IF NOT EXISTS time_entries (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  project_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  hours DECIMAL(8,2) NOT NULL,
+  entry_date DATE NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_time_entries_user_date_created (user_id, entry_date, created_at),
+  CONSTRAINT fk_time_entries_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 -- Audit logs: record security-relevant events and support rate-limiting checks
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
