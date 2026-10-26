@@ -1,0 +1,41 @@
+/* Stili specifici per la pagina Chi Siamo */
+
+.team-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1.5rem;
+	margin-top: 2rem;
+}
+
+.team-card {
+	text-align: center;
+	padding: 1.5rem;
+	background: #f8f9fa;
+	border-radius: 8px;
+}
+
+.team-card img {
+	width: 120px;
+	height: 120px;
+	border-radius: 50%;
+	object-fit: cover;
+	margin-bottom: 1rem;
+}
+
+.team-card h3 {
+	color: #333;
+	margin-bottom: 0.5rem;
+}
+
+.team-card p {
+	color: #666;
+	font-size: 0.9rem;
+	margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+	.team-card img {
+		width: 100px;
+		height: 100px;
+	}
+}

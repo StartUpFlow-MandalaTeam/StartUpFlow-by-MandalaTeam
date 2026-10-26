@@ -1,0 +1,51 @@
+/* Stili specifici per la pagina Servizi */
+
+.services-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 1.5rem;
+	margin-top: 2rem;
+}
+
+.service-card {
+	background: #f8f9fa;
+	padding: 1.5rem;
+	border-radius: 8px;
+	border-left: 4px solid #d6a800;
+}
+
+.service-card h3 {
+	color: #333;
+	margin-bottom: 0.75rem;
+}
+
+.service-card .material-symbols-outlined {
+	font-size: 2rem;
+	color: #d6a800;
+	margin-bottom: 0.5rem;
+}
+
+.service-card p {
+	color: #666;
+	margin-bottom: 0;
+}
+
+.features-list {
+	list-style: none;
+	padding: 0;
+}
+
+.features-list li {
+	padding: 0.5rem 0;
+	padding-left: 1.5rem;
+	position: relative;
+	color: #555;
+}
+
+.features-list li::before {
+	content: "\2713";
+	position: absolute;
+	left: 0;
+	color: #d6a800;
+	font-weight: bold;
+}

@@ -5,7 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('profile-modal');
     const closeTrigger = document.querySelector('[data-profile-modal-close]');
     const countrySelect = document.querySelector('[data-countries-select]');
+    const profileForm = document.getElementById('profile-form');
+    const profileSave = profileForm ? profileForm.querySelector('.profile-modal__save') : null;
     const countriesUrl = 'assets/data/countries.json';
+    const selectedCountry = countrySelect?.dataset.selectedCountry?.trim() || '';
 
     let countriesCache = null;
     let countriesPromise = null;
@@ -29,7 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
             countrySelect.append(option);
         });
 
-        countrySelect.value = '';
+        const savedCountry = countries.find((country) =>
+            country.code.toLowerCase() === selectedCountry.toLowerCase()
+            || country.name.toLowerCase() === selectedCountry.toLowerCase()
+        );
+        countrySelect.value = savedCountry?.code || '';
 
         countrySelect.dataset.countriesLoaded = 'true';
         countrySelect.disabled = false;
@@ -119,6 +126,76 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.addEventListener('close', () => {
         syncExpandedState(false);
     });
+
+    const updateAvatarImages = (avatarUrl) => {
+        document.querySelectorAll('[data-profile-avatar]').forEach((avatar) => {
+            avatar.replaceChildren();
+
+            if (avatarUrl) {
+                const image = document.createElement('img');
+                image.src = avatarUrl;
+                image.alt = '';
+                avatar.append(image);
+                return;
+            }
+
+            const placeholder = document.createElement('span');
+            placeholder.className = 'material-symbols-outlined';
+            placeholder.textContent = 'person';
+            avatar.append(placeholder);
+        });
+    };
+
+    if (profileForm && profileSave) {
+        profileSave.addEventListener('click', () => profileForm.requestSubmit());
+        profileForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(profileForm);
+            const avatarFile = profileForm.elements.avatar?.files[0];
+            const requestOptions = {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            };
+
+            fetch('/auth/process-profile.php', {
+                ...requestOptions,
+                body: formData
+            })
+                .then((response) => response.json())
+                .then((profileData) => {
+                    if (!profileData.success) {
+                        throw new Error(profileData.message || 'Impossibile salvare il profilo');
+                    }
+
+                    if (!avatarFile) {
+                        return null;
+                    }
+
+                    const avatarData = new FormData();
+                    avatarData.append('csrf_token', formData.get('csrf_token'));
+                    avatarData.append('avatar', avatarFile);
+
+                    return fetch('/auth/process-avatar.php', {
+                        ...requestOptions,
+                        body: avatarData
+                    }).then((response) => response.json());
+                })
+                .then((avatarData) => {
+                    if (avatarData && !avatarData.success) {
+                        throw new Error(avatarData.message || 'Impossibile salvare l’immagine');
+                    }
+
+                    if (avatarData?.avatar_url) {
+                        updateAvatarImages(avatarData.avatar_url);
+                    }
+                    alert('Profilo aggiornato');
+                    closeModal();
+                })
+                .catch((error) => alert(error.message || 'Impossibile aggiornare il profilo'));
+        });
+    }
 
     // --- Change Email modal handling (top-level dialog) ---
     const changeEmailModal = document.getElementById('change-email-modal');

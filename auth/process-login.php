@@ -94,6 +94,24 @@ try {// Look up the user in the database by username
     $_SESSION['user_id'] = (int) $user['id'];
     $_SESSION['username'] = $user['username'];
 
+    // Fetch user's information through query and stores it in the session
+    $userInfoQry = $pdo->prepare('SELECT first_name, last_name, birth_date, birth_place, birth_country, cf, address, city, postal_code
+        FROM users_profiles
+        WHERE user_id = :user_id
+    ');
+    $userInfoQry->execute([":user_id" => $user['id']]);
+    $userInfo = $userInfoQry->fetch();
+    $_SESSION['user_info_set'] = true;
+    $_SESSION['first_name'] = $userInfo['first_name'];
+    $_SESSION['last_name'] = $userInfo['last_name'];
+    $_SESSION['birth_date'] = $userInfo['birth_date'];
+    $_SESSION['birth_place'] = $userInfo['birth_place'];
+    $_SESSION['birth_country'] = $userInfo['birth_country'];
+    $_SESSION['cf'] = $userInfo['cf'];
+    $_SESSION['address'] = $userInfo['address'];
+    $_SESSION['city'] = $userInfo['city'];
+    $_SESSION['postal_code'] = $userInfo['postal_code'];
+
     // If the "remember me" checkbox is checked, issue a remember-me token
     if (!empty($_POST['remember_me'])) {
         clearRememberMeToken();

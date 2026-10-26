@@ -1,3 +1,4 @@
+/* Stili principali per l'intero sito */
 @import url('https://fonts.googleapis.com/css2?family=Poppins');
 *{
     margin: 0;
@@ -7,13 +8,60 @@
 }
 
 body{
-    background-color: #dbad00;
-    background-image: url(/assets/img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg);
-    background-position: center;
-    background-size: cover;
+    margin: 0;
     min-height: 100vh;
+    background: #d6a800;
+    font-family: Arial, sans-serif;
+    color: #111;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     overflow-x: hidden;
+}
+
+.auth-page{
+    background: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)), url('../img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg') center / cover no-repeat fixed;
+}
+
+
+.public-nav{
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.public-nav a{
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.public-nav a:hover,
+.public-nav a:focus-visible{
+    text-decoration: underline;
+}
+.dashboard-page{
+    background: url('../img/maxim-potyomkin-imviVpdI1OM-unsplash.jpg') center / cover no-repeat fixed;
+}
+
+.main {
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 3rem;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .container{
@@ -99,7 +147,7 @@ body{
     height: 45px;
     background: transparent;
     border: none;
-    padding: 20px 20px 2px 5px;
+    padding: 20px 35px 2px 30px;
     color: #fff;
     font-size: 16px;
 }
@@ -110,7 +158,7 @@ body{
 
 .form-box .input-box label{
     position: absolute;
-    left: 5px;
+    left: 30px;
     top: 50%;
     transform: translateY(-50%);
     color: #fff;
@@ -139,9 +187,32 @@ i{
     position: absolute;
     color: #fff;
     top: 13px;
-    right: 0;
+    left: 0;
     transition: color .2s ease;
 
+}
+
+.password-toggle{
+    position: absolute;
+    top: 8px;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+
+.password-toggle i{
+    position: static;
+    color: inherit;
+}
+
+.password-toggle:focus-visible{
+    outline: 2px solid #ffd400;
+    outline-offset: 3px;
 }
 
 .form-box .input-box:has(input:not(:placeholder-shown)) i{
@@ -180,6 +251,11 @@ input::placeholder{
     top: 10px;
     text-decoration: none;
     font-weight: 500;
+}
+
+.group span a .auth-login-link{
+    color: #ffd400;
+    font-weight: 700;
 }
 
 .group a:focus{
@@ -278,3 +354,127 @@ input::placeholder{
         font-size: 16px;
     }
 }
+
+    .back-link {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        transition: all 0.2s;
+    }
+
+    .back-link:hover {
+        background: rgba(0, 0, 0, 0.7);
+        border-color: rgba(0, 0, 0, 0.5);
+    }
+
+	/* Auth buttons for homepage */
+	.auth-main {
+		flex: 1;
+		width: 100%;
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 2rem 1rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		min-height: calc(100vh - 76px);
+	}
+
+	.auth-buttons {
+		display: flex;
+		gap: 20px;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.auth-btn {
+		display: inline-block;
+		padding: 14px 32px;
+		border-radius: 8px;
+		font-size: 18px;
+		font-weight: 600;
+		text-decoration: none;
+		text-align: center;
+		transition: all 0.2s ease;
+		cursor: pointer;
+		border: 2px solid transparent;
+	}
+
+	.auth-btn--signup {
+		background: #005f5f;
+		color: #fff;
+		border-color: #005f5f;
+	}
+
+	.auth-btn--signup:hover {
+		background: #004a4a;
+		border-color: #004a4a;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 95, 95, 0.3);
+	}
+
+	.auth-btn--signin {
+		background: #fff;
+		color: #111;
+		border-color: transparent;
+	}
+
+	.auth-btn--signin:hover {
+		background: #f0f0f0;
+		border-color: transparent;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	@media (max-width: 520px) {
+		.auth-buttons {
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		.auth-btn {
+			width: 100%;
+			max-width: 300px;
+			padding: 16px 24px;
+			font-size: 16px;
+		}
+	}
+
+	/* Desktop: show auth buttons in navbar, hide center buttons */
+	@media (min-width: 901px) {
+		.auth-buttons {
+			display: none !important;
+		}
+		.dashboard-navbar__userarea .auth-btn {
+			margin-left: 10px;
+		}
+		/* Show footer properly */
+		.auth-main {
+			min-height: calc(100vh - 150px);
+		}
+	}
+
+	/* Fix per pagine statiche: contenuto visibile */
+	.page-content {
+		width: 100%;
+		max-width: 100%;
+		margin: 0;
+		padding: 2rem;
+		box-sizing: border-box;
+	}
+
+	/* Mobile portrait: hide auth buttons in navbar, show overlay */
+	@media (max-width: 900px) and (orientation: portrait) {
+		.dashboard-navbar__userarea .auth-btn {
+			display: none !important;
+		}
+	}

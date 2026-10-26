@@ -1,0 +1,84 @@
+/* Stili specifici per la pagina Contatti */
+
+.contact-section {
+	margin-bottom: 2rem;
+}
+
+.contact-method {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.contact-method .material-symbols-outlined {
+	font-size: 1.5rem;
+	color: #d6a800;
+	margin-top: 0.25rem;
+}
+
+.contact-method h3 {
+	color: #333;
+	margin: 0 0 0.25rem 0;
+}
+
+.contact-method p {
+	margin: 0;
+	color: #666;
+}
+
+.contact-method a {
+	color: #d6a800;
+	text-decoration: none;
+}
+
+.contact-method a:hover {
+	text-decoration: underline;
+}
+
+.contact-form {
+	max-width: 600px;
+}
+
+.contact-form .form-group {
+	margin-bottom: 1rem;
+}
+
+.contact-form label {
+	display: block;
+	margin-bottom: 0.25rem;
+	color: #333;
+	font-weight: 500;
+}
+
+.contact-form input,
+.contact-form textarea,
+.contact-form select {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-family: inherit;
+}
+
+.contact-form textarea {
+	min-height: 150px;
+	resize: vertical;
+}
+
+.contact-form button[type="submit"] {
+	padding: 0.75rem 1.5rem;
+	background: #d6a800;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.contact-form button[type="submit"]:hover {
+	background: #b89200;
+}

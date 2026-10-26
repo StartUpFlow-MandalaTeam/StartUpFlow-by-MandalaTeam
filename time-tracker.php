@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 
-// 1. Verifica che la pagina sia accessibile solo a un utente autenticato.
 if (!isLoggedIn()) {
-    header('Location: /auth/register.php');
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        http_response_code(401);
+        exit;
+    }
+    header('Location: /auth/login.php');
     exit;
 }
 

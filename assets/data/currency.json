@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Euro",
+    "value": "EUR",
+    "symbol": "€"
+  },
+  {
+    "name": "US Dollar",
+    "value": "USD",
+    "symbol": "$"
+  },
+  {
+    "name": "British Pound",
+    "value": "GBP",
+    "symbol": "£"
+  },
+  {
+    "name": "Japanese Yen",
+    "value": "JPY",
+    "symbol": "¥"
+  },
+  {
+    "name": "Swiss Franc",
+    "value": "CHF",
+    "symbol": "CHF"
+  },
+  {
+    "name": "Canadian Dollar",
+    "value": "CAD",
+    "symbol": "C$"
+  },
+  {
+    "name": "Australian Dollar",
+    "value": "AUD",
+    "symbol": "A$"
+  },
+  {
+    "name": "Chinese Yuan",
+    "value": "CNY",
+    "symbol": "¥"
+  },
+  {
+    "name": "Indian Rupee",
+    "value": "INR",
+    "symbol": "₹"
+  },
+  {
+    "name": "Brazilian Real",
+    "value": "BRL",
+    "symbol": "R$"
+  },
+  {
+    "name": "Mexican Peso",
+    "value": "MXN",
+    "symbol": "$"
+  },
+  {
+    "name": "Swedish Krona",
+    "value": "SEK",
+    "symbol": "kr"
+  },
+  {
+    "name": "Norwegian Krone",
+    "value": "NOK",
+    "symbol": "kr"
+  },
+  {
+    "name": "Danish Krone",
+    "value": "DKK",
+    "symbol": "kr"
+  },
+  {
+    "name": "Polish Złoty",
+    "value": "PLN",
+    "symbol": "zł"
+  },
+  {
+    "name": "Czech Koruna",
+    "value": "CZK",
+    "symbol": "Kč"
+  },
+  {
+    "name": "Hungarian Forint",
+    "value": "HUF",
+    "symbol": "Ft"
+  },
+  {
+    "name": "Romanian Leu",
+    "value": "RON",
+    "symbol": "lei"
+  }
+]
