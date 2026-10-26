@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS time_entries (
   user_id INT UNSIGNED NOT NULL,
   project_name VARCHAR(255) NOT NULL,
   description TEXT NULL,
-  hours DECIMAL(8,2) NOT NULL,
+  hours DECIMAL(10,4) NOT NULL,
   entry_date DATE NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

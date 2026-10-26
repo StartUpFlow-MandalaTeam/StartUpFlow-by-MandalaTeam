@@ -76,6 +76,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                 <span>Nuova fattura</span>
             </button>
         </nav>
+        <p class="invoice-list-status" id="invoice-workflow-status" role="status" aria-live="polite"></p>
 
         <section class="invoice-list-view" id="invoice-list-view" hidden>
             <div class="invoice-list-heading">
@@ -93,6 +94,7 @@ $username = $_SESSION['username'] ?? 'Utente';
             <button type="button" class="invoice-back-button" data-invoice-action="home" aria-label="Torna alle azioni fatturazione" title="Torna alle azioni">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
             </button>
+            <p class="invoice-timer" id="invoice-timer" role="status" aria-live="off">Tempo di compilazione: 00:00:00</p>
         </div>
         <?php if (!$isProfileOk): ?>
         <section class="profile-completion" id="profile-completion">
@@ -331,4 +333,3 @@ $username = $_SESSION['username'] ?? 'Utente';
         </div>
         </div>
 </div>
-

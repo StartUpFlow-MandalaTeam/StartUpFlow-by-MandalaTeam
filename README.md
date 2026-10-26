@@ -74,7 +74,7 @@ Per creare o aggiornare un utente attivo di test:
 php scripts/seed-test-user.php
 ```
 
-Se il database esiste gia e manca una tabella aggiunta di recente, rieseguire il comando MySQL dello schema qui sopra: le tabelle sono create con `IF NOT EXISTS`.
+Se il database esiste gia e manca una tabella aggiunta di recente, rieseguire il comando MySQL dello schema qui sopra: le tabelle sono create con `IF NOT EXISTS`. Per aggiornare una tabella `time_entries` gia esistente alla precisione usata per il timer automatico, eseguire una volta `ALTER TABLE time_entries MODIFY hours DECIMAL(10,4) NOT NULL;`.
 
 Il flusso completo di registrazione, verifica email, login, reset password e cambio email e descritto in [README_LOGIN.md](README_LOGIN.md).
 
@@ -108,7 +108,7 @@ In questo caso il servizio email deve essere configurato separatamente. `start-d
 - verifiche email e richieste di cambio email;
 - reset password;
 - token Remember Me;
-- registrazioni del Time Tracker (`time_entries`).
+- registrazioni del Time Tracker (`time_entries`), incluse le ore rilevate durante la creazione delle fatture.
 
 La connessione PDO e centralizzata in `includes/db.php`. Le query applicative devono usare statement preparati.
 

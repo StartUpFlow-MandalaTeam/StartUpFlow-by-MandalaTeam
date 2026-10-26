@@ -238,13 +238,35 @@ try {
 				':total' => number_format($invoiceTotal, 2, '.', ''),
 			]);
 			$invoiceId = (int) $pdo->lastInsertId();
+			$timerStartedAt = $_SESSION['invoice_timer_started_at'] ?? null;
+			$trackedSeconds = is_numeric($timerStartedAt)
+				? max(0, (int) floor(microtime(true) - (float) $timerStartedAt))
+				: 0;
+			if ($trackedSeconds > 0) {
+				$trackedHours = round($trackedSeconds / 3600, 4);
+				if ($trackedHours > 0) {
+					$insertTimeEntry = $pdo->prepare('
+						INSERT INTO time_entries (user_id, project_name, description, hours, entry_date)
+						VALUES (:user_id, :project_name, :description, :hours, :entry_date)
+					');
+					$insertTimeEntry->execute([
+						':user_id' => $userId,
+						':project_name' => 'Fatturazione',
+						':description' => 'Creazione fattura ' . $documentNumber,
+						':hours' => number_format($trackedHours, 4, '.', ''),
+						':entry_date' => date('Y-m-d'),
+					]);
+				}
+			}
 			$pdo->commit();
+			unset($_SESSION['invoice_timer_started_at'], $_SESSION['invoice_timer_id']);
 
 			$respond(201, [
 				'success' => true,
 				'invoice_id' => $invoiceId,
 				'document_number' => $documentNumber,
 				'xml_file' => $documentNumber . '.xml',
+				'tracked_seconds' => $trackedSeconds,
 			]);
 		} catch (PDOException $exception) {
 			if ($pdo->inTransaction()) {

@@ -1,0 +1,274 @@
+.time-tracker {
+    --tracker-ink: #172033;
+    --tracker-muted: #64748b;
+    --tracker-border: #dbe2ea;
+    --tracker-accent: #d6a800;
+    --tracker-danger: #b42318;
+    --tracker-danger-hover: #8f1d15;
+    color: var(--tracker-ink);
+}
+
+.time-tracker .service-header {
+    position: relative;
+    display: flex;
+    min-height: 140px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 3.5rem 1rem 1rem;
+    text-align: center;
+}
+
+.time-tracker .service-header .back-link {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    border: 1px solid #111;
+    border-radius: 8px;
+    background: #111;
+    color: #fff;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.time-tracker .service-header .back-link:hover {
+    border-color: #333;
+    background: #333;
+}
+
+.time-tracker .service-header h1,
+.time-tracker .service-header p {
+    margin: 0;
+}
+
+.time-tracker .service-header p {
+    margin-top: 0.35rem;
+    color: var(--tracker-muted);
+}
+
+.time-tracker .service-content {
+    display: block;
+    width: calc(100% - 2rem);
+    max-width: 1100px;
+    margin: 0 auto 3rem;
+}
+
+.time-tracker .alert-msg {
+    margin: 0 0 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--tracker-border);
+    border-radius: 8px;
+}
+
+.time-tracker .alert-success {
+    border-color: #a6d8bd;
+    background: #edf8f1;
+    color: #17633a;
+}
+
+.time-tracker .alert-danger {
+    border-color: #f0b8b5;
+    background: #fff1f0;
+    color: #8f1d15;
+}
+
+.time-tracker .tracker-form {
+    margin: 0 0 2rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--tracker-border);
+    border-left: 4px solid var(--tracker-accent);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgb(23 32 51 / 5%);
+}
+
+.time-tracker .tracker-form h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+}
+
+.time-tracker .tracker-form p {
+    margin: 0;
+    color: var(--tracker-muted);
+    line-height: 1.6;
+}
+
+.time-tracker .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1rem;
+}
+
+.time-tracker .section-header h3 {
+    margin: 0;
+}
+
+.time-tracker .btn-export {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid #167343;
+    border-radius: 8px;
+    background: #198754;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.time-tracker .btn-export:hover {
+    border-color: #125c36;
+    background: #146c43;
+}
+
+.time-tracker .tracker-table-container {
+    overflow-x: auto;
+    border: 1px solid var(--tracker-border);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgb(23 32 51 / 5%);
+}
+
+.time-tracker .tracker-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.time-tracker .tracker-table th,
+.time-tracker .tracker-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--tracker-border);
+    vertical-align: middle;
+}
+
+.time-tracker .tracker-table th {
+    background: #f5f7fa;
+    color: #344054;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.time-tracker .tracker-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.time-tracker .tracker-table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.time-tracker .tracker-table td:nth-child(1),
+.time-tracker .tracker-table td:nth-child(3) {
+    white-space: nowrap;
+}
+
+.time-tracker .tracker-table tfoot tr {
+    background: #f5f7fa;
+    font-weight: 700;
+}
+
+.time-tracker .tracker-table tfoot td {
+    border-top: 1px solid var(--tracker-border);
+    border-bottom: 0;
+}
+
+.time-tracker .delete-form {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+}
+
+.time-tracker .btn-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: 40px;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--tracker-danger);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--tracker-danger);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.time-tracker .btn-delete:hover {
+    border-color: var(--tracker-danger-hover);
+    background: var(--tracker-danger);
+    color: #fff;
+}
+
+.time-tracker .btn-delete:active {
+    border-color: var(--tracker-danger-hover);
+    background: var(--tracker-danger-hover);
+    color: #fff;
+}
+
+.time-tracker .btn-delete:focus-visible,
+.time-tracker .btn-export:focus-visible,
+.time-tracker .back-link:focus-visible {
+    outline: 3px solid rgb(214 168 0 / 50%);
+    outline-offset: 3px;
+}
+
+.time-tracker > .service-content > p:last-child {
+    padding: 1.25rem;
+    border: 1px dashed var(--tracker-border);
+    border-radius: 8px;
+    color: var(--tracker-muted);
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .time-tracker .service-header {
+        min-height: 130px;
+    }
+
+    .time-tracker .service-header .back-link {
+        left: 0.5rem;
+    }
+
+    .time-tracker .service-content {
+        width: calc(100% - 1rem);
+    }
+
+    .time-tracker .tracker-form {
+        padding: 1rem;
+    }
+
+    .time-tracker .section-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .time-tracker .tracker-table {
+        min-width: 680px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .time-tracker .back-link,
+    .time-tracker .btn-export,
+    .time-tracker .btn-delete {
+        transition: none;
+    }
+}

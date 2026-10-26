@@ -23,7 +23,66 @@ const initializeFatturazione = () => {
     const invoiceListView = document.getElementById('invoice-list-view');
     const invoiceList = document.getElementById('invoice-list');
     const invoiceListStatus = document.getElementById('invoice-list-status');
+    const invoiceWorkflowStatus = document.getElementById('invoice-workflow-status');
+    const invoiceTimer = document.getElementById('invoice-timer');
     let invoiceNumberRequest = 0;
+    let invoiceTimerStartedAt = null;
+    let invoiceTimerInterval = null;
+    let invoiceTimerId = null;
+
+    const formatElapsedTime = (seconds) => {
+        const elapsed = Math.max(0, Math.floor(seconds));
+        const hours = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const remainingSeconds = String(elapsed % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${remainingSeconds}`;
+    };
+
+    const renderInvoiceTimer = () => {
+        if (!invoiceTimer || invoiceTimerStartedAt === null) return;
+        invoiceTimer.textContent = `Tempo di compilazione: ${formatElapsedTime((performance.now() - invoiceTimerStartedAt) / 1000)}`;
+    };
+
+    const setInvoiceTimer = async (action, timerId = '', keepalive = false) => {
+        const csrfToken = invoiceForm?.querySelector('[name="csrf_token"]')?.value || '';
+        const response = await fetch('/invoice/invoice-timer.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({ action, csrf_token: csrfToken, timer_id: timerId }),
+            keepalive,
+            credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Impossibile aggiornare il timer di fatturazione');
+        }
+        return data;
+    };
+
+    const stopInvoiceTimer = () => {
+        if (invoiceTimerInterval !== null) {
+            window.clearInterval(invoiceTimerInterval);
+            invoiceTimerInterval = null;
+        }
+        invoiceTimerStartedAt = null;
+        if (invoiceTimer) invoiceTimer.textContent = 'Tempo di compilazione: 00:00:00';
+    };
+
+    const cancelInvoiceTimer = (keepalive = false) => {
+        if (invoiceTimerStartedAt === null) return;
+        const timerId = invoiceTimerId;
+        stopInvoiceTimer();
+        invoiceTimerId = null;
+        setInvoiceTimer('cancel', timerId, keepalive).catch((error) => {
+            console.error(error);
+            if (invoiceWorkflowStatus) {
+                invoiceWorkflowStatus.textContent = 'Impossibile annullare il timer di fatturazione.';
+            }
+        });
+    };
 
     const generateInvoiceNumber = () => {
         const requestId = ++invoiceNumberRequest;
@@ -181,7 +240,7 @@ const initializeFatturazione = () => {
             }
         };
 
-        invoiceActions.addEventListener('click', (event) => {
+        invoiceActions.addEventListener('click', async (event) => {
             const button = event.target.closest('[data-invoice-action]');
             if (!button) return;
             if (button.dataset.invoiceAction === 'browse') {
@@ -194,15 +253,45 @@ const initializeFatturazione = () => {
                 return;
             }
             if (button.dataset.invoiceAction === 'create') {
-                showView('create');
-                document.dispatchEvent(new Event('invoice:new'));
+                button.disabled = true;
+                if (invoiceWorkflowStatus) invoiceWorkflowStatus.textContent = '';
+                try {
+                    const timer = await setInvoiceTimer('start');
+                    if (typeof timer.timer_id !== 'string' || timer.timer_id === '') {
+                        throw new Error('Il server ha restituito un avvio timer non valido');
+                    }
+                    invoiceTimerId = timer.timer_id;
+                    invoiceTimerStartedAt = performance.now();
+                    renderInvoiceTimer();
+                    if (invoiceTimerInterval !== null) window.clearInterval(invoiceTimerInterval);
+                    invoiceTimerInterval = window.setInterval(renderInvoiceTimer, 1000);
+                    showView('create');
+                    document.dispatchEvent(new Event('invoice:new'));
+                } catch (error) {
+                    if (invoiceWorkflowStatus) {
+                        invoiceWorkflowStatus.textContent = error.message || 'Impossibile avviare il timer di fatturazione';
+                    }
+                } finally {
+                    button.disabled = false;
+                }
                 return;
             }
             showView('home');
         });
         invoiceListView.querySelector('[data-invoice-action="home"]').addEventListener('click', () => showView('home'));
-        invoiceCreateWorkflow.querySelector('[data-invoice-action="home"]').addEventListener('click', () => showView('home'));
+        invoiceCreateWorkflow.querySelector('[data-invoice-action="home"]').addEventListener('click', () => {
+            cancelInvoiceTimer();
+            showView('home');
+        });
         document.addEventListener('invoice:saved', () => showView('home'));
+        document.addEventListener('click', (event) => {
+            const link = event.target.closest('a[data-spa="true"]');
+            if (!link || invoiceTimerStartedAt === null) return;
+            if (new URL(link.href, window.location.href).pathname !== window.location.pathname) {
+                cancelInvoiceTimer();
+            }
+        });
+        window.addEventListener('pagehide', () => cancelInvoiceTimer(true));
         invoiceActions.hidden = false;
     }
 
@@ -241,7 +330,15 @@ const initializeFatturazione = () => {
                     throw new Error(data.message || 'Impossibile salvare la fattura');
                 }
 
+                stopInvoiceTimer();
+                invoiceTimerId = null;
                 invoiceSaveStatus.textContent = `Fattura salvata. XML: ${data.xml_file}`;
+                if (invoiceWorkflowStatus) {
+                    const trackedSeconds = Number(data.tracked_seconds) || 0;
+                    invoiceWorkflowStatus.textContent = trackedSeconds > 0
+                        ? `Fattura salvata. Tempo registrato nel Time Tracker: ${formatElapsedTime(trackedSeconds)}.`
+                        : 'Fattura salvata.';
+                }
                 saveInvoiceButton.textContent = 'Fattura salvata';
                 const browseButton = document.querySelector('[data-invoice-action="browse"]');
                 if (browseButton) browseButton.dataset.refreshInvoices = 'true';

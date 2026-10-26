@@ -67,6 +67,12 @@ body.dashboard-page {
 	width: min(100%, 900px);
 }
 
+.invoice-timer {
+	margin: 0 0 0 auto;
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
 .invoice-action {
 	display: flex;
 	min-height: 124px;
