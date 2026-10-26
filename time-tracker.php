@@ -34,8 +34,8 @@ $stmt = $pdo->prepare("
 $stmt->execute(['user_id' => $userId]);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calcola il totale da mostrare nella tabella.
-$totalHours = array_sum(array_column($entries, 'hours'));
+// I valori sono memorizzati in ore e visualizzati in minuti.
+$totalMinutes = array_sum(array_column($entries, 'hours')) * 60;
 ?>
 
 <div class="service-page time-tracker">
@@ -63,24 +63,24 @@ $totalHours = array_sum(array_column($entries, 'hours'));
                         <tr>
                             <th>Data</th>
                             <th>Progetto</th>
-                            <th>Ore</th>
+                            <th>Minuti</th>
                             <th>Descrizione</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($entries as $entry): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($entry['entry_date'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><?php echo htmlspecialchars((new DateTimeImmutable($entry['entry_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><strong><?php echo htmlspecialchars($entry['project_name'], ENT_QUOTES, 'UTF-8'); ?></strong></td>
-                                <td><?php echo htmlspecialchars(number_format((float) $entry['hours'], 4, ',', ''), ENT_QUOTES, 'UTF-8'); ?> h</td>
+                                <td><?php echo htmlspecialchars(number_format((float) $entry['hours'] * 60, 2, ',', ''), ENT_QUOTES, 'UTF-8'); ?> min</td>
                                 <td><?php echo htmlspecialchars($entry['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="2">Totale ore</td>
-                            <td><?php echo htmlspecialchars(number_format((float) $totalHours, 4, ',', ''), ENT_QUOTES, 'UTF-8'); ?> h</td>
+                            <td colspan="2">Totale minuti</td>
+                            <td><?php echo htmlspecialchars(number_format((float) $totalMinutes, 2, ',', ''), ENT_QUOTES, 'UTF-8'); ?> min</td>
                             <td></td>
                         </tr>
                     </tfoot>
