@@ -2,18 +2,10 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php'; // Fornisce $pdo
-if (!isLoggedIn()) {
-    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-        http_response_code(401);
-        exit;
-    }
-    header('Location: /auth/login.php');
-    exit;
-}
 
 const NS_CARTELLA_RELATIVA = 'storage/spese';
 const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
-const NS_MIME_AMMESSI      = ['image/jpeg', 'image/png', 'application/pdf'];
+const NS_CATEGORIE         = ['Cibo', 'Trasporti', 'Software', 'Altro'];
 
 /** Riconosce JPG, PNG o PDF dalla firma dei primi byte. Restituisce il MIME o null. */
 function rilevaMime(string $percorso): ?string
@@ -60,11 +52,11 @@ function percorsoScontrino(PDO $pdo, int $idSpesa, int $userId): ?string
     return is_file($assoluto) ? $assoluto : null;
 }
 
-/** Invia il file al browser con il tipo MIME reale. */
+/** Invia il file al browser. */
 function inviaFile(string $percorso, int $id): never
 {
     $mime = rilevaMime($percorso);
-    if ($mime === null || !in_array($mime, NS_MIME_AMMESSI, true)) {
+    if ($mime === null) {
         http_response_code(415);
         exit('Formato non supportato.');
     }
@@ -75,6 +67,7 @@ function inviaFile(string $percorso, int $id): never
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
     readfile($percorso);
+    exit;
 }
 
 // ---------- VISUALIZZAZIONE SCONTRINO (GET, pagine separate) ----------
@@ -88,7 +81,7 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
     $userId = (int)currentUserId();
 
     if (isset($_GET['scontrino'])) {
-        $id        = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
+        $id       = filter_input(INPUT_GET, 'scontrino', FILTER_VALIDATE_INT);
         $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
         if ($percorso === null) {
             http_response_code(404);
@@ -97,7 +90,7 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
         inviaFile($percorso, $id);
     }
 
-    $id        = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
+    $id       = filter_input(INPUT_GET, 'anteprima', FILTER_VALIDATE_INT);
     $percorso = $id ? percorsoScontrino($pdo, $id, $userId) : null;
     if ($percorso === null) {
         http_response_code(404);
@@ -118,7 +111,7 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
 <body>
 <div class="ns">
     <header class="ns-header">
-        <a href="/nota-spese" class="back-link">← Torna alle spese</a>
+        <a href="/nota-spese.php" class="back-link">← Torna alle spese</a>
         <h1>Scontrino #<?= (int)$id ?></h1>
         <p><a href="<?= htmlspecialchars($urlFile, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Apri a schermo intero</a></p>
     </header>
@@ -136,7 +129,7 @@ if (isset($_GET['scontrino']) || isset($_GET['anteprima'])) {
     exit;
 }
 
-// ---------- CONTROLLI DI ACCESSO (SPA e form) ----------
+// ---------- CONTROLLI DI ACCESSO ----------
 
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -151,7 +144,7 @@ if (!isLoggedIn()) {
     exit;
 }
 
-if (!$isAjax && !$isPost) {
+if (!$isAjax && !$isPost && empty($_SESSION['ns_flash'])) {
     header('Location: /');
     exit;
 }
@@ -171,13 +164,13 @@ if ($isPost) {
     $categoria   = trim($_POST['categoria'] ?? '');
     $importoStr  = trim($_POST['importo'] ?? '');
 
-    if (empty($dataSpesa)) {
+    if ($dataSpesa === '') {
         $errori[] = 'La data è obbligatoria.';
     }
-    if (empty($descrizione) || mb_strlen($descrizione) > 255) {
+    if ($descrizione === '' || mb_strlen($descrizione) > 255) {
         $errori[] = 'La descrizione è obbligatoria e non può superare i 255 caratteri.';
     }
-    if (!in_array($categoria, ['Cibo', 'Trasporti', 'Software', 'Altro'], true)) {
+    if (!in_array($categoria, NS_CATEGORIE, true)) {
         $errori[] = 'Seleziona una categoria valida.';
     }
     if (!is_numeric($importoStr) || (float)$importoStr <= 0) {
@@ -196,17 +189,19 @@ if ($isPost) {
                     throw new RuntimeException('Errore durante il caricamento del file.');
                 }
                 if ($file['size'] > 5 * 1024 * 1024) {
-                    throw new RuntimeException('Il file supera la dimensione massima consentita (5MB).');
+                    throw new RuntimeException('Il file supera la dimensione massima consentita (5 MB).');
                 }
 
-                // Sostituito finfo con la funzione rilevaMime per compatibilità universale
                 $mimeType = rilevaMime($file['tmp_name']);
-                if ($mimeType === null || !in_array($mimeType, NS_MIME_AMMESSI, true)) {
+                if ($mimeType === null) {
                     throw new RuntimeException('Formato file non valido. Sono accettati solo JPG, PNG e PDF.');
                 }
 
-                if (!is_dir(NS_CARTELLA_UPLOAD)) {
-                    mkdir(NS_CARTELLA_UPLOAD, 0755, true);
+                if (!is_dir(NS_CARTELLA_UPLOAD) && !mkdir(NS_CARTELLA_UPLOAD, 0755, true) && !is_dir(NS_CARTELLA_UPLOAD)) {
+                    throw new RuntimeException('Impossibile creare la cartella ' . NS_CARTELLA_RELATIVA . ' sul server.');
+                }
+                if (!is_writable(NS_CARTELLA_UPLOAD)) {
+                    throw new RuntimeException('La cartella ' . NS_CARTELLA_RELATIVA . ' non è scrivibile dal server.');
                 }
 
                 $ext = match ($mimeType) {
@@ -220,7 +215,7 @@ if ($isPost) {
                 $percorsoDb   = NS_CARTELLA_RELATIVA . '/' . $nomeFile;
 
                 if (!move_uploaded_file($file['tmp_name'], $destinazione)) {
-                    throw new RuntimeException('Impossibile salvare il file sul server.');
+                    throw new RuntimeException('Impossibile salvare il file nello storage.');
                 }
             }
 
@@ -239,19 +234,22 @@ if ($isPost) {
 
             $messaggi[] = 'Spesa salvata con successo.';
         } catch (RuntimeException $e) {
+            if ($destinazione !== null && is_file($destinazione)) {
+                unlink($destinazione);
+            }
             $errori[] = $e->getMessage();
         } catch (PDOException $e) {
             if ($destinazione !== null && is_file($destinazione)) {
                 unlink($destinazione);
             }
             error_log('Errore salvataggio spesa DB: ' . $e->getMessage());
-            $errori[] = 'Impossibile salvare la spesa nel database.';
+            $errori[] = 'Impossibile salvare la spesa nel database. Riprova.';
         }
     }
 
     if (!$isAjax) {
         $_SESSION['ns_flash'] = ['ok' => $messaggi, 'err' => $errori];
-        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '/'));
+        header('Location: /nota-spese.php');
         exit;
     }
 }
@@ -265,14 +263,17 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute([':user_id' => $userId]);
 $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
-?>
-<link rel="stylesheet" href="/assets/css/nota-spese.css">
 
+$totaleSpese = 0.0;
+foreach ($spese as $s) {
+    $totaleSpese += (float)$s['amount'];
+}
+?>
 <div class="service-page ns">
     <header class="service-header ns-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Nota Spese</h1>
-        <p>Benvenuto, <?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>!</p>
+        <p>Registra le spese di lavoro e consulta quelle archiviate.</p>
     </header>
 
     <div class="service-content">
@@ -283,52 +284,31 @@ $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="ns-alert ns-alert--err"><?= htmlspecialchars($e, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endforeach; ?>
 
-        <section class="ns-card">
-            <h2>Nuova spesa</h2>
+        <!-- Menu: due azioni, come in Fatturazione -->
+        <nav class="ns-actions-menu" aria-label="Azioni nota spese">
+            <button type="button" class="ns-action" data-ns-action="browse">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16M4 12h16M4 18.5h16M2.5 5.5h.01M2.5 12h.01M2.5 18.5h.01" /></svg>
+                <span>Spese archiviate</span>
+            </button>
+            <button type="button" class="ns-action" data-ns-action="create">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14M4 3.5h16a.5.5 0 0 1 .5.5v16a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+                <span>Nuova spesa</span>
+            </button>
+        </nav>
 
-            <form method="post" action="/nota-spese.php" enctype="multipart/form-data">
-                <div class="ns-grid">
-                    <div class="ns-field">
-                        <label for="data_spesa">Data</label>
-                        <input type="date" id="data_spesa" name="data_spesa" required>
-                    </div>
+        <!-- Vista: spese archiviate -->
+        <section class="ns-view ns-browse" id="ns-browse" hidden>
+            <div class="ns-view-heading">
+                <button type="button" class="ns-back" data-ns-action="home" aria-label="Torna al menu" title="Torna indietro">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
+                </button>
+                <h2>Spese archiviate</h2>
+            </div>
 
-                    <div class="ns-field">
-                        <label for="importo">Importo (€)</label>
-                        <input type="number" id="importo" name="importo" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required>
-                    </div>
-
-                    <div class="ns-field">
-                        <label for="categoria">Categoria</label>
-                        <select id="categoria" name="categoria" required>
-                            <option value="">Scegli...</option>
-                            <option value="Cibo">Cibo</option>
-                            <option value="Trasporti">Trasporti</option>
-                            <option value="Software">Software</option>
-                            <option value="Altro">Altro</option>
-                        </select>
-                    </div>
-
-                    <div class="ns-field ns-full">
-                        <label for="descrizione">Descrizione</label>
-                        <input type="text" id="descrizione" name="descrizione" maxlength="255" placeholder="Es. Pranzo con il cliente" required>
-                    </div>
-
-                    <div class="ns-field">
-                        <label for="scontrino">Foto dello scontrino (facoltativa)</label>
-                        <input type="file" id="scontrino" name="scontrino" accept="image/jpeg,image/png,application/pdf">
-                        <small class="ns-hint">JPG, PNG o PDF, massimo 5 MB</small>
-                    </div>
-                </div>
-
-                <div class="ns-actions">
-                    <button type="submit" class="ns-btn">Salva spesa</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="ns-card">
-            <h2>Elenco spese</h2>
+            <div class="ns-totale">
+                <span>Totale spese</span>
+                <strong><?= number_format($totaleSpese, 2, ',', '.') ?> €</strong>
+            </div>
 
             <div class="ns-table-wrap">
                 <table class="ns-table">
@@ -351,12 +331,11 @@ $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <tr>
                                     <td data-label="Data"><?= htmlspecialchars($s['expense_date'], ENT_QUOTES, 'UTF-8') ?></td>
                                     <td data-label="Descrizione"><?= htmlspecialchars($s['description'], ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td data-label="Categoria"><?= htmlspecialchars($s['category'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td data-label="Categoria"><span class="ns-badge ns-badge--<?= htmlspecialchars(strtolower($s['category']), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($s['category'], ENT_QUOTES, 'UTF-8') ?></span></td>
                                     <td data-label="Importo" class="ns-importo"><?= number_format((float)$s['amount'], 2, ',', '.') ?> €</td>
                                     <td data-label="Scontrino">
                                         <?php if ($s['receipt_path']): ?>
-                                            <a href="/nota-spese.php?anteprima=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Anteprima</a>
-                                            · <a href="/nota-spese.php?scontrino=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Apri</a>
+                                            <a href="/nota-spese.php?scontrino=<?= (int)$s['id'] ?>" target="_blank" rel="noopener">Apri</a>
                                         <?php else: ?>
                                             —
                                         <?php endif; ?>
@@ -368,5 +347,55 @@ $spese = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </table>
             </div>
         </section>
+
+        <!-- Vista: nuova spesa -->
+        <section class="ns-view ns-create" id="ns-create" hidden>
+            <div class="ns-view-heading">
+                <button type="button" class="ns-back" data-ns-action="home" aria-label="Torna al menu" title="Torna indietro">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
+                </button>
+                <h2>Nuova spesa</h2>
+            </div>
+
+            <form id="form-nota-spese" class="ns-form" method="post" action="/nota-spese.php" enctype="multipart/form-data">
+                <div class="ns-grid">
+                    <div class="ns-field">
+                        <label for="data_spesa">Data</label>
+                        <input type="date" id="data_spesa" name="data_spesa" required>
+                    </div>
+
+                    <div class="ns-field">
+                        <label for="importo">Importo (€)</label>
+                        <input type="number" id="importo" name="importo" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required>
+                    </div>
+
+                    <div class="ns-field">
+                        <label for="categoria">Categoria</label>
+                        <select id="categoria" name="categoria" required>
+                            <option value="">Scegli...</option>
+                            <?php foreach (NS_CATEGORIE as $cat): ?>
+                                <option value="<?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="ns-field ns-full">
+                        <label for="descrizione">Descrizione</label>
+                        <input type="text" id="descrizione" name="descrizione" maxlength="255" placeholder="Es. Pranzo con il cliente" required>
+                    </div>
+
+                    <div class="ns-field">
+                        <label for="scontrino">Foto dello scontrino (facoltativa)</label>
+                        <input type="file" id="scontrino" name="scontrino" accept="image/jpeg,image/png,application/pdf">
+                        <small class="ns-hint">JPG, PNG o PDF, massimo 5 MB</small>
+                    </div>
+                </div>
+
+                <div class="ns-actions">
+                    <button type="submit" class="ns-btn">Salva spesa</button>
+                </div>
+            </form>
+        </section>
     </div>
+    <script src="/assets/js/nota-spese.js" defer></script>
 </div>

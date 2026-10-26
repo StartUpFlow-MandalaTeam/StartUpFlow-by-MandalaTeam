@@ -189,6 +189,13 @@ foreach ($spese as $s) {
 </div>
 
 <style>
+body:has(.scadenzario-wrapper) {
+    background: #eb7e09;
+}
+.main:has(.scadenzario-wrapper) {
+    max-width: none;
+    background: transparent;
+}
 .scaduto {
     color: #dc2626 !important;
     font-weight: 700;

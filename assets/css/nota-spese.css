@@ -1,26 +1,31 @@
-.main:has(.ns),
-.main:has(.ns) #app,
-.main:has(.ns) #dynamic-content {
-    background: none !important;
-    background-image: none !important;
-    max-width: none;
+/* Nota Spese: stile allineato a Fatturazione */
+
+body:has(.ns) {
+    background: #aaed00;
 }
 
-.service-page.ns,
+.main:has(.ns) {
+    max-width: none;
+    background: transparent;
+}
+
 .ns {
+    --ns-ink: #111;
+    --ns-label: #3f4657;
+    --ns-muted: #626a66;
+    --ns-line: rgba(17, 17, 17, 0.12);
+    --ns-accent: #d6a800;
+    --ns-accent-soft: #fff9df;
+    --ns-dark: #3f4657;
+
     display: block;
-    background: #ffffff47 !important;
-    background-image: none !important;
-    box-sizing: border-box;
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 1rem;
-    border-radius: 12px;
-    color: #1f2937;
+    padding: 1.5rem 1rem;
+    box-sizing: border-box;
+    color: var(--ns-ink);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    float: none;
-    position: static;
 }
 
 .ns *,
@@ -29,266 +34,412 @@
     box-sizing: border-box;
 }
 
-.ns .service-content {
+/* ---------- INTESTAZIONE ---------- */
+
+.ns .ns-header {
+    position: relative;
     display: flex;
+    min-height: 140px;
     flex-direction: column;
-    gap: 1rem;
-    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 3.5rem 1rem 1rem;
+    text-align: center;
 }
-
-/* ---------- 2. VARIABILI E INTESTAZIONE ---------- */
-
-.ns {
-    --ns-border: #dfe3ea;
-    --ns-muted: #6b7280;
-    --ns-accent: #2563eb;
-    --ns-accent-hover: #1d4ed8;
-}
-
-.ns .ns-header h1 {
-    margin: .5rem 0 .25rem;
-    font-size: 1.6rem;
-    color: #111827;
-}
-.ns .ns-header p {
-    margin: 0 0 1rem;
-    color: var(--ns-muted);
-}
-
-.ns .back-link {
+.ns .ns-header .back-link {
+    position: absolute;
+    top: 1rem;
+    left: 0;
     display: inline-block;
-    margin-top: .5rem;
     padding: .5rem 1rem;
     background: #000;
     color: #fff;
     text-decoration: none;
     font-size: .9rem;
     font-weight: 500;
-    border-radius: 4px;
     border: 1px solid #000;
+    border-radius: 4px;
+    transition: background-color .2s, border-color .2s;
 }
-.ns .back-link:hover {
+.ns .ns-header .back-link:hover {
     background: #333;
     border-color: #000;
 }
+.ns .ns-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--ns-ink);
+}
+.ns .ns-header p {
+    margin: .35rem 0 0;
+    color: var(--ns-label);
+}
 
-/* ---------- 3. MESSAGGI ---------- */
+/* ---------- LAYOUT ---------- */
+
+.ns .service-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
+}
+
+/* ---------- MESSAGGI ---------- */
 
 .ns .ns-alert {
-    padding: .7rem 1rem;
+    margin: 0;
+    padding: .8rem 1rem;
     border-radius: 8px;
     border: 1px solid transparent;
-    margin: 0;
+    font-weight: 600;
 }
-.ns .ns-alert--ok  { background: #dcfce7; color: #14532d; border-color: #bbf7d0; }
-.ns .ns-alert--err { background: #fee2e2; color: #7f1d1d; border-color: #fecaca; }
+.ns .ns-alert--ok  { background: #e8f8ee; color: #15803d; border-color: #bbe5cb; }
+.ns .ns-alert--err { background: #fdecec; color: #b84242; border-color: #f2c4c4; }
 
-/* ---------- 4. CARD ---------- */
+/* ---------- MENU A DUE PULSANTI (come Fatturazione) ---------- */
 
-.ns .ns-card {
-    display: block;
-    width: 100%;
+.ns .ns-actions-menu {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    width: min(100%, 760px);
+    margin: 0 auto;
+}
+.ns .ns-actions-menu[hidden] {
+    display: none !important;
+}
+
+.ns .ns-action {
+    display: flex;
+    min-height: 124px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .8rem;
+    border: 1px solid rgba(17, 17, 17, .14);
+    border-radius: 8px;
     background: #fff;
-    border: 1px solid var(--ns-border);
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin: 0;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-    float: none;
-    position: static;
+    color: var(--ns-ink);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
 }
-.ns .ns-card h2 {
-    margin: 0 0 1rem;
-    font-size: 1.2rem;
-    color: #111827;
+.ns .ns-action:hover {
+    transform: translateY(-2px);
+    border-color: var(--ns-accent);
+    background: var(--ns-accent-soft);
+}
+.ns .ns-action svg,
+.ns .ns-back svg {
+    width: 28px;
+    height: 28px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
 }
 
-/* ---------- 5. FORM ---------- */
+/* ---------- VISTE ---------- */
+
+.ns .ns-view {
+    width: min(100%, 900px);
+    margin: 0 auto;
+}
+.ns .ns-view[hidden] {
+    display: none !important;
+}
+
+.ns .ns-view-heading {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.ns .ns-view-heading h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--ns-label);
+}
+.ns .ns-back {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border: 1px solid rgba(17, 17, 17, .16);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ns-ink);
+    cursor: pointer;
+}
+.ns .ns-back svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* ---------- FORM (campi arrotondati come Fatturazione) ---------- */
 
 .ns .ns-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
-    width: 100%;
+    gap: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(17, 17, 17, .14);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .04);
 }
 
 .ns .ns-field {
-    display: flex;
-    flex-direction: column;
-    gap: .35rem;
+    display: grid;
+    align-content: start;
+    gap: 8px;
     min-width: 0;
-    width: 100%;
 }
 .ns .ns-field label {
-    font-weight: 600;
-    font-size: .9rem;
-    color: #1f2937;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ns-label);
 }
-
 .ns .ns-field input:not([type="file"]),
 .ns .ns-field select {
     width: 100%;
     min-width: 0;
-    min-height: 44px;
-    padding: .6rem .75rem;
-    border: 1px solid var(--ns-border);
-    border-radius: 8px;
+    min-height: 48px;
+    padding: 13px 14px;
+    border: 1px solid var(--ns-line);
+    border-radius: 14px;
     background: #fff;
+    color: var(--ns-ink);
     font: inherit;
-    color: #1f2937;
 }
-
-/* Input file: largo quanto il campo, il pulsante del browser resta leggibile */
 .ns .ns-field input[type="file"] {
     width: 100%;
     min-width: 0;
-    padding: .45rem;
-    border: 1px dashed var(--ns-border);
-    border-radius: 8px;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px dashed rgba(17, 17, 17, .25);
+    border-radius: 14px;
     background: #fff;
+    color: var(--ns-label);
     font: inherit;
-    font-size: .9rem;
-}
-
-.ns .ns-field input:focus-visible,
-.ns .ns-field select:focus-visible,
-.ns .ns-btn:focus-visible {
-    outline: 3px solid rgba(37, 99, 235, .35);
-    outline-offset: 1px;
-}
-
-.ns .ns-full { grid-column: 1 / -1; }
-
-.ns .ns-hint {
-    color: var(--ns-muted);
-    font-size: .8rem;
-}
-
-.ns .ns-actions {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.ns .ns-btn {
-    width: 100%;
-    min-height: 44px;
-    padding: .6rem 1.25rem;
-    border: 0;
-    border-radius: 8px;
-    background: var(--ns-accent);
-    color: #fff;
-    font: inherit;
-    font-weight: 600;
+    font-size: 13px;
     cursor: pointer;
 }
-.ns .ns-btn:hover { background: var(--ns-accent-hover); }
+.ns .ns-field input:focus-visible,
+.ns .ns-field select:focus-visible,
+.ns .ns-btn:focus-visible,
+.ns .ns-action:focus-visible,
+.ns .ns-back:focus-visible {
+    outline: 2px solid var(--ns-accent);
+    outline-offset: 2px;
+}
+.ns .ns-full {
+    grid-column: 1 / -1;
+}
+.ns .ns-hint {
+    color: var(--ns-muted);
+    font-size: 12px;
+}
+.ns .ns-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+.ns .ns-btn {
+    width: 100%;
+    min-height: 48px;
+    padding: .7rem 1.5rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--ns-dark);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .15s, transform .15s;
+}
+.ns .ns-btn:hover:not(:disabled) {
+    background: #2b303d;
+    transform: translateY(-1px);
+}
+.ns .ns-btn:disabled {
+    opacity: .6;
+    cursor: progress;
+}
 
-/* ---------- 6. TOTALE ---------- */
+/* ---------- TOTALE ---------- */
 
 .ns .ns-totale {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin: 0 0 1rem;
+    padding: .9rem 1rem;
+    border-radius: 8px;
+    background: var(--ns-accent-soft);
+    border: 1px solid #f2e1a0;
     font-size: 1.05rem;
+    color: var(--ns-label);
 }
-.ns .ns-totale strong { font-variant-numeric: tabular-nums; }
+.ns .ns-totale strong {
+    font-size: 1.2rem;
+    color: var(--ns-ink);
+    font-variant-numeric: tabular-nums;
+}
 
-/* ---------- 7. TABELLA ---------- */
+/* ---------- TABELLA ---------- */
 
-.ns .ns-table-wrap { overflow-x: auto; }
-
+.ns .ns-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(17, 17, 17, .14);
+    border-radius: 8px;
+    background: #fff;
+}
 .ns .ns-table {
     width: 100%;
+    min-width: 560px;
     border-collapse: collapse;
     font-size: .95rem;
-    background: #fff;
 }
 .ns .ns-table th,
 .ns .ns-table td {
-    padding: .7rem .6rem;
-    border-bottom: 1px solid var(--ns-border);
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(17, 17, 17, .08);
     text-align: left;
     vertical-align: middle;
-    color: #1f2937;
+    color: #374151;
 }
 .ns .ns-table th {
-    background: #f9fafb;
-    color: var(--ns-muted);
-    font-size: .78rem;
+    background: var(--ns-dark);
+    color: #f9fafb;
+    font-size: .8rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .04em;
+}
+.ns .ns-table tbody tr:hover {
+    background: #f9fafb;
 }
 .ns .ns-importo {
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--ns-ink);
 }
 .ns .ns-empty {
     text-align: center;
     color: var(--ns-muted);
-    padding: 1.5rem 0;
+    padding: 2rem !important;
 }
 
-/* ---------- 8. BADGE CATEGORIA ---------- */
+/* ---------- BADGE CATEGORIA ---------- */
 
 .ns .ns-badge {
     display: inline-block;
-    padding: .15rem .6rem;
-    border-radius: 999px;
+    padding: .2rem .55rem;
+    border-radius: 4px;
     font-size: .8rem;
     font-weight: 600;
+    background: #f3f4f6;
+    color: #4b5563;
 }
 .ns .ns-badge--cibo      { background: #ffedd5; color: #9a3412; }
 .ns .ns-badge--trasporti { background: #dbeafe; color: #1e40af; }
 .ns .ns-badge--software  { background: #ede9fe; color: #5b21b6; }
-.ns .ns-badge--altro     { background: #f3f4f6; color: #374151; }
 
-/* ---------- 9. RESPONSIVE ---------- */
+/* ---------- ANTEPRIMA SCONTRINO ---------- */
 
-/* Mobile (<640px): ogni spesa diventa una scheda */
+.ns .ns-preview-img,
+.ns .ns-preview-frame {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid var(--ns-line);
+    border-radius: 8px;
+    background: #fff;
+}
+.ns .ns-preview-frame {
+    height: 80vh;
+}
+.ns .ns-card {
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid rgba(17, 17, 17, .14);
+    border-radius: 8px;
+}
+
+/* ---------- MOBILE (<640px): ogni spesa diventa una scheda ---------- */
+
 @media (max-width: 639px) {
-    .ns .ns-table thead { display: none; }
-
+    .ns .ns-header .back-link {
+        left: .75rem;
+    }
+    .ns .ns-actions-menu {
+        gap: .75rem;
+    }
+    .ns .ns-action {
+        min-height: 108px;
+    }
+    .ns .ns-table {
+        min-width: 0;
+    }
+    .ns .ns-table thead {
+        display: none;
+    }
     .ns .ns-table tr:not(.ns-vuoto) {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: .5rem .75rem;
-        padding: .75rem 0;
-        border-bottom: 1px solid var(--ns-border);
+        padding: .85rem;
+        border-bottom: 1px solid rgba(17, 17, 17, .1);
     }
     .ns .ns-table tr:not(.ns-vuoto) td {
-        border: 0;
         padding: 0;
+        border: 0;
     }
     .ns .ns-table td[data-label="Descrizione"] {
         grid-column: 1 / -1;
-        font-weight: 600;
+        font-weight: 700;
     }
     .ns .ns-table td::before {
         content: attr(data-label);
         display: block;
-        font-size: .72rem;
+        margin-bottom: 2px;
+        font-size: .7rem;
         color: var(--ns-muted);
         text-transform: uppercase;
         letter-spacing: .04em;
     }
-    .ns .ns-importo { text-align: left; }
+    .ns .ns-importo {
+        text-align: left;
+    }
 }
 
-/* Tablet (≥640px): due colonne nel form */
+/* ---------- TABLET (≥640px): due colonne nel form ---------- */
+
 @media (min-width: 640px) {
-    .ns .ns-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .ns .ns-btn { width: auto; min-width: 180px; }
-    .ns .ns-table th,
-    .ns .ns-table td { padding: .75rem .9rem; }
-    .ns .ns-table tbody tr:hover { background: #f9fafb; }
+    .ns .ns-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .ns .ns-btn {
+        width: auto;
+        min-width: 200px;
+    }
+    .ns .ns-table td,
+    .ns .ns-table th {
+        padding: 14px 16px;
+    }
 }
 
-/* Desktop (≥900px): tre colonne nel form */
+/* ---------- DESKTOP (≥900px): tre colonne nel form ---------- */
+
 @media (min-width: 900px) {
-    .ns .ns-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ns .ns-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
