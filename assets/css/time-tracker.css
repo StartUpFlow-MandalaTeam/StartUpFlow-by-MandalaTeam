@@ -3,8 +3,6 @@
     --tracker-muted: #64748b;
     --tracker-border: #dbe2ea;
     --tracker-accent: #d6a800;
-    --tracker-danger: #b42318;
-    --tracker-danger-hover: #8f1d15;
     color: var(--tracker-ink);
 }
 
@@ -60,25 +58,6 @@
     margin: 0 auto 3rem;
 }
 
-.time-tracker .alert-msg {
-    margin: 0 0 1.25rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid var(--tracker-border);
-    border-radius: 8px;
-}
-
-.time-tracker .alert-success {
-    border-color: #a6d8bd;
-    background: #edf8f1;
-    color: #17633a;
-}
-
-.time-tracker .alert-danger {
-    border-color: #f0b8b5;
-    background: #fff1f0;
-    color: #8f1d15;
-}
-
 .time-tracker .tracker-form {
     margin: 0 0 2rem;
     padding: 1.25rem 1.5rem;
@@ -110,28 +89,6 @@
 
 .time-tracker .section-header h3 {
     margin: 0;
-}
-
-.time-tracker .btn-export {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    min-height: 42px;
-    padding: 0.55rem 0.9rem;
-    border: 1px solid #167343;
-    border-radius: 8px;
-    background: #198754;
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background-color 160ms ease, border-color 160ms ease;
-}
-
-.time-tracker .btn-export:hover {
-    border-color: #125c36;
-    background: #146c43;
 }
 
 .time-tracker .tracker-table-container {
@@ -187,44 +144,6 @@
     border-bottom: 0;
 }
 
-.time-tracker .delete-form {
-    display: flex;
-    justify-content: center;
-    margin: 0;
-}
-
-.time-tracker .btn-delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 88px;
-    min-height: 40px;
-    padding: 0.5rem 0.85rem;
-    border: 1px solid var(--tracker-danger);
-    border-radius: 7px;
-    background: #fff;
-    color: var(--tracker-danger);
-    font: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
-}
-
-.time-tracker .btn-delete:hover {
-    border-color: var(--tracker-danger-hover);
-    background: var(--tracker-danger);
-    color: #fff;
-}
-
-.time-tracker .btn-delete:active {
-    border-color: var(--tracker-danger-hover);
-    background: var(--tracker-danger-hover);
-    color: #fff;
-}
-
-.time-tracker .btn-delete:focus-visible,
-.time-tracker .btn-export:focus-visible,
 .time-tracker .back-link:focus-visible {
     outline: 3px solid rgb(214 168 0 / 50%);
     outline-offset: 3px;
@@ -266,9 +185,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .time-tracker .back-link,
-    .time-tracker .btn-export,
-    .time-tracker .btn-delete {
+    .time-tracker .back-link {
         transition: none;
     }
 }

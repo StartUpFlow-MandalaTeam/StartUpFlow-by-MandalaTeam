@@ -24,7 +24,7 @@ $username = $_SESSION['username'] ?? 'Utente';
         <h1>Burn Rate Meter</h1>
         <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
     </header>
-    <div class="service-content">
+    <div class=service-content">
         <div class="alert alert-info">
             <strong>Modulo Burn Rate Meter</strong>
             <p>Questo spazio è riservato al team di sviluppo per implementare il servizio.</p>

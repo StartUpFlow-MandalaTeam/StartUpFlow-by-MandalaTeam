@@ -266,7 +266,6 @@ try {
 				'invoice_id' => $invoiceId,
 				'document_number' => $documentNumber,
 				'xml_file' => $documentNumber . '.xml',
-				'tracked_seconds' => $trackedSeconds,
 			]);
 		} catch (PDOException $exception) {
 			if ($pdo->inTransaction()) {

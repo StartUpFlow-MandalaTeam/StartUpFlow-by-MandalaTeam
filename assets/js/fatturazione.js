@@ -333,12 +333,6 @@ const initializeFatturazione = () => {
                 stopInvoiceTimer();
                 invoiceTimerId = null;
                 invoiceSaveStatus.textContent = `Fattura salvata. XML: ${data.xml_file}`;
-                if (invoiceWorkflowStatus) {
-                    const trackedSeconds = Number(data.tracked_seconds) || 0;
-                    invoiceWorkflowStatus.textContent = trackedSeconds > 0
-                        ? `Fattura salvata. Tempo registrato nel Time Tracker: ${formatElapsedTime(trackedSeconds)}.`
-                        : 'Fattura salvata.';
-                }
                 saveInvoiceButton.textContent = 'Fattura salvata';
                 const browseButton = document.querySelector('[data-invoice-action="browse"]');
                 if (browseButton) browseButton.dataset.refreshInvoices = 'true';
