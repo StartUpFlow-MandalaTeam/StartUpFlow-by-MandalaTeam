@@ -154,7 +154,7 @@ $totalHours = array_sum(array_column($entries, 'hours'));
     .form-group input, .form-group textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     .btn-submit { background: #007bff; color: #fff; padding: 0.6rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .btn-submit:hover { background: #0056b3; }
-    .btn-export { display: inline-block; background: #28a745; color: #fff; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; float: right; }
+    .btn-export { background: #28a745; color: #fff; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; float: right; }
     .btn-export:hover { background: #218838; }
     .section-header { overflow: hidden; margin-top: 2rem; margin-bottom: 1rem; }
     .section-header h3 { float: left; margin: 0; }
