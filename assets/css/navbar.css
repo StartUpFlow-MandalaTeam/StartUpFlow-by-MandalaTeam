@@ -421,6 +421,9 @@
 }
 
 .profile-modal{
+    position: fixed;
+    inset: 0;
+    margin: auto;
     width: min(92vw, 640px);
     max-height: calc(100dvh - 32px);
     border: 0;

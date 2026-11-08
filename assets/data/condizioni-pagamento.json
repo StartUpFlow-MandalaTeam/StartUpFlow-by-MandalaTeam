@@ -1,0 +1,5 @@
+[
+  { "value": "TP01", "name": "Pagamento a rate" },
+  { "value": "TP02", "name": "Pagamento completo" },
+  { "value": "TP03", "name": "Anticipato" }
+]

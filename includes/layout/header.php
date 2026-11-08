@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../profile-fiscal.php';
 
 // Fetch user profile data from the database only if logged in
 $username = '';
 $email = '';
 $createdAt = '';
 $avatarUrl = '';
+$fiscalRow = [];
+$fiscal = fiscalFormValues([]);
 if (isLoggedIn()) {
 	global $pdo;
 	$userId = currentUserId();
@@ -24,6 +27,7 @@ if (isLoggedIn()) {
 		$stmt->execute([':id' => $userId]);
 		$userRow = $stmt->fetch();
 		getUsersInfo($userId);
+		$fiscalRow = loadUserFiscalProfile($pdo, $userId);
 
 		if ($userRow) {
 			$profile = [
@@ -59,6 +63,9 @@ if (isLoggedIn()) {
 	$address = htmlspecialchars($profile['address'], ENT_QUOTES, 'UTF-8');
 	$city = htmlspecialchars($profile['city'], ENT_QUOTES, 'UTF-8');
 	$postalCode = htmlspecialchars($profile['postal_code'], ENT_QUOTES, 'UTF-8');
+
+	// Dati fiscali del cedente (FatturaPA), già escapati, usati dalla modale profilo.
+	$fiscal = fiscalFormValues($fiscalRow);
 
 	$createdAt = $profile['created_at'] !== ''
 		? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8')

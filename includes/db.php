@@ -13,5 +13,6 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    die('Database connection failed: ' . $e->getMessage());
+    // Rilancia l'eccezione invece di chiamare die(), così il chiamante può gestire l'errore
+    throw new RuntimeException('Database connection failed: ' . $e->getMessage());
 }

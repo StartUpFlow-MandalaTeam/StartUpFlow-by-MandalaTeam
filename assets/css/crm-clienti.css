@@ -49,28 +49,9 @@ body.dashboard-page {
     margin: 0 auto;
 }
 
-
-/* Stile per il link di ritorno alla dashboard */
-.back-link { 
-    display: inline-block; 
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
-    padding: 0.5rem 1rem; 
-    background-color: #167c80; 
-    border: none;
-    color: #fff; 
-    text-decoration: none; 
-    font-size: 0.9rem; 
-    font-weight: 500; 
-    border-radius: 4px; 
-    transition: all 0.2s;
-}
-    
-.back-link:hover { 
-    background: #0f5f63;
-}
-
-/* Breadcrumb */
+/*========== 
+Breadcrumb 
+============*/
 .crm-breadcrumb {
   display: flex;
   flex-direction: row;
@@ -108,7 +89,9 @@ body.dashboard-page {
   font-weight: 500;
 }
 
-/* Buttons */
+/* ==========
+    Buttons
+============== */
 .btn {
     display: inline-flex;
     width: fit-content;
@@ -164,7 +147,16 @@ body.dashboard-page {
     background-color: #7f8c8d;
 }
 
-/* Tables */
+.btn-payment {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.78rem;
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+}
+
+/* ===========
+    Tables 
+============== */
 .table-container {
     max-height: 400px;
     overflow-y: auto;
@@ -234,7 +226,7 @@ body.dashboard-page {
     color: #2c3e50;
 }
 
-/* Bell icon*/
+/* ------ Bell icon --------*/
 .next-action-bell {
     background: none;
     border: none;
@@ -254,7 +246,9 @@ body.dashboard-page {
     50%      { transform: rotate(0); }
 }
 
-/* Forms */
+/* ========== 
+    Forms 
+=============*/
 .form-group {
     width: 90%;
     margin-left: 5%;
@@ -283,15 +277,15 @@ body.dashboard-page {
 }
 
 .form-control[name="item_unit_price[]"] {
-  width: 130px;
+  width: 80px;
 }
 
 .form-control[name="item_vat_rate[]"] {
-  width: fit-content;
+  width: 100px;
 }
 
 .form-control[name="item_quantity[]"] {
-  width: 70px;
+  width: 80px;
 }
 
 #order-modal .form-control::placeholder {
@@ -299,7 +293,6 @@ body.dashboard-page {
     color: #999;
   opacity: 1; 
 }
-
 
 .form-control:focus {
     border-color: #3498db;
@@ -339,7 +332,9 @@ textarea.form-control {
     margin-top: 1.5rem;
 }
 
-/* CRM Legend & Popup Modal */
+/* ======================
+CRM Legend & Popup Modal
+========================= */
 .crm-legend {
     display: flex;
     align-items: center;
@@ -454,13 +449,21 @@ textarea.form-control {
     }
 }
 
-/* Modale Nuovo Ordine e scroll ordini dopo 2 elementi */
+/* ================================================
+Modale Nuovo Ordine e scroll ordini dopo 2 elementi
+=================================================== */
 dialog.profile-modal {
+    background:#ffffff;
     margin: 0;
+    padding: 1rem;
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+dialog.profile-modal .profile-modal__panel {
+    background: #ffffff;
 }
 
 .orders-table-container {
@@ -477,11 +480,25 @@ dialog.profile-modal {
 }
 
 .order-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.order-item__primary,
+.order-item__secondary {
     display: grid;
-    grid-template-columns: 3fr 1fr 1.2fr 1.1fr 1fr auto;
     gap: 0.5rem;
     align-items: center;
-    margin-bottom: 0.5rem;
+}
+
+.order-item__primary {
+    grid-template-columns: 3fr 1fr 1.2fr;
+}
+
+.order-item__secondary {
+    grid-template-columns: 1.1fr 1fr 1fr auto auto;
 }
 
 .order-item__total {
@@ -520,10 +537,17 @@ dialog.profile-modal {
 
 /* Mobile: righe ordine in colonna compatta */
 @media (max-width: 640px) {
-    .order-item {
+    .order-item__primary,
+    .order-item__secondary {
         grid-template-columns: 1fr 1fr;
     }
-    .order-item input[name="item_description[]"] {
+
+    .order-item__primary input[name="item_description[]"] {
         grid-column: 1 / -1;
+    }
+
+    .order-item__secondary .order-item__total,
+    .order-item__secondary [data-order-remove-item] {
+        justify-self: stretch;
     }
 }
