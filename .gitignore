@@ -33,8 +33,24 @@ storage/*.log
 .vscode/
 .idea/
 
+# Invoices
+storage/invoices/*.xml
+storage/contracts/*
+!storage/contracts/.htaccess
+storage/contracts/*.pdf
+storage/contracts/*.docx
+
+# Expenses
+storage/expenses/*.pdf
+storage/expenses/*.jpg
+storage/expenses/*.png
+
 # macOS
 .DS_Store
 
 # Windows
 Thumbs.db
+
+# Invoices
+storage/invoices/*.xml
+storage/contracts/*

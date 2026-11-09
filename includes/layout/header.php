@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../profile-fiscal.php';
 
 // Fetch user profile data from the database only if logged in
 $username = '';
 $email = '';
 $createdAt = '';
 $avatarUrl = '';
+$fiscalRow = [];
+$fiscal = fiscalFormValues([]);
 if (isLoggedIn()) {
 	global $pdo;
 	$userId = currentUserId();
@@ -23,6 +26,8 @@ if (isLoggedIn()) {
 		$stmt = $pdo->prepare('SELECT username, email, created_at, avatar_path FROM users WHERE id = :id LIMIT 1');
 		$stmt->execute([':id' => $userId]);
 		$userRow = $stmt->fetch();
+		getUsersInfo($userId);
+		$fiscalRow = loadUserFiscalProfile($pdo, $userId);
 
 		if ($userRow) {
 			$profile = [
@@ -30,13 +35,38 @@ if (isLoggedIn()) {
 				'email' => (string) $userRow['email'],
 				'created_at' => (string) $userRow['created_at'],
 				'avatar_path' => (string) ($userRow['avatar_path'] ?? ''),
+
+				'first_name' => (string) ($_SESSION['first_name'] ?? ''),
+				'last_name' => (string) ($_SESSION['last_name'] ?? ''),
+				'birth_date' => (string) ($_SESSION['birth_date'] ?? ''),
+				'birth_place' => (string) ($_SESSION['birth_place'] ?? ''),
+				'birth_country' => (string) ($_SESSION['birth_country'] ?? ''),
+				'cf' => (string) ($_SESSION['cf'] ?? ''),
+				'address' => (string) ($_SESSION['address'] ?? ''),
+				'city' => (string) ($_SESSION['city'] ?? ''),
+				'postal_code' => (string) ($_SESSION['postal_code'] ?? ''),
 			];
 		}
+		
 	}
 
 	// Sanitize user data for safe output in HTML contexts to prevent XSS attacks.
 	$username = htmlspecialchars($profile['username'], ENT_QUOTES, 'UTF-8');
 	$email = htmlspecialchars($profile['email'], ENT_QUOTES, 'UTF-8');
+
+	$firstName = htmlspecialchars($profile['first_name'], ENT_QUOTES, 'UTF-8');
+	$lastName = htmlspecialchars($profile['last_name'], ENT_QUOTES, 'UTF-8');
+	$birthDate = htmlspecialchars($profile['birth_date'], ENT_QUOTES, 'UTF-8');
+	$birthPlace = htmlspecialchars($profile['birth_place'], ENT_QUOTES, 'UTF-8');
+	$birthCountry = htmlspecialchars($profile['birth_country'], ENT_QUOTES, 'UTF-8');
+	$cf = htmlspecialchars($profile['cf'], ENT_QUOTES, 'UTF-8');
+	$address = htmlspecialchars($profile['address'], ENT_QUOTES, 'UTF-8');
+	$city = htmlspecialchars($profile['city'], ENT_QUOTES, 'UTF-8');
+	$postalCode = htmlspecialchars($profile['postal_code'], ENT_QUOTES, 'UTF-8');
+
+	// Dati fiscali del cedente (FatturaPA), già escapati, usati dalla modale profilo.
+	$fiscal = fiscalFormValues($fiscalRow);
+
 	$createdAt = $profile['created_at'] !== ''
 		? htmlspecialchars(date('d/m/Y H:i', strtotime($profile['created_at'])), ENT_QUOTES, 'UTF-8')
 		: '';
@@ -63,6 +93,7 @@ if (isLoggedIn()) {
 	<?php echo ($additionalCss ?? ''); ?>
 	<script src="/assets/js/mobile-nav.js" defer></script>
 	<script src="/assets/js/profile-modal.js" defer></script>
+	<script src="/assets/js/fatturazione.js" defer></script>
 	
 	<?php echo $additionalHead ?? ''; ?>
 </head>

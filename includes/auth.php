@@ -205,3 +205,39 @@ function logoutUser(): void
 
 	session_destroy();
 }
+
+function currentSelectedClientId(): ?int
+{
+	return isset($_SESSION['selected_client_id']) && is_numeric($_SESSION['selected_client_id'])
+		? (int) $_SESSION['selected_client_id']
+		: null;
+}
+
+function currentSelectedClient(): ?array
+{
+	return isset($_SESSION['selected_client']) && is_array($_SESSION['selected_client'])
+		? $_SESSION['selected_client']
+		: null;
+}
+
+function getUsersInfo(?int $id): void{
+	global $pdo;
+	if (!isset($_SESSION['user_info_set'])) {
+		$userInfoQry = $pdo->prepare('SELECT first_name, last_name, birth_date, birth_place, birth_country, cf, address, city, postal_code
+        	FROM users_profiles
+        	WHERE user_id = :user_id
+		');
+		$userInfoQry->execute([":user_id" => $id]);
+		$userInfo = $userInfoQry->fetch();
+		$_SESSION['user_info_set'] = true;
+		$_SESSION['first_name'] = $userInfo['first_name'];
+		$_SESSION['last_name'] = $userInfo['last_name'];
+		$_SESSION['birth_date'] = $userInfo['birth_date'];
+		$_SESSION['birth_place'] = $userInfo['birth_place'];
+		$_SESSION['birth_country'] = $userInfo['birth_country'];
+		$_SESSION['cf'] = $userInfo['cf'];
+		$_SESSION['address'] = $userInfo['address'];
+		$_SESSION['city'] = $userInfo['city'];
+		$_SESSION['postal_code'] = $userInfo['postal_code'];
+	}
+} 

@@ -72,7 +72,7 @@ Mail Capture: MailHog (recommended for local development)
 Initialize your schema by importing database/schema.sql via your database client or terminal:
 
 ```bash
-mysql -u root -p < database/schema.sql
+mysql
 ```
 
 ## Test User

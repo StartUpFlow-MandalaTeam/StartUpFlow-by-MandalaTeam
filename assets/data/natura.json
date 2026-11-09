@@ -1,0 +1,23 @@
+[
+  { "value": "N1", "name": "Escluse ex art. 15 DPR 633/72" },
+  { "value": "N2.1", "name": "Non soggette ad IVA ai sensi degli artt. da 7 a 7-septies del DPR 633/72" },
+  { "value": "N2.2", "name": "Non soggette – altri casi (es. Regime Forfettario)" },
+  { "value": "N3.1", "name": "Non imponibili – esportazioni" },
+  { "value": "N3.2", "name": "Non imponibili – cessioni intracomunitarie" },
+  { "value": "N3.3", "name": "Non imponibili – cessioni verso San Marino" },
+  { "value": "N3.4", "name": "Non imponibili – operazioni assimilate alle cessioni all'esportazione" },
+  { "value": "N3.5", "name": "Non imponibili – a seguito di dichiarazioni d'intento" },
+  { "value": "N3.6", "name": "Non imponibili – altre operazioni che non concorrono alla formazione del plafond" },
+  { "value": "N4", "name": "Esenti" },
+  { "value": "N5", "name": "Regime del margine / IVA non esposta in fattura" },
+  { "value": "N6.1", "name": "Inversione contabile – cessione di rottami e altri materiali di recupero" },
+  { "value": "N6.2", "name": "Inversione contabile – cessione di oro e argento ai sensi della L. 7/2000 e oreficeria usata" },
+  { "value": "N6.3", "name": "Inversione contabile – subappalto nel settore edile" },
+  { "value": "N6.4", "name": "Inversione contabile – cessione di fabbricati" },
+  { "value": "N6.5", "name": "Inversione contabile – cessione di telefoni cellulari" },
+  { "value": "N6.6", "name": "Inversione contabile – cessione di prodotti elettronici" },
+  { "value": "N6.7", "name": "Inversione contabile – prestazioni comparto edile e settori connessi" },
+  { "value": "N6.8", "name": "Inversione contabile – operazioni settore energetico" },
+  { "value": "N6.9", "name": "Inversione contabile – altri casi" },
+  { "value": "N7", "name": "IVA assolta in altro stato UE (servizi di telecomunicazione, tele-radiodiffusione ed elettronici)" }
+]

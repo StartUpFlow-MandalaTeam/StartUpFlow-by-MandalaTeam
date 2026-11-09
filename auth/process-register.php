@@ -112,6 +112,15 @@ try {// Use a transaction to ensure atomicity of the registration process
         ':expires_at' => $expires,
     ]);
 
+    // Creation of user's profile
+    $profileCreation = $pdo->prepare('
+        INSERT INTO users_profiles (user_id)
+        VALUES (:user_id)
+    ');
+    $profileCreation->execute([
+        ':user_id' => $userId
+    ]);
+
     $pdo->commit();
 
     //Build the verification link and send it via the mail helper

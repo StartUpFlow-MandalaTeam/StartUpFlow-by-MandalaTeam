@@ -20,6 +20,56 @@
     margin-bottom: 0.5rem;
 }
 
+.burn-rate-card {
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.metric .label {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.metric .value {
+    color: #167c80;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.meter-label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.meter-bar-bg {
+    overflow: hidden;
+    height: 16px;
+    background: #e5e7eb;
+    border-radius: 8px;
+}
+
+.meter-bar-fill {
+    height: 100%;
+    background: #22c55e;
+    border-radius: inherit;
+    transition: width 0.5s ease-in-out;
+}
+
 /* === Breadcrumb desktop (fisso sotto la navbar) === */
 .breadcrumb {
     position: fixed;

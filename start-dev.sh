@@ -8,7 +8,7 @@ PORT="8000"
 PHP_BIN="${PHP_BIN:-php}"
 MAILHOG_IMAGE="${MAILHOG_IMAGE:-mailhog/mailhog}"
 
-mailhog_pid=""
+mailhog_pid="just a placeholder"
 
 cleanup() {
     if [[ -n "${mailhog_pid}" ]]; then

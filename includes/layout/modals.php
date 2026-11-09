@@ -29,44 +29,164 @@
 					<input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif">
 				</label>
 				<div class="profile-modal__divider" aria-hidden="true"></div>
+				<?php
+				// Dati fiscali già escapati da header.php (vedi includes/profile-fiscal.php).
+				$fiscal = $fiscal ?? [];
+				$fv = static fn (string $key): string => (string) ($fiscal[$key] ?? '');
+				$isCompany = $fv('entity_type') === 'company';
+				$hideUnlessCompany = $isCompany ? '' : ' hidden style="display:none"';
+				$regimes = defined('TAX_REGIMES_SUPPORTED') ? TAX_REGIMES_SUPPORTED : [];
+				?>
+
+				<h3 class="profile-modal__field--full" style="grid-column:1/-1; margin:0;">Dati personali</h3>
 				<label class="profile-modal__field">
 					<span>Nome</span>
-					<input type="text" name="nome" value="" placeholder="Inserisci il nome">
+					<input type="text" name="nome" value="<?php echo $firstName ?? ''; ?>" placeholder="Inserisci il nome" maxlength="60" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Cognome</span>
-					<input type="text" name="cognome" value="" placeholder="Inserisci il cognome">
+					<input type="text" name="cognome" value="<?php echo $lastName ?? ''; ?>" placeholder="Inserisci il cognome" maxlength="60" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Data di nascita</span>
-					<input type="date" name="data_di_nascita" value="">
+					<input type="date" name="data_di_nascita" value="<?php echo $birthDate ?? ''; ?>" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Luogo di nascita</span>
-					<input type="text" name="luogo_di_nascita" value="" placeholder="Inserisci il luogo di nascita">
+					<input type="text" name="luogo_di_nascita" value="<?php echo $birthPlace ?? ''; ?>" placeholder="Inserisci il luogo di nascita" required>
 				</label>
 				<label class="profile-modal__field">
 					<span>Stato di nascita</span>
-					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select>
-						<option value="" selected>Seleziona uno Stato</option>
+					<select name="stato" id="stato_nascita" aria-label="Stato di nascita" data-countries-select data-selected-country="<?php echo $birthCountry ?? ''; ?>" required>
+						<option value="<?php echo $birthCountry ?? ''; ?>" selected>Seleziona uno Stato</option>
 					</select>
 				</label>
+
+				<h3 class="profile-modal__field--full" style="grid-column:1/-1;margin:1rem 0 0">Dati fiscali per la fattura</h3>
 				<label class="profile-modal__field">
-					<span>Codice fiscale</span>
-					<input type="text" name="codice_fiscale" value="" placeholder="Inserisci il codice fiscale">
+					<span>Tipo soggetto</span>
+					<select name="tipo_soggetto" id="tipo-soggetto" required>
+						<option value="individual"<?php echo $isCompany ? '' : ' selected'; ?>>Persona fisica / ditta individuale / professionista</option>
+						<option value="company"<?php echo $isCompany ? ' selected' : ''; ?>>Società</option>
+					</select>
 				</label>
+				<label class="profile-modal__field" data-entity="company"<?php echo $hideUnlessCompany; ?>>
+					<span>Denominazione (ragione sociale)</span>
+					<input type="text" name="denominazione" value="<?php echo $fv('company_name'); ?>" placeholder="Es. Rossi S.r.l." maxlength="80"<?php echo $isCompany ? ' required' : ''; ?> data-required-when-visible>
+				</label>
+				<label class="profile-modal__field">
+					<span data-cf-label>Codice fiscale</span>
+					<input type="text" name="codice_fiscale" value="<?php echo $cf ?? ''; ?>" placeholder="Inserisci il codice fiscale" maxlength="16" autocomplete="off" data-uppercase required>
+				</label>
+				<label class="profile-modal__field">
+					<span>Partita IVA</span>
+					<input type="text" name="partita_iva" value="<?php echo $fv('vat_number'); ?>" placeholder="11 cifre" inputmode="numeric" maxlength="11" pattern="[0-9]{11}" autocomplete="off" required>
+				</label>
+				<label class="profile-modal__field">
+					<span>Regime fiscale</span>
+					<select name="regime_fiscale" required>
+						<option value="">Seleziona il regime fiscale</option>
+						<?php foreach ($regimes as $code => $label): ?>
+							<option value="<?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $fv('tax_regime') === $code ? ' selected' : ''; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<h3 class="profile-modal__field--full" style="grid-column:1/-1;margin:1rem 0 0">Sede / domicilio fiscale</h3>
 				<label class="profile-modal__field profile-modal__field--full">
-					<span>Indirizzo</span>
-					<input type="text" name="indirizzo" value="" placeholder="Inserisci l'indirizzo">
+					<span>Indirizzo (via, piazza…)</span>
+					<input type="text" name="indirizzo" value="<?php echo $address ?? ''; ?>" placeholder="Inserisci l'indirizzo" maxlength="60" required>
 				</label>
 				<label class="profile-modal__field">
-					<span>Città</span>
-					<input type="text" name="citta" value="" placeholder="Inserisci la città">
+					<span>Numero civico</span>
+					<input type="text" name="civico" value="<?php echo $fv('street_number'); ?>" placeholder="Facoltativo" maxlength="8">
+				</label>
+				<label class="profile-modal__field">
+					<span>Comune</span>
+					<input type="text" name="citta" value="<?php echo $city ?? ''; ?>" placeholder="Inserisci il comune" maxlength="60" required>
+				</label>
+				<label class="profile-modal__field">
+					<span>Provincia</span>
+					<input type="text" name="provincia" value="<?php echo $fv('province'); ?>" placeholder="Es. MI" maxlength="2" pattern="[A-Za-z]{2}" data-uppercase required>
 				</label>
 				<label class="profile-modal__field">
 					<span>CAP</span>
-					<input type="text" name="cap" value="" placeholder="Inserisci il CAP" inputmode="numeric" maxlength="5">
+					<input type="text" name="cap" value="<?php echo $postalCode ?? ''; ?>" placeholder="Inserisci il CAP" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required>
 				</label>
+
+				<h3 class="profile-modal__field--full" style="grid-column:1/-1;margin:1rem 0 0">Contatti e pagamento (facoltativi)</h3>
+				<label class="profile-modal__field">
+					<span>Telefono (5–12 caratteri)</span>
+					<input type="tel" name="telefono" value="<?php echo $fv('phone'); ?>" placeholder="Es. 0212345678" maxlength="12">
+				</label>
+				<label class="profile-modal__field">
+					<span>Email di contatto</span>
+					<input type="email" name="email_contatto" value="<?php echo $fv('contact_email'); ?>" placeholder="nome@esempio.it" maxlength="256">
+				</label>
+				<label class="profile-modal__field">
+					<span>IBAN</span>
+					<input type="text" name="iban" value="<?php echo $fv('iban'); ?>" placeholder="IT60X0542811101000000123456" maxlength="34" autocomplete="off" data-uppercase>
+				</label>
+				<label class="profile-modal__field">
+					<span>BIC / SWIFT</span>
+					<input type="text" name="bic" value="<?php echo $fv('bic'); ?>" placeholder="8 o 11 caratteri" maxlength="11" autocomplete="off" data-uppercase>
+				</label>
+
+				<details class="profile-modal__field--full" style="grid-column:1/-1"<?php echo ($fv('professional_register') !== '' || $fv('register_number') !== '') ? ' open' : ''; ?>>
+					<summary>Albo professionale (solo professionisti iscritti)</summary>
+					<div class="profile-modal__grid">
+						<label class="profile-modal__field">
+							<span>Albo professionale</span>
+							<input type="text" name="albo" value="<?php echo $fv('professional_register'); ?>" maxlength="60">
+						</label>
+						<label class="profile-modal__field">
+							<span>Provincia albo</span>
+							<input type="text" name="provincia_albo" value="<?php echo $fv('register_province'); ?>" placeholder="Es. MI" maxlength="2" pattern="[A-Za-z]{2}" data-uppercase>
+						</label>
+						<label class="profile-modal__field">
+							<span>Numero di iscrizione</span>
+							<input type="text" name="numero_albo" value="<?php echo $fv('register_number'); ?>" maxlength="60">
+						</label>
+						<label class="profile-modal__field">
+							<span>Data di iscrizione</span>
+							<input type="date" name="data_albo" value="<?php echo $fv('register_date'); ?>">
+						</label>
+					</div>
+				</details>
+
+				<details class="profile-modal__field--full" style="grid-column:1/-1"<?php echo ($fv('rea_office') !== '' || $fv('rea_number') !== '') ? ' open' : ''; ?>>
+					<summary>Iscrizione al Registro Imprese / REA (solo società e imprese iscritte)</summary>
+					<div class="profile-modal__grid">
+						<label class="profile-modal__field">
+							<span>Provincia ufficio REA</span>
+							<input type="text" name="ufficio_rea" value="<?php echo $fv('rea_office'); ?>" placeholder="Es. MI" maxlength="2" pattern="[A-Za-z]{2}" data-uppercase>
+						</label>
+						<label class="profile-modal__field">
+							<span>Numero REA</span>
+							<input type="text" name="numero_rea" value="<?php echo $fv('rea_number'); ?>" maxlength="20">
+						</label>
+						<label class="profile-modal__field">
+							<span>Capitale sociale (€)</span>
+							<input type="text" name="capitale_sociale" value="<?php echo $fv('share_capital'); ?>" placeholder="Es. 10000.00" inputmode="decimal" maxlength="15">
+						</label>
+						<label class="profile-modal__field">
+							<span>Socio unico</span>
+							<select name="socio_unico">
+								<option value="">Non applicabile</option>
+								<option value="SU"<?php echo $fv('sole_shareholder') === 'SU' ? ' selected' : ''; ?>>Socio unico</option>
+								<option value="SM"<?php echo $fv('sole_shareholder') === 'SM' ? ' selected' : ''; ?>>Più soci</option>
+							</select>
+						</label>
+						<label class="profile-modal__field">
+							<span>Stato di liquidazione</span>
+							<select name="stato_liquidazione">
+								<option value="">Seleziona (obbligatorio se compili il REA)</option>
+								<option value="LN"<?php echo $fv('liquidation_status') === 'LN' ? ' selected' : ''; ?>>Non in liquidazione</option>
+								<option value="LS"<?php echo $fv('liquidation_status') === 'LS' ? ' selected' : ''; ?>>In liquidazione</option>
+							</select>
+						</label>
+					</div>
+				</details>
 			</div>
 
 			<footer class="profile-modal__actions">
@@ -105,3 +225,213 @@
 			</footer>
 		</form>
 	</dialog>
+
+	<!-- Popup Modal per la Legenda Stati CRM -->
+	<div id="statusPopupModal" class="status-modal" style="display:none;">
+		<div class="status-modal-content">
+			<h3 id="popupTitle"></h3>
+			<p id="popupDesc"></p>
+			<button onclick="closeStatusPopup()" class="btn btn-primary">Chiudi</button>
+		</div>
+	</div>
+
+	<script>
+	window.showStatusPopup = function(title, desc) {
+		document.getElementById('popupTitle').innerText = title;
+		document.getElementById('popupDesc').innerText = desc;
+		document.getElementById('statusPopupModal').style.display = 'flex';
+	};
+	window.closeStatusPopup = function() {
+		document.getElementById('statusPopupModal').style.display = 'none';
+	};
+	</script>
+
+	<dialog class="profile-modal" id="order-modal" aria-labelledby="order-modal-title">
+		<form class="profile-modal__panel" method="POST" action="crm-clienti.php?action=store_order" id="order-form">
+			<?php echo function_exists('csrfInput') ? csrfInput() : ''; ?>
+			<header class="profile-modal__header">
+				<div>
+					<p class="profile-modal__eyebrow">Gestione Ordini</p>
+					<h2 id="order-modal-title">Nuovo Ordine</h2>
+				</div>
+				<button type="button" class="profile-modal__close" data-order-modal-close aria-label="Chiudi modale">
+					<span class="material-symbols-outlined" aria-hidden="true">close</span>
+				</button>
+			</header>
+
+			<div class="profile-modal__grid">
+				<label class="profile-modal__field">
+					<span>Numero Ordine</span>
+					<input type="text" name="order_number" class="form-control" placeholder="Es. ORD-12345" required>
+				</label>
+				<label class="profile-modal__field">
+					<span>Valuta</span>
+					<select name="currency" class="form-control">
+						<option value="EUR">EUR</option>
+						<option value="USD">USD</option>
+						<option value="GBP">GBP</option>
+					</select>
+				</label>
+				<label class="profile-modal__field profile-modal__field--full">
+					<span>Righe dell'ordine</span>
+					<div id="order-items" class="order-items"></div>
+					<button type="button" class="profile-modal__cancel" data-order-add-item>+ Aggiungi riga</button>
+				</label>
+				<label class="profile-modal__field profile-modal__field--full">
+					<span>Causale / note (riportata in fattura)</span>
+					<textarea name="notes" class="form-control" rows="3" maxlength="2000"></textarea>
+				</label>
+				<p class="profile-modal__field profile-modal__field--full order-totals" aria-live="polite">
+					Imponibile <strong id="order-subtotal">0,00</strong> IVA <strong id="order-tax">0,00</strong> Totale <strong id="order-total">0,00</strong>
+				</p>
+			</div>
+
+			<input type="hidden" name="client_id" id="order_client_id" value="">
+
+			<footer class="profile-modal__actions">
+				<button type="submit" class="profile-modal__save">Crea Ordine</button>
+				<button type="button" class="profile-modal__cancel" data-order-modal-close>Annulla</button>
+			</footer>
+		</form>
+	</dialog>
+
+	<script>
+	document.addEventListener('click', (event) => {
+		const openBtn = event.target.closest('[data-order-modal-open]');
+		const closeBtn = event.target.closest('[data-order-modal-close]');
+		const orderModal = document.getElementById('order-modal');
+		const orderClientIdInput = document.getElementById('order_client_id');
+
+		if (openBtn) {
+			if (orderClientIdInput && openBtn.dataset.clientId) {
+				orderClientIdInput.value = openBtn.dataset.clientId;
+			}
+			if (orderModal && !orderModal.open) {
+				orderModal.showModal();
+			}
+		}
+
+		if (closeBtn) {
+			if (orderModal && orderModal.open) {
+				orderModal.close();
+			}
+		}
+
+		if (orderModal && event.target === orderModal) {
+			orderModal.close();
+		}
+	});
+
+	document.addEventListener('submit', (event) => {
+		const form = event.target;
+		if (form && form.id === 'order-form') {
+			setTimeout(() => {
+				form.reset();
+				const modal = document.getElementById('order-modal');
+				if (modal && modal.open) modal.close();
+			}, 300);
+		}
+	});
+	</script>
+
+	<template id="order-item-template">
+		<div class="order-item">
+			<div class="order-item__primary">
+				<input type="text" name="item_description[]" class="form-control" placeholder="Descrizione" maxlength="500" required aria-label="Descrizione">
+				<input type="number" name="item_quantity[]" class="form-control" placeholder="Q.tà" step="0.01" min="0" required aria-label="Quantità">
+				<input type="number" name="item_unit_price[]" class="form-control" placeholder="P.U." step="0.01" min="0.00" required aria-label="Prezzo unitario">
+			</div>
+			<div class="order-item__secondary">
+				<select name="item_discount_type[]" class="form-control" aria-label="Tipo sconto">
+					<option value="none" selected>Nessuno sconto</option>
+					<option value="percentage">Sconto %</option>
+					<option value="amount">Sconto €</option>
+				</select>
+				<input type="number" name="item_discount_value[]" class="form-control" placeholder="Sconto" step="0.01" min="0" value="0" aria-label="Valore sconto">
+				<select name="item_vat_rate[]" class="form-control" aria-label="Aliquota IVA">
+					<option value="22" selected>IVA 22%</option>
+					<option value="10">IVA 10%</option>
+					<option value="5">IVA 5%</option>
+					<option value="4">IVA 4%</option>
+					<option value="0">IVA 0%</option>
+				</select>
+				<output class="order-item__total" aria-label="Totale riga">0,00</output>
+				<button type="button" class="btn btn-secondary" data-order-remove-item aria-label="Rimuovi riga">Reset</button>
+			</div>
+		</div>
+		
+</template>
+
+	<script>
+	(function () {
+		const box = () => document.getElementById('order-items');
+		const tpl = () => document.getElementById('order-item-template');
+		const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+		const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+		function addRow() {
+			if (!box() || !tpl()) return;
+			box().appendChild(tpl().content.firstElementChild.cloneNode(true));
+		}
+
+		function recalc() {
+			let subtotal = 0, tax = 0;
+			document.querySelectorAll('#order-items .order-item').forEach((row) => {
+				const q = parseFloat(row.querySelector('[name="item_quantity[]"]').value) || 0;
+				const p = parseFloat(row.querySelector('[name="item_unit_price[]"]').value) || 0;
+				const discountType = row.querySelector('[name="item_discount_type[]"]').value;
+				const discountValue = parseFloat(row.querySelector('[name="item_discount_value[]"]').value) || 0;
+				const rate = parseFloat(row.querySelector('[name="item_vat_rate[]"]').value) || 0;
+				const gross = round2(q * p);
+				const discount = discountType === 'percentage'
+					? round2(gross * Math.min(100, discountValue) / 100)
+					: discountType === 'amount' ? Math.min(gross, round2(discountValue)) : 0;
+				const taxable = round2(gross - discount);
+				const vat = round2(taxable * rate / 100);
+				row.querySelector('.order-item__total').textContent = fmt(round2(taxable + vat));
+				subtotal = round2(subtotal + taxable);
+				tax = round2(tax + vat);
+			});
+			const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = fmt(value); };
+			set('order-subtotal', subtotal);
+			set('order-tax', tax);
+			set('order-total', round2(subtotal + tax));
+		}
+
+		function resetRows() {
+			if (!box()) return;
+			box().innerHTML = '';
+			addRow();
+			recalc();
+		}
+
+		document.addEventListener('click', (event) => {
+			if (event.target.closest('[data-order-add-item]')) {
+				addRow();
+				recalc();
+			}
+			const removeBtn = event.target.closest('[data-order-remove-item]');
+			if (removeBtn) {
+				if (box().children.length > 1) {
+					removeBtn.closest('.order-item').remove();
+				} else {
+					resetRows();
+				}
+				recalc();
+			}
+			if (event.target.closest('[data-order-modal-open]')) {
+				resetRows();
+			}
+		});
+		document.addEventListener('input', (event) => {
+			if (event.target.closest('#order-items')) recalc();
+		});
+		document.addEventListener('change', (event) => {
+			if (event.target.closest('#order-items')) recalc();
+		});
+		document.addEventListener('submit', (event) => {
+			if (event.target && event.target.id === 'order-form') setTimeout(resetRows, 350);
+		});
+		resetRows();
+	})();
+	</script>

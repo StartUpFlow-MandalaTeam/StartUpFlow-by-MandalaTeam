@@ -27,19 +27,3 @@
 	color: #555;
 }
 
-.back-link {
-	display: inline-block;
-	margin-top: 2rem;
-	padding: 0.75rem 1.5rem;
-	background: #d6a800;
-	color: white;
-	text-decoration: none;
-	border-radius: 6px;
-	font-weight: 500;
-	transition: background 0.2s ease;
-}
-
-.back-link:hover {
-	background: #b89200;
-}
-

@@ -50,35 +50,28 @@ if ($isAjax) {
     <h2>Il nostro team</h2>
     <div class="team-grid">
         <div class="team-card">
-            <img src="https://placehold.co/120x120" alt="Mario Rossi">
-            <h3>Mario Rossi</h3>
-            <p>CEO & Founder</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+            <img src="https://placehold.co/120x120" alt="Nikka Cantorna">
+            <h3>Nikka</h3>
+            <p>Developer</p>
+        </div>
         <div class="team-card">
             <img src="https://placehold.co/120x120" alt="Luisa Bianchi">
-            <h3>Luisa Bianchi</h3>
-            <p>CTO</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+            <h3>Presley</h3>
+            <p>Developer</p>
+        </div>
         <div class="team-card">
             <img src="https://placehold.co/120x120" alt="Marco Verdi">
-            <h3>Marco Verdi</h3>
-            <p>Lead Developer</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+            <h3>Rafid</h3>
+            <p>Developer</p>
+        </div>
         <div class="team-card">
             <img src="/assets/img/GianLucaDev.jpg" alt="Gian Luca Vitale">
-            <h3>Gian Luca Vitale</h3>
+            <h3>Gian Luca</h3>
             <p>Developer</p>
-        <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
-    <style>.back-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #000; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-radius: 4px; border: 1px solid #000; transition: all 0.2s; }.back-link:hover { background: #333; border-color: #000; }</style>
-</div>
+        </div>
+    </div>
     
-    <?php if ($isAjax || isLoggedIn()): ?>
-    <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
-    <?php endif; ?>
+    
 </div>
 
 <?php

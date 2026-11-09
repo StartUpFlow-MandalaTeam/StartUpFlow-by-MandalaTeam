@@ -1,0 +1,23 @@
+{
+    "require": {
+        "fatturaelettronicaphp/fattura-elettronica": "^2.8",
+        "cweagans/composer-patches": "^2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "cweagans/composer-configurable-plugin": true,
+            "cweagans/composer-patches": true
+        }
+    },
+    "extra": {
+        "patches": {
+            "fatturaelettronicaphp/fattura-elettronica": [
+                {
+                    "description": "Use explicit nullable type for Deduction on PHP 8.4+",
+                    "url": "patches/fattura-elettronica-php84-nullable-deduction.patch",
+                    "depth": 1
+                }
+            ]
+        }
+    }
+}

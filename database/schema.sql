@@ -1,10 +1,14 @@
 -- database/schema.sql
 -- SQL schema for the login authentication system
-CREATE DATABASE IF NOT EXISTS login_auth_db
+CREATE DATABASE IF NOT EXISTS startupflow_db
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE login_auth_db;
+USE startupflow_db;
+
+-- =====================================================================
+-- AUTENTICAZIONE
+-- =====================================================================
 
 -- Users table: stores account credentials and basic lockout / audit fields
 CREATE TABLE IF NOT EXISTS users (
@@ -22,6 +26,23 @@ CREATE TABLE IF NOT EXISTS users (
   PRIMARY KEY (id),
   UNIQUE KEY uk_users_username (username),
   UNIQUE KEY uk_users_email (email)
+) ENGINE=InnoDB;
+
+-- Time tracker entries: work-hour records owned by each user
+CREATE TABLE IF NOT EXISTS time_entries (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  project_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  hours DECIMAL(10,4) NOT NULL,
+  entry_date DATE NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_time_entries_user_date_created (user_id, entry_date, created_at),
+  CONSTRAINT fk_time_entries_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- Audit logs: record security-relevant events and support rate-limiting checks
@@ -108,3 +129,315 @@ CREATE TABLE IF NOT EXISTS remember_me_tokens (
     ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS users_profiles (
+  user_id INT UNSIGNED PRIMARY KEY,
+  entity_type ENUM('individual','company') NOT NULL DEFAULT 'individual',
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  company_name VARCHAR(80) NULL,                           -- FatturaPA 1.2.1.3.1 Denominazione
+  birth_date DATE,
+  birth_place VARCHAR(100),
+  birth_country VARCHAR(100),
+  cf VARCHAR(16) UNIQUE,                                   -- 1.2.1.2 CodiceFiscale
+  vat_country CHAR(2) NOT NULL DEFAULT 'IT',               -- 1.2.1.1.1 IdPaese
+  vat_number VARCHAR(28) NULL,                             -- 1.2.1.1.2 IdCodice (P.IVA)
+  tax_regime CHAR(4) NULL,                                 -- 1.2.1.8 RegimeFiscale (RF01, RF19...)
+  address VARCHAR(255),                                    -- 1.2.2.1 Indirizzo (max 60 per lo SdI, validato in app)
+  street_number VARCHAR(8) NULL,                           -- 1.2.2.2 NumeroCivico
+  city VARCHAR(100),                                       -- 1.2.2.4 Comune (max 60 per lo SdI)
+  province CHAR(2) NULL,                                   -- 1.2.2.5 Provincia
+  postal_code VARCHAR(10),                                 -- 1.2.2.3 CAP (5 cifre, validato in app)
+  country CHAR(2) NOT NULL DEFAULT 'IT',                   -- 1.2.2.6 Nazione
+  phone VARCHAR(12) NULL,                                  -- 1.2.5.1 Telefono
+  contact_email VARCHAR(256) NULL,                         -- 1.2.5.3 Email
+  professional_register VARCHAR(60) NULL,                  -- 1.2.1.4 AlboProfessionale
+  register_province CHAR(2) NULL,                          -- 1.2.1.5 ProvinciaAlbo
+  register_number VARCHAR(60) NULL,                        -- 1.2.1.6 NumeroIscrizioneAlbo
+  register_date DATE NULL,                                 -- 1.2.1.7 DataIscrizioneAlbo
+  rea_office CHAR(2) NULL,                                 -- 1.2.4.1 Ufficio
+  rea_number VARCHAR(20) NULL,                             -- 1.2.4.2 NumeroREA
+  share_capital DECIMAL(14,2) NULL,                        -- 1.2.4.3 CapitaleSociale
+  sole_shareholder ENUM('SU','SM') NULL,                   -- 1.2.4.4 SocioUnico
+  liquidation_status ENUM('LS','LN') NULL,                 -- 1.2.4.5 StatoLiquidazione
+  iban VARCHAR(34) NULL,                                   -- 2.4.2.13 IBAN
+  bic VARCHAR(11) NULL,                                    -- 2.4.2.16 BIC
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_users_profiles_vat (vat_country, vat_number),
+  CONSTRAINT fk_users_profiles_user
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- CRM CLIENTI
+-- =====================================================================
+
+-- Anagrafica unica: lead, prospect, customer e lost
+-- Il cambio di stato sposta solo crm_status: nessun dato viene copiato tra tabelle.
+-- crm_status e converted_at vanno scritti SOLO da ClientService::markAsCustomer()
+-- (e dagli altri metodi del servizio per le transizioni manuali).
+CREATE TABLE IF NOT EXISTS clients (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,                          -- proprietario (chi emette fatture)
+  client_type ENUM('individual','company') NOT NULL,
+  company_name VARCHAR(255) NULL,
+  first_name VARCHAR(100) NULL,
+  last_name VARCHAR(100) NULL,
+  vat_number VARCHAR(20) NULL,
+  cf VARCHAR(16) NULL,
+  address VARCHAR(255) NULL,
+  city VARCHAR(100) NULL,
+  state VARCHAR(10) NULL,
+  postal_code VARCHAR(10) NULL,
+  country VARCHAR(100) NULL,
+  email VARCHAR(255) NULL,
+  phone VARCHAR(30) NULL,
+  pec VARCHAR(255) NULL,                                  -- fatturazione elettronica
+  sdi_code CHAR(7) NULL,                                  -- codice destinatario SDI
+  -- campi CRM
+  crm_status ENUM('lead','prospect','customer','lost') NOT NULL DEFAULT 'lead',
+  source VARCHAR(50) NULL,                                -- sito, referral, fiera...
+  notes TEXT NULL,
+  converted_at DATETIME NULL,                             -- data dell'ultima promozione a customer (primo ordine confermato)
+  lost_reason VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_clients_id_user (id, user_id),            -- necessaria per le FK composte (quotes, orders, invoices)
+  UNIQUE KEY uk_clients_user_vat (user_id, vat_number),   -- anti-duplicati (i NULL sono ammessi)
+  KEY idx_clients_user_status (user_id, crm_status),
+  CONSTRAINT fk_clients_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS documents (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id INT UNSIGNED NOT NULL,
+  type ENUM('NDA', 'Contract') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+
+-- Tabella di supporto per i contatori progressivi delle fatture (per anno e serie)
+CREATE TABLE IF NOT EXISTS invoice_counters (
+    series VARCHAR(10) NOT NULL,
+    year INT NOT NULL,
+    last_number INT NOT NULL,
+    PRIMARY KEY (series, year)
+) ENGINE=InnoDB;
+
+
+-- Persone di riferimento di un cliente/azienda
+CREATE TABLE IF NOT EXISTS client_contacts (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id INT UNSIGNED NOT NULL,
+  first_name VARCHAR(100) NULL,
+  last_name VARCHAR(100) NULL,
+  role VARCHAR(100) NULL,
+  email VARCHAR(255) NULL,
+  phone VARCHAR(30) NULL,
+  is_primary TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_contacts_client (client_id),
+  CONSTRAINT fk_contacts_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- FLUSSO COMMERCIALE: preventivo -> ordine -> evasione -> pagamento
+-- =====================================================================
+-- Preventivi
+CREATE TABLE IF NOT EXISTS quotes (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  client_id INT UNSIGNED NOT NULL,
+  quote_number VARCHAR(50) NOT NULL,
+  status ENUM('draft','sent','accepted','rejected','expired') NOT NULL DEFAULT 'draft',
+  issue_date DATE NOT NULL,
+  valid_until DATE NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'EUR',
+  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  notes TEXT NULL,
+  accepted_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_quotes_user_number (user_id, quote_number),
+  KEY idx_quotes_client_user (client_id, user_id),
+  CONSTRAINT fk_quotes_client_user
+    FOREIGN KEY (client_id, user_id) REFERENCES clients (id, user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quote_items (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  quote_id INT UNSIGNED NOT NULL,
+  position SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  description VARCHAR(500) NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+  unit_price DECIMAL(10,2) NOT NULL,
+  vat_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  line_total DECIMAL(10,2) NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_quote_items_quote (quote_id),
+  CONSTRAINT fk_quote_items_quote
+    FOREIGN KEY (quote_id) REFERENCES quotes (id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Ordini
+-- La conferma è inserita manualmente: status='confirmed' + confirmed_at.
+-- È l'evento che fa scattare ClientService::markAsCustomer().
+CREATE TABLE IF NOT EXISTS orders (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  client_id INT UNSIGNED NOT NULL,
+  quote_id INT UNSIGNED NULL,
+  order_number VARCHAR(50) NOT NULL,
+  status ENUM('draft','confirmed','fulfilled','cancelled') NOT NULL DEFAULT 'draft',
+  payment_status ENUM('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
+  currency CHAR(3) NOT NULL DEFAULT 'EUR',
+  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  notes TEXT NULL,
+  confirmed_at DATETIME NULL,
+  fulfilled_at DATETIME NULL,
+  paid_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_orders_user_number (user_id, order_number),
+  UNIQUE KEY uk_orders_quote (quote_id),
+  KEY idx_orders_client_user (client_id, user_id),
+  KEY idx_orders_user_status (user_id, status),
+  CONSTRAINT fk_orders_client_user
+    FOREIGN KEY (client_id, user_id) REFERENCES clients (id, user_id),
+  CONSTRAINT fk_orders_quote
+    FOREIGN KEY (quote_id) REFERENCES quotes (id)
+    ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id INT UNSIGNED NOT NULL,
+  position SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  description VARCHAR(500) NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+  unit_price DECIMAL(10,2) NOT NULL,
+  discount_type ENUM('none','percentage','amount') NOT NULL DEFAULT 'none',
+  discount_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  vat_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  line_total DECIMAL(10,2) NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_order_items_order (order_id),
+  CONSTRAINT fk_order_items_order
+    FOREIGN KEY (order_id) REFERENCES orders (id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Pagamenti (più rate/acconti per ordine).
+CREATE TABLE IF NOT EXISTS payments (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id INT UNSIGNED NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  method VARCHAR(30) NULL,
+  reference VARCHAR(100) NULL,
+  received_at DATETIME NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_payments_order (order_id),
+  CONSTRAINT fk_payments_order
+    FOREIGN KEY (order_id) REFERENCES orders (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id INT UNSIGNED NOT NULL,
+    order_id INT UNSIGNED NULL,
+    user_id INT UNSIGNED NOT NULL,
+    document_number VARCHAR(50) NOT NULL,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
+    tax_regime VARCHAR(16) NOT NULL,                      -- RegimeFiscale FatturaPA (RF01, RF19...), validato da assets/data/regimi-fiscali.json
+    total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    bollo DECIMAL(10,2) NOT NULL DEFAULT 0.00,            -- ImportoBollo (IVA esclusa)
+    bollo_to_client TINYINT(1) NOT NULL DEFAULT 0,        -- True se la marca da bollo è addebitata al cliente (BolloVirtuale = SI)
+    cassa_type CHAR(4) NULL,                              -- TipoCassa FatturaPA (TC01...TC22), NULL = nessuna cassa
+    cassa_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,     -- ImportoContributoCassa (IVA sul contributo esclusa)
+    is_paid BOOLEAN NOT NULL DEFAULT FALSE,               -- True se la fattura è stata saldata (pagamenti >= total + bollo + cassa_amount)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_invoices_document_number (document_number),
+    KEY idx_invoices_order (order_id),
+    CONSTRAINT fk_invoices_client
+        FOREIGN KEY (client_id)
+        REFERENCES clients(id),
+    CONSTRAINT fk_invoices_order
+        FOREIGN KEY (order_id)
+        REFERENCES orders(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_invoices_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- STORICO CRM
+-- =====================================================================
+
+-- Timeline: chiamate, email, meeting, note, cambi di stato, prossime azioni.
+-- order_id / quote_id collegano l'evento al documento che l'ha causato.
+CREATE TABLE IF NOT EXISTS crm_activities (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id INT UNSIGNED NOT NULL,
+  order_id INT UNSIGNED NULL,
+  quote_id INT UNSIGNED NULL,
+  user_id INT UNSIGNED NOT NULL,
+  type ENUM('call','email','meeting','note','status_change') NOT NULL,
+  subject VARCHAR(255) NULL,
+  body TEXT NULL,
+  occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  next_action_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_act_client (client_id, occurred_at),
+  KEY idx_act_next (user_id, next_action_at),
+  KEY idx_act_order (order_id),
+  KEY idx_act_quote (quote_id),
+  CONSTRAINT fk_act_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
+  CONSTRAINT fk_act_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT fk_act_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL,
+  CONSTRAINT fk_act_quote FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Current Nota Spese schema, including uploaded receipt paths.
+CREATE TABLE IF NOT EXISTS expenses (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  expense_date DATE NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  category ENUM('Cibo','Trasporti','Software','Altro') NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  receipt_path VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_expenses_user_date (user_id, expense_date),
+  CONSTRAINT fk_expenses_user FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
