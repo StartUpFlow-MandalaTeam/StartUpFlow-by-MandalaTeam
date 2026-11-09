@@ -1,0 +1,168 @@
+body:has(.scadenzario-wrapper) {
+    background: #eb7e09;
+}
+.main:has(.scadenzario-wrapper) {
+    max-width: none;
+    background: transparent;
+}
+.scaduto {
+    color: #dc2626 !important;
+    font-weight: 700;
+    animation: lampeggioScaduto 1.2s infinite ease-in-out;
+    display: inline-block;
+}
+@keyframes lampeggioScaduto {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.15; }
+}
+.in-attesa {
+    color: #b45309 !important;
+    font-weight: 600;
+    display: inline-block;
+}
+.pagato {
+    color: #15803d !important;
+    font-weight: 600;
+    display: inline-block;
+}
+.pagato-parziale {
+    color: #7c3aed !important;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.scadenzario-wrapper {
+    width: 100%;
+    max-width: 1050px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+    box-sizing: border-box;
+    float: none;
+}
+.scadenzario-wrapper *,
+.scadenzario-wrapper *::before,
+.scadenzario-wrapper *::after {
+    box-sizing: border-box;
+}
+.scadenzario-wrapper .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid #000;
+}
+.scadenzario-wrapper .back-link:hover {
+    background: #333;
+    border-color: #000;
+}
+.scadenzario-wrapper h1 {
+    margin: 0.5rem 0 0.25rem;
+}
+.scadenzario-intro {
+    color: #1f2937;
+    font-size: 0.95rem;
+    margin: 0.25rem 0 0;
+}
+
+.scad-summary-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0 2rem 0;
+}
+@media (min-width: 640px) {
+    .scad-summary-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+.scad-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+}
+.scad-card--in  { border-left: 4px solid #10b981; }
+.scad-card--out { border-left: 4px solid #ef4444; }
+.scad-card-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+.scad-card-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin-top: 0.4rem;
+}
+
+.scad-section {
+    display: block;
+    width: 100%;
+    margin-bottom: 2.5rem;
+}
+.scad-section h2 {
+    font-size: 1.15rem;
+    color: #111827;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+.scad-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+}
+.scad-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+.scad-table th {
+    background-color: #1f2937;
+    color: #f9fafb;
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.scad-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+.scad-table tr:hover {
+    background-color: #f9fafb;
+}
+.scad-empty {
+    text-align: center;
+    color: #6b7280;
+    padding: 2rem !important;
+}
+
+.badge-cat {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #4b5563;
+    font-size: 0.85rem;
+}

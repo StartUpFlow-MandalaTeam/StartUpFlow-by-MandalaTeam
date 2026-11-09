@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const routes = {
         // Servizi
         '/fatturazione': { file: '/fatturazione.php', title: 'Fatturazione - StartUpFlow', css: '/assets/css/fatturazione.css' },
-        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow', css: '/assets/css/scadenzario.css' },
+        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow', css: '/assets/css/scadenziario.css' },
         '/nota-spese': { file: '/nota-spese.php', title: 'Nota Spese - StartUpFlow', css: '/assets/css/nota-spese.css' },
         '/burn-rate-meter': { file: '/burn-rate-meter.php', title: 'Burn Rate Meter - StartUpFlow', css: '/assets/css/burn-rate-meter.css' },
         '/time-tracker': { file: '/time-tracker.php', title: 'Time Tracker - StartUpFlow', css: '/assets/css/time-tracker.css' },
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="card">
                         <img class="card-image" src="/assets/img/card-6.webp" alt="Zero carta">
                         <div class="card-content">
-                            <h3 class="card-title">"Zero carta"</h3>
+                            <h3 class="card-title">Zero carta</h3>
                             <p class="card-description">Repository documentale</p>
                             <a href="/zero-carta" class="card-button" data-spa="true">Vai!</a>
                         </div>
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="card">
                         <img class="card-image" src="/assets/img/card-7.webp" alt="CRM clienti">
                         <div class="card-content">
-                            <h3 class="card-title">CRM clienti</h3>
+                            <h3 class="card-title">CRM</h3>
                             <p class="card-description">Ciclo di acquisizione clienti</p>
                             <a href="/crm-clienti" class="card-button" data-spa="true">Vai!</a>
                     </div>
@@ -168,7 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gestione dei click sui link SPA
     document.addEventListener('click', (e) => {
-        const link = e.target.closest('a[data-spa="true"]');
+        const target = e.target instanceof Element ? e.target : null;
+        if (!target) return;
+        const link = target.closest('a[data-spa="true"]');
         if (!link) return;
 
         e.preventDefault();
@@ -182,8 +184,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const action = form.getAttribute('action');
         if (!action) return;
         if (action.includes('process-logout') || action.startsWith('/auth/')) return;
+        if (form.matches('#invoice-form')) return;
 
         e.preventDefault();
+
+        if (form.matches('[data-payment-form]')) {
+            e.stopPropagation();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const status = form.querySelector('[data-payment-status]');
+            if (submitButton) submitButton.disabled = true;
+            if (status) status.textContent = 'Salvataggio pagamento...';
+
+            try {
+                const response = await fetch(action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    credentials: 'include',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!response.ok) {
+                    const body = await response.text();
+                    let message = `Errore nella richiesta: ${response.status}`;
+                    try {
+                        const json = JSON.parse(body);
+                        message = json.message || message;
+                    } catch {
+                        const match = body.match(/<p>([\s\S]*?)<\/p>/);
+                        if (match) message = match[1].replace(/<[^>]+>/g, '').trim() || message;
+                    }
+                    throw new Error(message);
+                }
+
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Pagamento non registrato');
+                if (status) status.textContent = result.message || 'Pagamento registrato.';
+                const modal = form.closest('dialog');
+                if (modal?.open) modal.close();
+                const clientId = new FormData(form).get('client_id');
+                loadPage(`/crm-clienti?action=show&id=${encodeURIComponent(clientId)}`);
+                return;
+            } catch (error) {
+                if (status) status.textContent = error.message || 'Errore durante il salvataggio del pagamento';
+                if (submitButton) submitButton.disabled = false;
+                return;
+            }
+        }
 
         try {
             dynamicContent.innerHTML = '<div class="loading-spinner">Caricamento...</div>';
