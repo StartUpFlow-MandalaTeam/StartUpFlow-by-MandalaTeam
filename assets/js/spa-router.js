@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const routes = {
         // Servizi
         '/fatturazione': { file: '/fatturazione.php', title: 'Fatturazione - StartUpFlow', css: '/assets/css/fatturazione.css' },
-        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow', css: '/assets/css/scadenzario.css' },
+        '/scadenzario': { file: '/scadenzario.php', title: 'Scadenzario - StartUpFlow', css: '/assets/css/scadenziario.css' },
         '/nota-spese': { file: '/nota-spese.php', title: 'Nota Spese - StartUpFlow', css: '/assets/css/nota-spese.css' },
         '/burn-rate-meter': { file: '/burn-rate-meter.php', title: 'Burn Rate Meter - StartUpFlow', css: '/assets/css/burn-rate-meter.css' },
         '/time-tracker': { file: '/time-tracker.php', title: 'Time Tracker - StartUpFlow', css: '/assets/css/time-tracker.css' },
