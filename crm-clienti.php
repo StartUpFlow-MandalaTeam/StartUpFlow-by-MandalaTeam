@@ -51,6 +51,14 @@ function requireClient(PDO $db, int $clientId, int $userId) {
     if (!$client) {
         abortWith(404, 'Cliente non trovato');
     }
+
+    function isValidDateForCrm(string $date): bool {
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        $errors = DateTimeImmutable::getLastErrors();
+        return $parsed !== false
+            && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))
+            && $parsed->format('Y-m-d') === $date;
+    }
     return $client;
 }
 
@@ -267,12 +275,21 @@ class Order {
 
     // Ordini del cliente, ciascuno con le proprie righe in $order->items.
     public static function where($db, $client_id, int $userId) {
-        $stmt = $db->prepare('SELECT * FROM orders WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC');
+        $stmt = $db->prepare(
+            'SELECT o.*,
+                    COALESCE((SELECT SUM(oi.quantity * oi.unit_price - oi.discount_amount) FROM order_items oi WHERE oi.order_id = o.id), 0) AS total_without_vat,
+                    COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id), 0) AS paid_amount,
+                    (SELECT MAX(p.received_at) FROM payments p WHERE p.order_id = o.id) AS last_payment_at
+             FROM orders o
+             WHERE o.client_id = ? AND o.user_id = ?
+             ORDER BY o.created_at DESC'
+        );
         $stmt->execute([$client_id, $userId]);
         $orders = $stmt->fetchAll(PDO::FETCH_OBJ);
         if (!$orders) {
             return $orders;
         }
+
         $ids = array_map(static fn($o) => (int) $o->id, $orders);
         $in = implode(',', array_fill(0, count($ids), '?'));
         $itemsStmt = $db->prepare("SELECT * FROM order_items WHERE order_id IN ($in) ORDER BY order_id, position, id");
@@ -287,11 +304,56 @@ class Order {
         return $orders;
     }
 
+    public static function recordPayment(PDO $db, int $orderId, int $clientId, int $userId, array $data): void {
+        $amountRaw = trim((string) ($data['amount'] ?? ''));
+        $method = strtoupper(trim((string) ($data['method'] ?? '')));
+        $reference = trim((string) ($data['reference'] ?? ''));
+        $receivedAt = trim((string) ($data['received_at'] ?? ''));
+        $validMethods = array_map(
+            static fn (array $entry): string => (string) ($entry['value'] ?? ''),
+            json_decode((string) @file_get_contents(__DIR__ . '/assets/data/modalita-pagamento.json'), true) ?: []
+        );
+        if (!preg_match('/^\d{1,8}(\.\d{1,2})?$/', $amountRaw) || (float) $amountRaw <= 0) {
+            throw new DomainException('Importo del pagamento non valido.');
+        }
+        if (!in_array($method, $validMethods, true)) {
+            throw new DomainException('Modalità di pagamento non valida.');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $receivedAt)
+            || !isValidDateForCrm($receivedAt)
+            || strlen($reference) > 100
+        ) {
+            throw new DomainException('Data o riferimento del pagamento non validi.');
+        }
+
+        $orderStmt = $db->prepare('SELECT total FROM orders WHERE id = ? AND client_id = ? AND user_id = ?');
+        $orderStmt->execute([$orderId, $clientId, $userId]);
+        $order = $orderStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$order) {
+            throw new DomainException('Ordine non trovato.');
+        }
+        $amount = round((float) $amountRaw, 2);
+        dbTransaction($db, static function () use ($db, $orderId, $amount, $method, $reference, $receivedAt, $order): void {
+            $sumStmt = $db->prepare('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE order_id = ?');
+            $sumStmt->execute([$orderId]);
+            $paid = (float) $sumStmt->fetchColumn();
+            if (round($paid + $amount, 2) > (float) $order['total']) {
+                throw new DomainException('Il pagamento supera il residuo dell\'ordine.');
+            }
+            $insert = $db->prepare('INSERT INTO payments (order_id, amount, method, reference, received_at) VALUES (?, ?, ?, ?, ?)');
+            $insert->execute([$orderId, number_format($amount, 2, '.', ''), $method, $reference !== '' ? $reference : null, $receivedAt . ' 00:00:00']);
+            $newPaid = round($paid + $amount, 2);
+            $status = $newPaid >= (float) $order['total'] ? 'paid' : 'partial';
+            $update = $db->prepare('UPDATE orders SET payment_status = ?, paid_at = ? WHERE id = ?');
+            $update->execute([$status, $status === 'paid' ? $receivedAt . ' 00:00:00' : null, $orderId]);
+        });
+    }
+
     // Valida e calcola le righe arrivate dal modale. Il server ricalcola sempre tutto:
     // i totali mostrati dal browser sono solo un'anteprima.
-    // Per riga: imponibile = quantità x prezzo; IVA = imponibile x aliquota; totale riga = imponibile + IVA.
+    // Per riga: imponibile netto = quantità x prezzo - sconto; IVA = imponibile netto x aliquota.
     public static function parseItems(array $post): array {
-        $fields = ['item_description', 'item_quantity', 'item_unit_price', 'item_vat_rate'];
+        $fields = ['item_description', 'item_quantity', 'item_unit_price', 'item_discount_type', 'item_discount_value', 'item_vat_rate'];
         $cols = [];
         foreach ($fields as $field) {
             $value = $post[$field] ?? [];
@@ -338,10 +400,30 @@ class Order {
             if (!in_array($row['item_vat_rate'], self::VAT_RATES, true)) {
                 throw new DomainException("Riga $n: aliquota IVA non valida.");
             }
+            if (!in_array($row['item_discount_type'], ['none', 'percentage', 'amount'], true)
+                || !preg_match('/^\d{1,8}(\.\d{1,2})?$/', $row['item_discount_value'])
+            ) {
+                throw new DomainException("Riga $n: sconto non valido.");
+            }
             $quantity = round((float) $row['item_quantity'], 2);
             $unitPrice = round((float) $row['item_unit_price'], 2);
+            $grossAmount = round($quantity * $unitPrice, 2);
+            $discountValue = round((float) $row['item_discount_value'], 2);
+            if ($row['item_discount_type'] === 'percentage' && $discountValue > 100) {
+                throw new DomainException("Riga $n: lo sconto percentuale non può superare il 100%.");
+            }
+            if ($row['item_discount_type'] === 'percentage') {
+                $discountAmount = round($grossAmount * $discountValue / 100, 2);
+            } elseif ($row['item_discount_type'] === 'amount') {
+                $discountAmount = $discountValue;
+            } else {
+                $discountAmount = 0.0;
+            }
+            if ($discountAmount > $grossAmount) {
+                throw new DomainException("Riga $n: lo sconto non può superare l'importo lordo.");
+            }
             $rate = (int) $row['item_vat_rate'];
-            $taxable = round($quantity * $unitPrice, 2);
+            $taxable = round($grossAmount - $discountAmount, 2);
             $taxAmount = round($taxable * $rate / 100, 2);
             $lineTotal = round($taxable + $taxAmount, 2);
             if ($lineTotal > self::MAX_AMOUNT) {
@@ -353,6 +435,9 @@ class Order {
                 'description' => $row['item_description'],
                 'quantity'    => number_format($quantity, 2, '.', ''),
                 'unit_price'  => number_format($unitPrice, 2, '.', ''),
+                'discount_type' => $row['item_discount_type'],
+                'discount_value' => number_format($discountValue, 2, '.', ''),
+                'discount_amount' => number_format($discountAmount, 2, '.', ''),
                 'vat_rate'    => number_format($rate, 2, '.', ''),
                 'line_total'  => number_format($lineTotal, 2, '.', ''),
             ];
@@ -370,7 +455,7 @@ class Order {
     // Scrive le righe dell'ordine. I valori arrivano già validati e ricalcolati dal server
     // (parseItems): qui si persiste solo, senza ricalcolare nulla.
     public static function insertItems(PDO $db, int $orderId, array $items): void {
-        $stmt = $db->prepare('INSERT INTO order_items (order_id, position, description, quantity, unit_price, vat_rate, line_total) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $db->prepare('INSERT INTO order_items (order_id, position, description, quantity, unit_price, discount_type, discount_value, discount_amount, vat_rate, line_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $position = 1;
         foreach ($items as $item) {
             $stmt->execute([
@@ -379,6 +464,9 @@ class Order {
                 $item['description'],
                 $item['quantity'],
                 $item['unit_price'],
+                $item['discount_type'],
+                $item['discount_value'],
+                $item['discount_amount'],
                 $item['vat_rate'],
                 $item['line_total'],
             ]);
@@ -466,7 +554,11 @@ class Order {
 function renderIndex($clients) {
     echo '<div class="service-page">
     <header class="service-header">
-        <a href="/" data-spa="true" class="back-link">← Dashboard</a>
+        <nav aria-label="breadcrumb" class="crm-breadcrumb">
+            <span class="crm-breadcrumb__item">
+                <a href="/" data-spa="true" class="crm-breadcrumb__link">Dashboard</a>
+            </span>
+        </nav>
         <h1>Customer Relationship Management (CRM)</h1>
         <div class="crm-legend">
             <span class="legend-label">Legenda (clicca per info):</span>
@@ -704,7 +796,7 @@ function renderEdit($client) {
                 <input type="text" name="city" class="form-control" value="' . htmlspecialchars($client->city ?? '') . '">
             </div>
             <div class="form-group">
-                <label>Stato:</label>
+                <label>Provincia:</label>
                 <input type="text" name="state" class="form-control" value="' . htmlspecialchars($client->state ?? '') . '">
             </div>
             <div class="form-group">
@@ -752,6 +844,16 @@ function renderEdit($client) {
 
 // Funzione per renderizzare il dettaglio di un cliente.
 function renderShow($client, $contacts, $activities, $orders) {
+    $paymentLabels = [];
+    $paymentCatalog = json_decode((string) @file_get_contents(__DIR__ . '/assets/data/modalita-pagamento.json'), true);
+    if (is_array($paymentCatalog)) {
+        foreach ($paymentCatalog as $entry) {
+            if (isset($entry['value'], $entry['name'])) {
+                $paymentLabels[(string) $entry['value']] = (string) $entry['name'];
+            }
+        }
+    }
+    $paymentStatusLabels = ['unpaid' => 'Da pagare', 'partial' => 'Parziale', 'paid' => 'Pagato'];
     echo '<div class="service-page">
     <header class="service-header">
         <nav aria-label="breadcrumb" class="crm-breadcrumb">
@@ -773,7 +875,7 @@ function renderShow($client, $contacts, $activities, $orders) {
                 <p class="card-text"><strong>Telefono:</strong> ' . htmlspecialchars($client->phone ?? '') . '</p>
                 <p class="card-text"><strong>Indirizzo:</strong> ' . htmlspecialchars($client->address ?? '') . '</p>
                 <p class="card-text"><strong>Città:</strong> ' . htmlspecialchars($client->city ?? '') . '</p>
-                <p class="card-text"><strong>Stato:</strong> ' . htmlspecialchars($client->state ?? '') . '</p>
+                <p class="card-text"><strong>Provincia:</strong> ' . htmlspecialchars($client->state ?? '') . '</p>
                 <p class="card-text"><strong>CAP:</strong> ' . htmlspecialchars($client->postal_code ?? '') . '</p>
                 <p class="card-text"><strong>Paese:</strong> ' . htmlspecialchars($client->country ?? '') . '</p>
                 <p class="card-text"><strong>P.IVA:</strong> ' . htmlspecialchars($client->vat_number ?? '') . '</p>
@@ -885,20 +987,28 @@ function renderShow($client, $contacts, $activities, $orders) {
                 <thead>
                     <tr>
                         <th>N. Ordine</th>
-                        <th>Totale</th>
+                        <th>Totale IVA inclusa</th>
+                        <th>Imponibile</th>
                         <th>Valuta</th>
                         <th>Stato</th>
                         <th>Pagamento</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>';
+    $paymentDialogs = '';
     foreach ($orders as $order) {
         echo '<tr>
             <td data-label="N. Ordine">' . htmlspecialchars($order->order_number ?? '') . '</td>
-            <td data-label="Totale">' . htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.')) . '</td>
+            <td data-label="Totale IVA inclusa">' . htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.')) . '</td>
+            <td data-label="Imponibile">' . htmlspecialchars(number_format((float)($order->total_without_vat ?? 0), 2, ',', '.')) . '</td>
             <td data-label="Valuta">' . htmlspecialchars($order->currency ?? 'EUR') . '</td>
             <td data-label="Stato">' . htmlspecialchars($order->status ?? '') . '</td>
-            <td data-label="Pagamento">' . htmlspecialchars($order->payment_status ?? '') . '</td>
+            <td data-label="Pagamento">' . htmlspecialchars($paymentStatusLabels[$order->payment_status ?? 'unpaid'] ?? 'Da pagare')
+                . (!empty($order->last_payment_at) ? '<br><small>Ultimo: ' . htmlspecialchars(date('d-m-Y', strtotime($order->last_payment_at))) . '</small>' : '') . '<br>'
+                . '<small>Incassato: ' . htmlspecialchars(number_format((float) ($order->paid_amount ?? 0), 2, ',', '.')) . ' ' . htmlspecialchars($order->currency ?? 'EUR')
+                . '</small></td>
+            <td data-label="Azioni"><button type="button" class="btn btn-secondary btn-payment" onclick="document.getElementById(\'payment-modal-' . (int) $order->id . '\').showModal()">Registra pagamento</button></td>
         </tr>';
         $orderLines = '';
         foreach (($order->items ?? []) as $item) {
@@ -909,13 +1019,42 @@ function renderShow($client, $contacts, $activities, $orders) {
                 . '%) = ' . htmlspecialchars(number_format((float)($item->line_total ?? 0), 2, ',', '.')) . '</li>';
         }
         if ($orderLines !== '') {
-            echo '<tr class="order-lines"><td colspan="5"><ul>' . $orderLines . '</ul></td></tr>';
+            echo '<tr class="order-lines"><td colspan="7"><ul>' . $orderLines . '</ul></td></tr>';
         }
+        $paymentDialogs .= '<dialog class="profile-modal" id="payment-modal-' . (int) $order->id . '" aria-labelledby="payment-modal-title-' . (int) $order->id . '">
+            <form class="profile-modal__panel" method="POST" action="/crm-clienti.php?action=store_payment" data-payment-form novalidate>
+                ' . csrfInput() . '
+                <header class="profile-modal__header">
+                    <div>
+                        <p class="profile-modal__eyebrow">Gestione pagamenti</p>
+                        <h2 id="payment-modal-title-' . (int) $order->id . '">Registra pagamento</h2>
+                    </div>
+                    <button type="button" class="profile-modal__close" data-payment-modal-close aria-label="Chiudi modale">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                </header>
+                <div class="profile-modal__grid">
+                    <p class="profile-modal__field profile-modal__field--full"><strong>Ordine:</strong> ' . htmlspecialchars($order->order_number ?? '') . '</p>
+                    <label class="profile-modal__field"><span>Importo</span><input type="number" name="amount" min="0.01" max="' . htmlspecialchars((string) max(0, (float) ($order->total ?? 0) - (float) ($order->paid_amount ?? 0))) . '" step="0.01" required></label>
+                    <label class="profile-modal__field"><span>Modalità</span><select name="method" required>';
+        foreach ($paymentLabels as $methodCode => $methodLabel) {
+            $paymentDialogs .= '<option value="' . htmlspecialchars($methodCode) . '">' . htmlspecialchars($methodLabel) . '</option>';
+        }
+        $paymentDialogs .= '</select></label>
+                    <label class="profile-modal__field"><span>Data ricezione</span><input type="date" name="received_at" value="' . date('Y-m-d') . '" required></label>
+                    <label class="profile-modal__field profile-modal__field--full"><span>Riferimento</span><input type="text" name="reference" maxlength="100" placeholder="CRO o identificativo transazione"></label>
+                    <p class="profile-modal__field profile-modal__field--full" data-payment-status role="status" aria-live="polite"></p>
+                </div>
+                <input type="hidden" name="client_id" value="' . (int) $client->id . '">
+                <input type="hidden" name="order_id" value="' . (int) $order->id . '">
+                <footer class="profile-modal__actions"><button type="submit" class="profile-modal__save">Salva pagamento</button><button type="button" class="profile-modal__cancel" data-payment-modal-close>Annulla</button></footer>
+            </form>
+        </dialog>';
     }
     echo '</tbody>
             </table>
             </div>
-        </div>
+        </div>' . $paymentDialogs . '
 
         <div class="mobile-cards-view">';
     foreach ($orders as $order) {
@@ -923,10 +1062,16 @@ function renderShow($client, $contacts, $activities, $orders) {
         $oTotal = htmlspecialchars(number_format((float)($order->total ?? 0), 2, ',', '.'));
         $oCurrency = htmlspecialchars($order->currency ?? 'EUR');
         $oStatus = htmlspecialchars($order->status ?? '');
-        $oPayment = htmlspecialchars($order->payment_status ?? '');
+        $oPayment = htmlspecialchars($paymentStatusLabels[$order->payment_status ?? 'unpaid'] ?? 'Da pagare')
+            . (!empty($order->last_payment_at) ? '<br><small>Ultimo: ' . htmlspecialchars(date('d-m-Y', strtotime($order->last_payment_at))) . '</small>' : '')
+            . '<br><small>Incassato: ' . htmlspecialchars(number_format((float) ($order->paid_amount ?? 0), 2, ',', '.')) . ' ' . htmlspecialchars($oCurrency)
+            . '</small><br>'
+            . '<button type="button" class="btn btn-secondary btn-payment" onclick="document.getElementById(\'payment-modal-' . (int) $order->id . '\').showModal()">Registra pagamento</button>';
+        $oNetTotal = htmlspecialchars(number_format((float)($order->total_without_vat ?? 0), 2, ',', '.'));
         echo '<div class="mobile-card">
             <div class="mobile-card-row"><span class="mobile-card-label">N. Ordine:</span><span class="mobile-card-value">' . $oNumber . '</span></div>
-            <div class="mobile-card-row"><span class="mobile-card-label">Totale:</span><span class="mobile-card-value">' . $oTotal . ' ' . $oCurrency . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Totale IVA inclusa:</span><span class="mobile-card-value">' . $oTotal . ' ' . $oCurrency . '</span></div>
+            <div class="mobile-card-row"><span class="mobile-card-label">Imponibile:</span><span class="mobile-card-value">' . $oNetTotal . ' ' . $oCurrency . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Stato:</span><span class="mobile-card-value">' . $oStatus . '</span></div>
             <div class="mobile-card-row"><span class="mobile-card-label">Pagamento:</span><span class="mobile-card-value">' . $oPayment . '</span></div>';
         $oLines = '';
@@ -982,7 +1127,48 @@ function renderShow($client, $contacts, $activities, $orders) {
         });
         </script>';
     }
-    echo '
+    echo '<script>
+    (() => {
+        if (window.__crmPaymentHandlers) return;
+        window.__crmPaymentHandlers = true;
+        document.addEventListener("click", (event) => {
+            const closeButton = event.target.closest("[data-payment-modal-close]");
+            if (closeButton) {
+                const modal = closeButton.closest("dialog");
+                if (modal && modal.open) modal.close();
+            }
+        });
+        document.addEventListener("submit", async (event) => {
+            const form = event.target.closest("[data-payment-form]");
+            if (!form) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const submitButton = form.querySelector("button[type=submit]");
+            const status = form.querySelector("[data-payment-status]");
+            if (submitButton) submitButton.disabled = true;
+            if (status) status.textContent = "Salvataggio pagamento...";
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: new FormData(form),
+                    credentials: "same-origin",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+                if (!response.ok) {
+                    const message = (await response.text()).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+                    throw new Error(message || "Impossibile registrare il pagamento");
+                }
+                if (status) status.textContent = "Pagamento registrato. Aggiornamento ordine...";
+                const modal = form.closest("dialog");
+                if (modal && modal.open) modal.close();
+                window.location.reload();
+            } catch (error) {
+                if (status) status.textContent = error.message || "Errore durante il salvataggio del pagamento";
+                if (submitButton) submitButton.disabled = false;
+            }
+        }, true);
+    })();
+    </script>
     </div>
 </div>';
 }
@@ -1188,6 +1374,48 @@ switch ($action) {
             Order::save($db, $data);
         } catch (DomainException $e) {
             abortWith(422, $e->getMessage());
+        }
+        $contacts = Contact::where($db, $client->id);
+        $activities = Activity::where($db, $client->id);
+        $orders = Order::where($db, $client->id, $userId);
+        renderShow($client, $contacts, $activities, $orders);
+        break;
+    case 'store_payment':
+        requireWritePost();
+        $client = requireClient($db, (int) ($_POST['client_id'] ?? 0), $userId);
+        try {
+            Order::recordPayment(
+                $db,
+                (int) ($_POST['order_id'] ?? 0),
+                (int) $client->id,
+                $userId,
+                $_POST
+            );
+        } catch (DomainException $e) {
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            abortWith(422, $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Order payment save failed: ' . $e->getMessage());
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                http_response_code(500);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Impossibile salvare il pagamento. Verifica che la migrazione database dei pagamenti sia stata eseguita.'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            abortWith(500, 'Impossibile salvare il pagamento. Verifica la configurazione del database.');
+        }
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'message' => 'Pagamento registrato'], JSON_UNESCAPED_UNICODE);
+            exit;
         }
         $contacts = Contact::where($db, $client->id);
         $activities = Activity::where($db, $client->id);

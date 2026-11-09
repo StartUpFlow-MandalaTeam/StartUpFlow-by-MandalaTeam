@@ -65,7 +65,46 @@ $filename = bin2hex(random_bytes(16)) . '.' . $allowedTypes[$mimeType];
 $absolutePath = $avatarDirectory . '/' . $filename;
 $relativePath = 'uploads/avatars/' . $filename;
 
-if (!move_uploaded_file($file['tmp_name'], $absolutePath)) {
+if (!function_exists('imagecreatefromstring') || !function_exists('imagecrop')) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Elaborazione immagini non disponibile']);
+    exit;
+}
+
+$imageData = file_get_contents($file['tmp_name']);
+$sourceImage = $imageData !== false ? @imagecreatefromstring($imageData) : false;
+if ($sourceImage === false) {
+    echo json_encode(['success' => false, 'message' => 'Impossibile leggere l’immagine']);
+    exit;
+}
+
+$sourceWidth = imagesx($sourceImage);
+$sourceHeight = imagesy($sourceImage);
+$cropSize = min($sourceWidth, $sourceHeight);
+$croppedImage = imagecrop($sourceImage, [
+    'x' => (int) floor(($sourceWidth - $cropSize) / 2),
+    'y' => (int) floor(($sourceHeight - $cropSize) / 2),
+    'width' => $cropSize,
+    'height' => $cropSize,
+]);
+imagedestroy($sourceImage);
+
+if ($croppedImage === false) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Impossibile ritagliare l’immagine']);
+    exit;
+}
+
+$saved = match ($mimeType) {
+    'image/jpeg' => imagejpeg($croppedImage, $absolutePath, 90),
+    'image/png' => imagepng($croppedImage, $absolutePath, 6),
+    'image/webp' => imagewebp($croppedImage, $absolutePath, 90),
+    'image/gif' => imagegif($croppedImage, $absolutePath),
+    default => false,
+};
+imagedestroy($croppedImage);
+
+if (!$saved) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Impossibile salvare l’immagine']);
     exit;

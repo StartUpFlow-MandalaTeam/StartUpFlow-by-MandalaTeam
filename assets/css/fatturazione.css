@@ -65,6 +65,12 @@ body.dashboard-page {
 	justify-content: flex-start;
 	box-sizing: border-box;
 	width: min(100%, 900px);
+	gap: 1rem;
+}
+
+.invoice-create-heading h2 {
+	margin: 0;
+	order: 1;
 }
 
 .invoice-action {
@@ -113,6 +119,7 @@ body.dashboard-page {
 	align-items: center;
 	justify-content: flex-start;
 	gap: 1rem;
+	margin-bottom: 1rem;
 }
 
 .invoice-list-heading .invoice-back-button {
@@ -405,6 +412,50 @@ body.dashboard-page {
 	gap: 16px;
 }
 
+.dati-fattura__field {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+}
+
+.dati-fattura__field > label {
+	display: block;
+}
+
+.dati-fattura__field > #invoice-type-status,
+.dati-fattura__field > #regime-fiscale-display {
+	min-height: 48px;
+	padding: 13px 14px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+}
+
+.dati-fattura__field > #regime-fiscale-display {
+	background: #f8fafc;
+	border: 1px solid rgba(17, 17, 17, 0.12);
+	border-radius: 6px;
+}
+
+.dati-fattura__bollo {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 1rem 0;
+}
+
+.dati-fattura__bollo[hidden] {
+	display: none !important;
+}
+
+.dati-fattura__bollo label {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 700;
+	color: #3f4657;
+}
+
 .dati-fattura label {
 	display: grid;
 	align-content: start;
@@ -566,6 +617,19 @@ body.dashboard-page {
 	font: inherit;
 }
 
+.form-beni-discount {
+	display: flex;
+	gap: 8px;
+}
+
+.form-beni-discount select {
+	flex: 0 0 42%;
+}
+
+.form-beni-discount input {
+	min-width: 0;
+}
+
 .form-beni input[readonly] {
 	background: #eff2f7;
 	color: #4a5160;
@@ -585,6 +649,21 @@ body.dashboard-page {
 .vat-summary-list {
 	display: grid;
 	gap: 1rem;
+}
+
+.vat-summary-total {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	margin-top: 1rem;
+	padding: 0.75rem 1rem;
+	border-top: 2px solid rgba(17, 17, 17, 0.12);
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.vat-summary-total strong {
+	color: #111;
 }
 
 .form-riepilogo {
@@ -628,6 +707,55 @@ body.dashboard-page {
 }
 
 .vat-summary-grid input[readonly] {
+	background: #eff2f7;
+	color: #4a5160;
+}
+
+#cassa-form,
+#ritenuta-form {
+	margin-top: 1.5rem;
+}
+
+#cassa-form h3,
+#ritenuta-form h3 {
+	margin: 0 0 1rem;
+	font-size: 1.1rem;
+	color: #3f4657;
+}
+
+.cassa-grid + .cassa-grid {
+	margin-top: 1rem;
+}
+
+.cassa-grid[hidden] {
+	display: none !important;
+}
+
+.cassa-grid__wide {
+	grid-column: 2 / -1;
+}
+
+.cassa-grid.has-manual-rate .cassa-grid__wide {
+	grid-column: 2 / 3;
+}
+
+.cassa-grid [data-cassa-manual-label],
+.cassa-grid [data-cassa-manual-input] {
+	display: block;
+}
+
+.cassa-grid [data-cassa-manual-label][hidden],
+.cassa-grid [data-cassa-manual-input][hidden] {
+	display: none !important;
+}
+
+.cassa-grid input[type="checkbox"] {
+	width: auto;
+	min-height: 0;
+	justify-self: start;
+}
+
+.cassa-grid select:disabled {
 	background: #eff2f7;
 	color: #4a5160;
 }

@@ -1,0 +1,7 @@
+[
+    { "value": "RT01", "name": "Ritenuta persone fisiche" },
+    { "value": "RT02", "name": "Ritenuta persone giuridiche" },
+    { "value": "RT03", "name": "Contributo ENASARCO" },
+    { "value": "RT04", "name": "Contributo Enpam" },
+    { "value": "RT05", "name": "Altro contributo previdenziale" }
+]

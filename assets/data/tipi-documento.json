@@ -1,0 +1,11 @@
+[
+    { "value": "TD01", "name": "Fattura", "simplified": false },
+    { "value": "TD02", "name": "Acconto/Anticipo su fattura", "simplified": false },
+    { "value": "TD03", "name": "Acconto/Anticipo su parcella", "simplified": false },
+    { "value": "TD04", "name": "Nota di credito", "simplified": false },
+    { "value": "TD05", "name": "Nota di debito", "simplified": false },
+    { "value": "TD06", "name": "Parcella", "simplified": false },
+    { "value": "TD07", "name": "Fattura semplificata", "simplified": true },
+    { "value": "TD08", "name": "Nota di credito semplificata", "simplified": true },
+    { "value": "TD09", "name": "Nota di debito semplificata", "simplified": true }
+]
