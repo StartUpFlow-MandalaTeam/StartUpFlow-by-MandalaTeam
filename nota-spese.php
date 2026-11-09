@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php'; // Fornisce $pdo
 
-const NS_CARTELLA_RELATIVA = 'storage/spese';
+const NS_CARTELLA_RELATIVA = 'storage/expenses';
 const NS_CARTELLA_UPLOAD   = __DIR__ . '/' . NS_CARTELLA_RELATIVA;
 const NS_CATEGORIE         = ['Cibo', 'Trasporti', 'Software', 'Altro'];
 

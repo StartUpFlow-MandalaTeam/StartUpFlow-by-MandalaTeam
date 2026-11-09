@@ -40,6 +40,11 @@ storage/contracts/*
 storage/contracts/*.pdf
 storage/contracts/*.docx
 
+# Expenses
+storage/expenses/*.pdf
+storage/expenses/*.jpeg
+storage/expenses/*.png
+
 # macOS
 .DS_Store
 
