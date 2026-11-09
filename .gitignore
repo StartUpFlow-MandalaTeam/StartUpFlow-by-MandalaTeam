@@ -42,7 +42,7 @@ storage/contracts/*.docx
 
 # Expenses
 storage/expenses/*.pdf
-storage/expenses/*.jpeg
+storage/expenses/*.jpg
 storage/expenses/*.png
 
 # macOS
