@@ -68,7 +68,6 @@ $username = $_SESSION['username'] ?? 'Utente';
 
         <div class="invoice-create-workflow" id="invoice-create-workflow" hidden>
         <div class="invoice-create-heading">
-            <h2> Crea fattura</h2>
             <button type="button" class="invoice-back-button" data-invoice-action="home" aria-label="Torna alle azioni fatturazione" title="Torna alle azioni">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 5-7 7 7 7M8 12h13" /></svg>
             </button>
