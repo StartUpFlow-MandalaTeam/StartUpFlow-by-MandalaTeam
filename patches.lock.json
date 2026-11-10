@@ -1,0 +1,17 @@
+{
+    "_hash": "1ad0060c913d30758d9cf355c0bc43e9d6bbef5c8884c57e117a90f49697d219",
+    "patches": {
+        "fatturaelettronicaphp/fattura-elettronica": [
+            {
+                "package": "fatturaelettronicaphp/fattura-elettronica",
+                "description": "Generate schema-compliant simplified invoices",
+                "url": "patches/fattura-elettronica-simplified-schema.patch",
+                "sha256": "d7303aa58d4a4ce837f6befd61115ec12ded01e7204f7f597fe7466d4d1ef6f8",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

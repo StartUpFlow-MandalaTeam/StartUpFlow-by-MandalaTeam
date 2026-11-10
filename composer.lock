@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "93e9392d5f2c9be5b31123e50ea0e697",
+    "content-hash": "2bc9a7808dbef9ee58adc7253c747552",
     "packages": [
         {
             "name": "alcohol/iso4217",
@@ -66,8 +66,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-06-29T11:40:36+00:00",
-            "published-time": "2026-10-26T08:46:04+00:00"
+            "time": "2026-06-29T11:40:36+00:00"
         },
         {
             "name": "cweagans/composer-configurable-plugin",
@@ -123,8 +122,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2023-02-12T04:58:58+00:00",
-            "published-time": "2023-02-12T05:06:43+00:00"
+            "time": "2023-02-12T04:58:58+00:00"
         },
         {
             "name": "cweagans/composer-patches",
@@ -191,8 +189,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-10-30T23:44:22+00:00",
-            "published-time": "2025-10-31T01:21:00+00:00"
+            "time": "2025-10-30T23:44:22+00:00"
         },
         {
             "name": "fatturaelettronicaphp/fattura-elettronica",
@@ -265,8 +262,7 @@
                 "issues": "https://github.com/fatturaelettronicaphp/FatturaElettronica/issues",
                 "source": "https://github.com/fatturaelettronicaphp/FatturaElettronica/tree/2.8.2"
             },
-            "time": "2026-10-27T09:46:13+00:00",
-            "published-time": "2026-10-27T09:47:05+00:00"
+            "time": "2026-10-27T09:46:13+00:00"
         },
         {
             "name": "league/iso3166",
@@ -329,8 +325,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2020-12-05T06:50:42+00:00",
-            "published-time": "2020-12-05T06:51:15+00:00"
+            "time": "2020-12-05T06:50:42+00:00"
         }
     ],
     "packages-dev": [],
@@ -341,5 +336,5 @@
     "prefer-lowest": false,
     "platform": {},
     "platform-dev": {},
-    "plugin-api-version": "2.11.0"
+    "plugin-api-version": "2.9.0"
 }

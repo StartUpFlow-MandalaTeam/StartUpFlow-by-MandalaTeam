@@ -262,7 +262,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                 </div>
                 <div class="dati-fattura__bollo" id="bollo-container" hidden>
                     <input type="checkbox" id="bollo-to-client" name="bollo_to_client" value="1">
-                    <label for="bollo-to-client">Addebito marca da bollo (€ 2,00) al cliente (imponibile > € 77,47)</label>
+                    <label for="bollo-to-client">Addebito marca da bollo (€ 2,00) al cliente (obbligatorio se > € 77,47)</label>
                 </div>
                 <div id="beni-servizi-form">
                     <div class="form-beni" data-beni-row>

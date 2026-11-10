@@ -493,11 +493,9 @@ try {
     }
 
     // Bollo
-    $bolloRequired = (!$appliesVat && ($taxableSum + $expensesSum + $nonTaxableExpensesSum + $cassaImporto) > 77.47);
+    $bolloRequired = (!$appliesVat && $bolloToClient);
     if ($bolloRequired) {
-        if ($bolloToClient) {
-            $bolloAmount = 2.00;
-        }
+        $bolloAmount = 2.00;
     }
 
     $grossInvoiceTotal = round($invoiceTotal + $nonTaxableExpensesSum + $cassaImporto + $cassaImposta + $bolloAmount, 2);
@@ -835,17 +833,21 @@ try {
         $clientName = 'Fattura ' . $documentNumber;
     }
     $elapsedHours = max(0.0001, round((microtime(true) - (float) $timerStartedAt) / 3600, 4));
-    $insertTimeEntry = $pdo->prepare(
-        'INSERT INTO time_entries (user_id, project_name, description, hours, entry_date)
-         VALUES (:user_id, :project_name, :description, :hours, :entry_date)'
-    );
-    $insertTimeEntry->execute([
-        ':user_id' => $userId,
-        ':project_name' => $clientName,
-        ':description' => 'Creazione fattura n. ' . $documentNumber,
-        ':hours' => number_format($elapsedHours, 4, '.', ''),
-        ':entry_date' => date('Y-m-d'),
-    ]);
+    try {
+        $insertTimeEntry = $pdo->prepare(
+            'INSERT INTO time_entries (user_id, project_name, description, hours, entry_date)
+             VALUES (:user_id, :project_name, :description, :hours, :entry_date)'
+        );
+        $insertTimeEntry->execute([
+            ':user_id' => $userId,
+            ':project_name' => $clientName,
+            ':description' => 'Creazione fattura n. ' . $documentNumber,
+            ':hours' => number_format($elapsedHours, 4, '.', ''),
+            ':entry_date' => date('Y-m-d'),
+        ]);
+    } catch (Throwable $e) {
+        // Ignore if time_entries table is missing
+    }
 
     $pdo->commit();
     unset($_SESSION['invoice_timer_started_at'], $_SESSION['invoice_timer_id']);

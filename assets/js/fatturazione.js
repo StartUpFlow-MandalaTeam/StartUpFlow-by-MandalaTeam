@@ -748,8 +748,7 @@ const initializeFatturazione = () => {
         const updateBolloVisibility = () => {
             if (!bolloContainer || !bolloCheckbox) return;
             const noVatRegime = regimeWithoutVat();
-            const totalTaxable = getTaxableTotal() + cassaContribution;
-            const showBollo = noVatRegime && roundMoney(totalTaxable) > 77.47;
+            const showBollo = noVatRegime;
             bolloContainer.hidden = !showBollo;
             if (!showBollo) {
                 bolloCheckbox.checked = false;
