@@ -871,7 +871,6 @@ try {
         'xml_file' => $documentNumber . '.xml',
         'is_simplified' => $isSimplified,
     ]);
-
 } catch (Throwable $exception) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
