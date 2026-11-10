@@ -46,7 +46,6 @@ $totalHours = array_sum(array_column($entries, 'hours'));
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Time-Tracker</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
     </header>
 
     <div class="service-content">
@@ -57,7 +56,7 @@ $totalHours = array_sum(array_column($entries, 'hours'));
 
         <!-- Mostra lo storico e il totale solo se ci sono dati. -->
         <div class="section-header">
-            <h3>Storico Attività</h3>
+            <h3>Timing del processo di fatturazione</h3>
         </div>
 
         <?php if (count($entries) > 0): ?>

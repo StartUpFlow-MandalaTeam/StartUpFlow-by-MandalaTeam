@@ -1,3 +1,11 @@
+body:has(.time-tracker) {
+    background: #d9aa02;
+}
+.main:has(.time-tracker) {
+    max-width: none;
+    background: transparent;
+}
+
 .time-tracker {
     --tracker-ink: #172033;
     --tracker-muted: #64748b;
@@ -92,6 +100,8 @@
 }
 
 .time-tracker .tracker-table-container {
+    max-height: calc(7 * 3.6rem);
+    overflow-y: auto;
     overflow-x: auto;
     border: 1px solid var(--tracker-border);
     border-radius: 10px;
@@ -113,6 +123,9 @@
 }
 
 .time-tracker .tracker-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     background: #f5f7fa;
     color: #344054;
     font-size: 0.82rem;
@@ -135,6 +148,9 @@
 }
 
 .time-tracker .tracker-table tfoot tr {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
     background: #f5f7fa;
     font-weight: 700;
 }
