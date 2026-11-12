@@ -108,6 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $monthStart = new DateTimeImmutable('first day of this month');
 $nextMonthStart = $monthStart->modify('+1 month');
 
+$cassaIniziale = 50000.0;
+$entrateMensili = 0.0;
+$speseMensili = 0.0;
+$ultimeSpese = [];
+
 try {
     $cashStatement = $pdo->prepare('SELECT initial_cash FROM burn_rate_settings WHERE user_id = :user_id');
     $cashStatement->execute([':user_id' => $userId]);
