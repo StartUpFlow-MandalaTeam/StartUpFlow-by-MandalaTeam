@@ -493,20 +493,30 @@ try {
     }
 
     // Bollo
-    $bolloRequired = (!$appliesVat && ($taxableSum + $expensesSum + $nonTaxableExpensesSum + $cassaImporto) > 77.47);
+    $bolloRequired = (!$appliesVat && $bolloToClient);
     if ($bolloRequired) {
-        if ($bolloToClient) {
-            $bolloAmount = 2.00;
-        }
+        $bolloAmount = 2.00;
     }
 
     $grossInvoiceTotal = round($invoiceTotal + $nonTaxableExpensesSum + $cassaImporto + $cassaImposta + $bolloAmount, 2);
     $invoiceTotal = round($grossInvoiceTotal - $ritenutaAmount, 2);
     // La scelta del tipo documento è automatica: la semplificata è ammessa solo fino a 400 euro.
-    // FSM10 non prevede il blocco DatiCassaPrevidenziale: la presenza della
-    // cassa richiede quindi una fattura ordinaria anche sotto i 400 euro.
+    // Lo XSD FSM10 (semplificata_1.0.xsd) è molto più ristretto dell'ordinario:
+    //  - DatiGeneraliDocumento ammette solo TipoDocumento, Divisa, Data, Numero, BolloVirtuale
+    //    (niente ImportoTotaleDocumento, Causale, DatiBollo, DatiRitenuta, DatiCassaPrevidenziale, sconti);
+    //  - DatiBeniServizi richiede sempre l'elemento DatiIVA, ma la libreria lo omette
+    //    quando imposta e aliquota sono entrambe 0 (regime forfettario, righe con Natura):
+    //    in quel caso l'XML risulterebbe non valido ("This element is not expected").
+    // In tutti questi casi si emette quindi una fattura ordinaria anche sotto i 400 euro.
     $hasDiscount = array_reduce($lineItems, static fn (bool $carry, array $item): bool => $carry || $item['discount_amount'] > 0, false);
-    $isSimplified = $grossInvoiceTotal <= 400.00 && $cassaTipo === '' && $ritenutaTipo === '' && !$hasDiscount;
+    $hasZeroRateLine = array_reduce($lineItems, static fn (bool $carry, array $item): bool => $carry || (int) $item['vat_rate'] === 0, false);
+    $isSimplified = $grossInvoiceTotal <= 400.00
+        && $cassaTipo === ''
+        && $ritenutaTipo === ''
+        && !$hasDiscount
+        && !$bolloRequired
+        && !$hasZeroRateLine
+        && $nonTaxableExpensesSum <= 0;
 
     // Controllo limite per fattura semplificata (<= 400 EUR)
     if ($isSimplified && $invoiceTotal > 400.00) {
@@ -610,13 +620,18 @@ try {
     $customerPec = trim((string) ($client['pec'] ?? ''));
 
     // --- Costruzione DigitalDocument Instance ---
+    // FSM10 non ammette ImportoTotaleDocumento né Causale in DatiGeneraliDocumento.
     $documentInstance = (new DigitalDocumentInstance())
         ->setDocumentType($isSimplified ? DocumentType::TD07() : DocumentType::TD01())
         ->setCurrency($currency)
         ->setDocumentDate(new DateTime($issueDate))
-        ->setDocumentNumber($documentNumber)
-        ->setDocumentTotal($invoiceTotal)
-        ->addDescription($causale !== '' ? $causale : 'Fattura n. ' . $documentNumber);
+        ->setDocumentNumber($documentNumber);
+
+    if (!$isSimplified) {
+        $documentInstance
+            ->setDocumentTotal($invoiceTotal)
+            ->addDescription($causale !== '' ? $causale : 'Fattura n. ' . $documentNumber);
+    }
 
     if ($bolloRequired) {
         $documentInstance->setVirtualDuty('SI');
@@ -654,10 +669,6 @@ try {
                 ->setAmount($ritenutaAmount)
                 ->setDescription($ritenutaCausali[$ritenutaTipo] ?? 'A')
         );
-    }
-
-    if ($causale !== '') {
-        // Aggiungi causale extra se presente
     }
 
     if ($isSimplified) {
@@ -737,29 +748,28 @@ try {
             }
             $documentInstance->addTotal($total);
         }
-    }
 
-    // Informazioni di pagamento
-    $ibanToUse = trim((string) ($supplierProfile['iban'] ?? ''));
-    $bankMethods = ['MP05', 'MP16', 'MP17', 'MP19', 'MP20', 'MP21'];
-    $paymentDetails = (new PaymentDetails())
-        ->setMethod(new PaymentMethod($paymentMethodCode))
-        ->setDueDate(new DateTime($dueDate))
-        ->setAmount($paymentAmount);
-    if (in_array($paymentMethodCode, $bankMethods, true) && $ibanToUse !== '') {
-        $paymentDetails->setIban($ibanToUse);
-    }
-    if ($paymentReference !== '') {
-        $paymentDetails->setPaymentCode($paymentReference);
-    }
+        // Informazioni di pagamento (DatiPagamento): previste solo dallo schema ordinario (FPR12).
+        // Lo schema semplificato FSM10 non le contempla, quindi vanno omesse per TD07.
+        $ibanToUse = trim((string) ($supplierProfile['iban'] ?? ''));
+        $bankMethods = ['MP05', 'MP16', 'MP17', 'MP19', 'MP20', 'MP21'];
+        $paymentDetails = (new PaymentDetails())
+            ->setMethod(new PaymentMethod($paymentMethodCode))
+            ->setDueDate(new DateTime($dueDate))
+            ->setAmount($paymentAmount);
+        if (in_array($paymentMethodCode, $bankMethods, true) && $ibanToUse !== '') {
+            $paymentDetails->setIban($ibanToUse);
+        }
+        if ($paymentReference !== '') {
+            $paymentDetails->setPaymentCode($paymentReference);
+        }
 
-    $documentInstance->addPaymentInformations(
-        (new PaymentInfo())
-            ->setTerms(new PaymentTerm($paymentTermsCode))
-            ->addDetails(
-                $paymentDetails
-            )
-    );
+        $documentInstance->addPaymentInformations(
+            (new PaymentInfo())
+                ->setTerms(new PaymentTerm($paymentTermsCode))
+                ->addDetails($paymentDetails)
+        );
+    }
 
     // --- DigitalDocument (Root) ---
     $transmissionFormat = $isSimplified ? TransmissionFormat::FSM10() : TransmissionFormat::FPR12();
@@ -835,17 +845,21 @@ try {
         $clientName = 'Fattura ' . $documentNumber;
     }
     $elapsedHours = max(0.0001, round((microtime(true) - (float) $timerStartedAt) / 3600, 4));
-    $insertTimeEntry = $pdo->prepare(
-        'INSERT INTO time_entries (user_id, project_name, description, hours, entry_date)
-         VALUES (:user_id, :project_name, :description, :hours, :entry_date)'
-    );
-    $insertTimeEntry->execute([
-        ':user_id' => $userId,
-        ':project_name' => $clientName,
-        ':description' => 'Creazione fattura n. ' . $documentNumber,
-        ':hours' => number_format($elapsedHours, 4, '.', ''),
-        ':entry_date' => date('Y-m-d'),
-    ]);
+    try {
+        $insertTimeEntry = $pdo->prepare(
+            'INSERT INTO time_entries (user_id, project_name, description, hours, entry_date)
+             VALUES (:user_id, :project_name, :description, :hours, :entry_date)'
+        );
+        $insertTimeEntry->execute([
+            ':user_id' => $userId,
+            ':project_name' => $clientName,
+            ':description' => 'Creazione fattura n. ' . $documentNumber,
+            ':hours' => number_format($elapsedHours, 4, '.', ''),
+            ':entry_date' => date('Y-m-d'),
+        ]);
+    } catch (Throwable $e) {
+        // Ignore if time_entries table is missing
+    }
 
     $pdo->commit();
     unset($_SESSION['invoice_timer_started_at'], $_SESSION['invoice_timer_id']);
@@ -857,7 +871,6 @@ try {
         'xml_file' => $documentNumber . '.xml',
         'is_simplified' => $isSimplified,
     ]);
-
 } catch (Throwable $exception) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();

@@ -13,8 +13,8 @@
         "patches": {
             "fatturaelettronicaphp/fattura-elettronica": [
                 {
-                    "description": "Use explicit nullable type for Deduction on PHP 8.4+",
-                    "url": "patches/fattura-elettronica-php84-nullable-deduction.patch",
+                    "description": "Generate schema-compliant simplified invoices",
+                    "url": "patches/fattura-elettronica-simplified-schema.patch",
                     "depth": 1
                 }
             ]

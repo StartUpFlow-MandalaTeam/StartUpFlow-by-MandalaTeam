@@ -1,6 +1,0 @@
-diff --git a/src/Writer/Body/GeneralDataWriter.php b/src/Writer/Body/GeneralDataWriter.php
---- a/src/Writer/Body/GeneralDataWriter.php
-+++ b/src/Writer/Body/GeneralDataWriter.php
-@@ -123 +123 @@
--    protected function addDeductionData(SimpleXMLElement $documentGeneralData, Deduction $deduction = null): void
-+    protected function addDeductionData(SimpleXMLElement $documentGeneralData, ?Deduction $deduction = null): void

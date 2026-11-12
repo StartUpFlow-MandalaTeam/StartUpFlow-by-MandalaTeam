@@ -158,7 +158,6 @@ $totalHours = array_sum(array_column($entries, 'hours'));
     <header class="service-header">
         <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Time-Tracker</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>!</p>
     </header>
 
     <div class="service-content">
