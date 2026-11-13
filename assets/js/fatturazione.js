@@ -752,6 +752,15 @@ const initializeFatturazione = () => {
             bolloContainer.hidden = !showBollo;
             if (!showBollo) {
                 bolloCheckbox.checked = false;
+                bolloCheckbox.disabled = false;
+            } else {
+                const totalWithoutBollo = getDocumentTotal() - (bolloCheckbox.checked ? 2 : 0);
+                if (totalWithoutBollo <= 77.47) {
+                    bolloCheckbox.checked = false;
+                    bolloCheckbox.disabled = true;
+                } else {
+                    bolloCheckbox.disabled = false;
+                }
             }
         };
 

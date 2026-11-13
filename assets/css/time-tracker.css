@@ -160,6 +160,40 @@ body:has(.time-tracker) {
     border-bottom: 0;
 }
 
+.time-tracker .delete-form {
+    margin: 0;
+    display: inline-block;
+}
+
+.time-tracker .btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.time-tracker .btn-delete:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.time-tracker .tracker-table th:nth-child(3),
+.time-tracker .tracker-table td:nth-child(3) {
+    text-align: right;
+}
+
+.time-tracker .tracker-table th:nth-child(5),
+.time-tracker .tracker-table td:nth-child(5) {
+    text-align: center;
+    width: 90px;
+}
+
 .time-tracker .back-link:focus-visible {
     outline: 3px solid rgb(214 168 0 / 50%);
     outline-offset: 3px;

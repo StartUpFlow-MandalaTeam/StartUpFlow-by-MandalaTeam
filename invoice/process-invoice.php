@@ -493,6 +493,10 @@ try {
     }
 
     // Bollo
+    $subtotalWithoutBollo = round($invoiceTotal + $nonTaxableExpensesSum + $cassaImporto + $cassaImposta, 2);
+    if ($subtotalWithoutBollo <= 77.47) {
+        $bolloToClient = 0;
+    }
     $bolloRequired = (!$appliesVat && $bolloToClient);
     if ($bolloRequired) {
         $bolloAmount = 2.00;

@@ -174,13 +174,13 @@ $totalHours = array_sum(array_column($entries, 'hours'));
 
         <form method="POST" action="/time-tracker.php" class="tracker-form">
             <input type="hidden" name="action" value="create">
-            <h3>Nuova Registrazione</h3>
+            <h3>Registrazione manuale</h3>
             <div class="form-group">
-                <label for="project_name">Progetto *</label>
+                <label for="project_name">Attività *</label>
                 <input type="text" id="project_name" name="project_name" required placeholder="Es. Restyling Sito Web">
             </div>
             <div class="form-group">
-                <label for="hours">Ore Lavorate *</label>
+                <label for="hours">Tempo di lavorazione *</label>
                 <input type="number" step="0.25" min="0.25" id="hours" name="hours" required placeholder="Es. 2.5">
             </div>
             <div class="form-group">
@@ -189,7 +189,7 @@ $totalHours = array_sum(array_column($entries, 'hours'));
             </div>
             <div class="form-group">
                 <label for="description">Descrizione Attività</label>
-                <textarea id="description" name="description" rows="3" placeholder="Dettagli sulle mansioni svolte..."></textarea>
+                <textarea id="description" name="description" rows="3" placeholder="Dettagli sull'attività svolta..."></textarea>
             </div>
             <button type="submit" class="btn-submit">Salva Ore</button>
         </form>
