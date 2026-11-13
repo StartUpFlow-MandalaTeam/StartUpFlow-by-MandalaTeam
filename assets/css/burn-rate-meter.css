@@ -16,7 +16,7 @@
 
 .service-header h1 {
     font-size: 1.8rem;
-    color: #167c80;
+    color: whitesmoke;
     margin-bottom: 0.5rem;
 }
 
@@ -154,4 +154,160 @@
     .service-header {
         padding-top: 66px;
     }
+}
+
+.burn-rate-forms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.burn-rate-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.burn-rate-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.burn-rate-card input[type="text"],
+.burn-rate-card input[type="number"],
+.burn-rate-card input[type="date"] {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.burn-rate-card input:focus {
+    outline: none;
+    border-color: #167c80;
+    box-shadow: 0 0 0 3px rgba(22, 124, 128, 0.15);
+}
+
+.burn-rate-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.burn-rate-card button[type="submit"] {
+    padding: 0.75rem 1.25rem;
+    background: #167c80;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.burn-rate-card button[type="submit"]:hover {
+    background: #125f62;
+}
+
+.burn-rate-notice {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 6px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.burn-rate-notice--success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.burn-rate-table-wrapper {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.burn-rate-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.burn-rate-table th,
+.burn-rate-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.burn-rate-table th {
+    font-weight: 600;
+    color: #374151;
+    background: #f9fafb;
+}
+
+.metric .value.success {
+    color: #16a34a;
+}
+.meter-bar-fill.success {
+    background-color: #22c55e;
+}
+
+.metric .value.warning {
+    color: #ca8a04;
+}
+.meter-bar-fill.warning {
+    background-color: #eab308;
+}
+
+.metric .value.danger {
+    color: #dc2626;
+}
+.meter-bar-fill.danger {
+    background-color: #ef4444;
+}
+
+.meter-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.meter-heading h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.meter-caption {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.section-header {
+    margin-bottom: 1rem;
+}
+
+.section-header h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    color: #111827;
+}
+
+.section-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6b7280;
 }

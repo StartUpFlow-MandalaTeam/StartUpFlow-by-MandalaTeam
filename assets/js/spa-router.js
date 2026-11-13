@@ -299,15 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(query);
             const formAction = urlParams.get('action') || '';
 
-            let targetUrl = '/crm-clienti';
-            if (formAction === 'store' || formAction === 'update' || formAction === 'update_status') {
-                // Creazione/modifica cliente e cambio stato: si torna alla lista.
-                targetUrl = '/crm-clienti';
-            } else if (formData.has('client_id')) {
-                // Contatto, attivita e ordine: si torna alla scheda del cliente.
-                targetUrl = `/crm-clienti?action=show&id=${formData.get('client_id')}`;
-            } else if (urlParams.get('id')) {
-                targetUrl = `/crm-clienti?action=show&id=${urlParams.get('id')}`;
+            let targetUrl = form.dataset.returnUrl || '/crm-clienti';
+            if (!form.dataset.returnUrl) {
+                if (formAction === 'store' || formAction === 'update' || formAction === 'update_status') {
+                    // Creazione/modifica cliente e cambio stato: si torna alla lista.
+                    targetUrl = '/crm-clienti';
+                } else if (formData.has('client_id')) {
+                    // Contatto, attivita e ordine: si torna alla scheda del cliente.
+                    targetUrl = `/crm-clienti?action=show&id=${formData.get('client_id')}`;
+                } else if (urlParams.get('id')) {
+                    targetUrl = `/crm-clienti?action=show&id=${urlParams.get('id')}`;
+                }
             }
             loadPage(targetUrl);
         } catch (error) {
