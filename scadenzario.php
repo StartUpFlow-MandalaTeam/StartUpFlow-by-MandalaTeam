@@ -76,7 +76,7 @@ foreach ($spese as $s) {
         </div>
 
         <section class="scad-section">
-            <h2>Pagamenti in entrata (fatture clienti)</h2>
+            <h2>Entrate (vendite)</h2>
             <div class="scad-table-wrap">
                 <table class="scad-table">
                     <thead>
@@ -111,7 +111,7 @@ foreach ($spese as $s) {
                                 }
                             ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($f['due_date'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars(!empty($f['due_date']) ? date('d-m-Y', strtotime($f['due_date'])) : '—', ENT_QUOTES, 'UTF-8') ?></td>
                                     <td><strong><?= htmlspecialchars($f['document_number'], ENT_QUOTES, 'UTF-8') ?></strong></td>
                                     <td><?= htmlspecialchars(trim((string)$f['cliente_nome']) ?: '—', ENT_QUOTES, 'UTF-8') ?></td>
                                     <td><?= number_format((float)$f['total'], 2, ',', '.') ?> €</td>
@@ -125,7 +125,7 @@ foreach ($spese as $s) {
         </section>
 
         <section class="scad-section">
-            <h2>Pagamenti in uscita (note spese e fornitori)</h2>
+            <h2>Uscite (spese e costi)</h2>
             <div class="scad-table-wrap">
                 <table class="scad-table">
                     <thead>
@@ -145,7 +145,7 @@ foreach ($spese as $s) {
                         <?php else: ?>
                             <?php foreach ($spese as $s): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($s['expense_date'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars(!empty($s['expense_date']) ? date('d-m-Y', strtotime($s['expense_date'])) : '—', ENT_QUOTES, 'UTF-8') ?></td>
                                     <td><?= htmlspecialchars($s['description'], ENT_QUOTES, 'UTF-8') ?></td>
                                     <td><span class="badge-cat"><?= htmlspecialchars($s['category'], ENT_QUOTES, 'UTF-8') ?></span></td>
                                     <td>-<?= number_format((float)$s['amount'], 2, ',', '.') ?> €</td>

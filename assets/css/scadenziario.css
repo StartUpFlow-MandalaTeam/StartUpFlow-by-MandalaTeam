@@ -158,6 +158,134 @@ body:has(.scadenzario-wrapper) {
     padding: 2rem !important;
 }
 
+/* Mobile: transform tables into cards (one card per row) */
+@media (max-width: 640px) {
+    .scad-table,
+    .scad-table tbody {
+        display: block;
+        width: 100%;
+        min-width: initial;
+        background: transparent;
+        border: none;
+    }
+    .scad-table thead {
+        display: none;
+    }
+    .scad-table tr {
+        display: flex;
+        flex-direction: column;
+        border-bottom: 2px solid #eb7e09;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .scad-table td {
+        border-bottom: none;
+        border-right: none;
+        padding: 0.5rem 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .scad-table td strong {
+        font-weight: 600;
+    }
+    /* Add labels for each column using ::before */
+    /* Table 1: Entrate (Scadenza, Fattura, Cliente, Importo, Stato) */
+    .scad-table tr td:nth-child(1)::before {
+        content: "Scadenza";
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    .scad-table tr td:nth-child(2)::before {
+        content: "Fattura";
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    .scad-table tr td:nth-child(3)::before {
+        content: "Cliente";
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    .scad-table tr td:nth-child(4)::before {
+        content: "Importo";
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    .scad-table tr td:nth-child(5)::before {
+        content: "Stato";
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    .scad-table tr td:nth-child(5) .scaduto,
+    .scad-table tr td:nth-child(5) .in-attesa,
+    .scad-table tr td:nth-child(5) .pagato,
+    .scad-table tr td:nth-child(5) .pagato-parziale {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .scad-table tr td:nth-child(5) .scaduto { background: #fef2f2; color: #dc2626; }
+    .scad-table tr td:nth-child(5) .in-attesa { background: #fffbeb; color: #b45309; }
+    .scad-table tr td:nth-child(5) .pagato { background: #f0fdf4; color: #15803d; }
+    .scad-table tr td:nth-child(5) .pagato-parziale { background: #f5f3ff; color: #7c3aed; }
+    .scad-table td .badge-cat {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background: #f3f4f6;
+        color: #4b5563;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+    .scad-empty {
+        text-align: center;
+        color: #6b7280;
+        padding: 2rem;
+    }
+    /* Nascondi i pseudo-label nella riga vuota */
+    .scad-table tr td.scad-empty::before {
+        content: none !important;
+    }
+    /* Second table: Uscite (Data uscita, Descrizione, Categoria, Importo, Stato) */
+    .scad-section:nth-of-type(2) .scad-table tr td:nth-child(1)::before {
+        content: "Data uscita";
+    }
+    .scad-section:nth-of-type(2) .scad-table tr td:nth-child(2)::before {
+        content: "Descrizione";
+    }
+    .scad-section:nth-of-type(2) .scad-table tr td:nth-child(3)::before {
+        content: "Categoria";
+    }
+    .scad-section:nth-of-type(2) .scad-table tr td:nth-child(4)::before {
+        content: "Importo";
+    }
+    .scad-section:nth-of-type(2) .scad-table tr td:nth-child(5)::before {
+        content: "Stato";
+    }
+}
+
 .badge-cat {
     display: inline-block;
     padding: 0.2rem 0.5rem;
