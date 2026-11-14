@@ -365,40 +365,69 @@ $meseCorrente = $monthStart->format('m/Y');
         <section class="burn-rate-card" aria-labelledby="expenses-list-title">
             <div class="section-header">
                 <h2 id="expenses-list-title">Ultime spese registrate</h2>
-                <p>Le spese sono associate al tuo account.</p>
             </div>
             <?php if ($ultimeSpese === []): ?>
                 <p class="meter-caption">Non hai ancora registrato spese.</p>
             <?php else: ?>
-                <div class="burn-rate-table-wrapper">
-                    <table class="burn-rate-table">
-                        <thead>
-                            <tr>
-                                <th scope="col">Data</th>
-                                <th scope="col">Descrizione</th>
-                                <th scope="col">Importo</th>
-                                <th scope="col" style="text-align: right;">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($ultimeSpese as $spesa): ?>
+                <div class="desktop-table-view">
+                    <div class="burn-rate-table-wrapper">
+                        <table class="burn-rate-table">
+                            <thead>
                                 <tr>
-                                    <td><?php echo htmlspecialchars((new DateTimeImmutable($spesa['expense_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($spesa['description'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td>€ <?php echo number_format((float) $spesa['amount'], 2, ',', '.'); ?></td>
-                                    <td style="text-align: right;">
-                                        <form action="/burn-rate-meter.php" method="post" data-return-url="/burn-rate-meter?success=deleted" onsubmit="return confirm('Sei sicuro di voler eliminare questa spesa?');" style="display:inline;">
-                                            <input type="hidden" name="action" value="delete_expense">
-                                            <input type="hidden" name="expense_id" value="<?php echo (int) $spesa['id']; ?>">
-                                            <input type="hidden" name="expense_source" value="<?php echo htmlspecialchars($spesa['source'], ENT_QUOTES, 'UTF-8'); ?>">
-                                            <?php echo csrfInput(); ?>
-                                            <button type="submit" style="background:#ef4444; color:#fff; border:none; padding:0.3rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.85rem;">Elimina</button>
-                                        </form>
-                                    </td>
+                                    <th scope="col">Data</th>
+                                    <th scope="col">Descrizione</th>
+                                    <th scope="col">Importo</th>
+                                    <th scope="col" style="text-align: right;">Azioni</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($ultimeSpese as $spesa): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars((new DateTimeImmutable($spesa['expense_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td><?php echo htmlspecialchars($spesa['description'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td>€ <?php echo number_format((float) $spesa['amount'], 2, ',', '.'); ?></td>
+                                        <td style="text-align: right;">
+                                            <form action="/burn-rate-meter.php" method="post" data-return-url="/burn-rate-meter?success=deleted" onsubmit="return confirm('Sei sicuro di voler eliminare questa spesa?');" style="display:inline;">
+                                                <input type="hidden" name="action" value="delete_expense">
+                                                <input type="hidden" name="expense_id" value="<?php echo (int) $spesa['id']; ?>">
+                                                <input type="hidden" name="expense_source" value="<?php echo htmlspecialchars($spesa['source'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                <?php echo csrfInput(); ?>
+                                                <button type="submit" style="background:#ef4444; color:#fff; border:none; padding:0.3rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.85rem;">Elimina</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mobile-cards-view">
+                    <?php foreach ($ultimeSpese as $spesa): ?>
+                        <div class="mobile-card">
+                            <div class="mobile-card-row">
+                                <span class="mobile-card-label">Data</span>
+                                <span class="mobile-card-value"><?php echo htmlspecialchars((new DateTimeImmutable($spesa['expense_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></span>
+                            </div>
+                            <div class="mobile-card-row">
+                                <span class="mobile-card-label">Descrizione</span>
+                                <span class="mobile-card-value"><strong><?php echo htmlspecialchars($spesa['description'], ENT_QUOTES, 'UTF-8'); ?></strong></span>
+                            </div>
+                            <div class="mobile-card-row">
+                                <span class="mobile-card-label">Importo</span>
+                                <span class="mobile-card-value">€ <?php echo number_format((float) $spesa['amount'], 2, ',', '.'); ?></span>
+                            </div>
+                            <div class="mobile-card-row" style="justify-content: flex-end; border-bottom: none; padding-top: 0.75rem;">
+                                <form action="/burn-rate-meter.php" method="post" data-return-url="/burn-rate-meter?success=deleted" onsubmit="return confirm('Sei sicuro di voler eliminare questa spesa?');" style="display:inline;">
+                                    <input type="hidden" name="action" value="delete_expense">
+                                    <input type="hidden" name="expense_id" value="<?php echo (int) $spesa['id']; ?>">
+                                    <input type="hidden" name="expense_source" value="<?php echo htmlspecialchars($spesa['source'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo csrfInput(); ?>
+                                    <button type="submit" style="background:#ef4444; color:#fff; border:none; padding:0.3rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.85rem;">Elimina</button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </section>

@@ -42,7 +42,6 @@ $storageRoot = realpath(__DIR__ . '/storage/contracts');
 <div class="service-page zero-carta">
     <header class="service-header">
         <h1>Zero carta</h1>
-        <p>Benvenuto, <?php echo htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8'); ?>!</p>
     </header>
     <div class="service-content">
         <div class="zero-carta__cards" role="tablist" aria-label="Gestione documenti" data-zero-carta-cards>

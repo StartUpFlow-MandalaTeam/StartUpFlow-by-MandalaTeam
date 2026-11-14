@@ -271,7 +271,6 @@ foreach ($spese as $s) {
 ?>
 <div class="service-page ns">
     <header class="service-header ns-header">
-        <a href="/" data-spa="true" class="back-link">← Torna alla Dashboard</a>
         <h1>Nota Spese</h1>
         <p>Registra le spese di lavoro e consulta quelle archiviate.</p>
     </header>

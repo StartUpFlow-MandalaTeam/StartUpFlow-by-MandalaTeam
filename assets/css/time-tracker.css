@@ -207,7 +207,63 @@ body:has(.time-tracker) {
     text-align: center;
 }
 
+.desktop-table-view {
+    display: block;
+}
+
+.mobile-cards-view {
+    display: none;
+}
+
 @media (max-width: 640px) {
+    .desktop-table-view {
+        display: none !important;
+    }
+    .mobile-cards-view {
+        display: flex !important;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .mobile-card {
+        background: #fff;
+        border: 1px solid var(--tracker-border);
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgb(23 32 51 / 5%);
+        padding: 1rem;
+        font-size: 0.85rem;
+    }
+    .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--tracker-border);
+    }
+    .mobile-card-row:last-child {
+        border-bottom: none;
+    }
+    .mobile-card-label {
+        font-weight: 600;
+        color: var(--tracker-muted);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.035em;
+    }
+    .mobile-card-value {
+        text-align: right;
+    }
+    .mobile-total-card {
+        background: #f5f7fa;
+        border: 1px solid var(--tracker-border);
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgb(23 32 51 / 5%);
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+    }
+
     .time-tracker .service-header {
         min-height: 130px;
     }

@@ -202,42 +202,81 @@ $totalHours = array_sum(array_column($entries, 'hours'));
         </div>
 
         <?php if (count($entries) > 0): ?>
-            <div class="tracker-table-container">
-                <table class="tracker-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Progetto</th>
-                            <th>Durata (mm:ss)</th>
-                            <th>Descrizione</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($entries as $entry): ?>
+            <div class="desktop-table-view">
+                <div class="tracker-table-container">
+                    <table class="tracker-table">
+                        <thead>
                             <tr>
-                                <td><?php echo htmlspecialchars((new DateTimeImmutable($entry['entry_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><strong><?php echo htmlspecialchars($entry['project_name'], ENT_QUOTES, 'UTF-8'); ?></strong></td>
-                                <td><?php echo htmlspecialchars($formatDuration((float) $entry['hours']), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars($entry['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td>
-                                    <form method="POST" action="/time-tracker.php" class="delete-form">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="entry_id" value="<?php echo (int) $entry['id']; ?>">
-                                        <button type="submit" class="btn-delete">Elimina</button>
-                                    </form>
-                                </td>
+                                <th>Data</th>
+                                <th>Progetto</th>
+                                <th>Durata (mm:ss)</th>
+                                <th>Descrizione</th>
+                                <th>Azioni</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="2">Durata totale</td>
-                            <td><?php echo htmlspecialchars($formatDuration((float) $totalHours), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td colspan="2"></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($entries as $entry): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars((new DateTimeImmutable($entry['entry_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td><strong><?php echo htmlspecialchars($entry['project_name'], ENT_QUOTES, 'UTF-8'); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($formatDuration((float) $entry['hours']), ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td><?php echo htmlspecialchars($entry['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td>
+                                        <form method="POST" action="/time-tracker.php" class="delete-form">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="entry_id" value="<?php echo (int) $entry['id']; ?>">
+                                            <button type="submit" class="btn-delete">Elimina</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2">Durata totale</td>
+                                <td><?php echo htmlspecialchars($formatDuration((float) $totalHours), ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mobile-cards-view">
+                <?php foreach ($entries as $entry): ?>
+                    <div class="mobile-card">
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Data</span>
+                            <span class="mobile-card-value"><?php echo htmlspecialchars((new DateTimeImmutable($entry['entry_date']))->format('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Progetto</span>
+                            <span class="mobile-card-value"><strong><?php echo htmlspecialchars($entry['project_name'], ENT_QUOTES, 'UTF-8'); ?></strong></span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Durata (mm:ss)</span>
+                            <span class="mobile-card-value"><?php echo htmlspecialchars($formatDuration((float) $entry['hours']), ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
+                        <?php if (!empty($entry['description'])): ?>
+                            <div class="mobile-card-row">
+                                <span class="mobile-card-label">Descrizione</span>
+                                <span class="mobile-card-value"><?php echo htmlspecialchars($entry['description'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <div class="mobile-card-row" style="justify-content: flex-end; border-bottom: none; padding-top: 0.75rem;">
+                            <form method="POST" action="/time-tracker.php" class="delete-form">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="entry_id" value="<?php echo (int) $entry['id']; ?>">
+                                <button type="submit" class="btn-delete">Elimina</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+
+                <div class="mobile-total-card">
+                    <span class="mobile-card-label">Durata totale</span>
+                    <span class="mobile-card-value"><strong><?php echo htmlspecialchars($formatDuration((float) $totalHours), ENT_QUOTES, 'UTF-8'); ?></strong></span>
+                </div>
             </div>
         <?php else: ?>
             <p>Nessuna attività registrata per ora.</p>
