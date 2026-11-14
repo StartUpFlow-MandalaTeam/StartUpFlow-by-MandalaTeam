@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/layout/header.php';
 			<button class="startup-overlay__power" type="button" id="startupPowerBtn" aria-label="Power">
 				<span style="font-size: 78px; color: #d40000; display: block;">⏻</span>
 			</button>
-			<div class="startup-overlay__title" onclick="window.location.href='/'" style="cursor: pointer;">StartupFlow</div>
+			<div class="startup-overlay__title" onclick="window.location.href='/'" style="cursor: pointer;">StartUpFlow</div>
 		</div>
 		
 		<div class="auth-buttons" id="authButtons" <?php echo !$hideOverlay ? 'hidden' : ''; ?>>
