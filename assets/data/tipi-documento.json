@@ -7,5 +7,9 @@
     { "value": "TD06", "name": "Parcella", "simplified": false },
     { "value": "TD07", "name": "Fattura semplificata", "simplified": true },
     { "value": "TD08", "name": "Nota di credito semplificata", "simplified": true },
-    { "value": "TD09", "name": "Nota di debito semplificata", "simplified": true }
+    { "value": "TD09", "name": "Nota di debito semplificata", "simplified": true },
+    { "value": "TD16", "name": "Integrazione / autofattura per reverse charge interno", "simplified": false },
+    { "value": "TD17", "name": "Integrazione / autofattura acquisto servizi dall'estero", "simplified": false },
+    { "value": "TD18", "name": "Integrazione acquisto beni intracomunitari", "simplified": false },
+    { "value": "TD19", "name": "Integrazione / autofattura acquisto beni ex art. 17 c. 2 DPR 633/72", "simplified": false }
 ]
