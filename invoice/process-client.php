@@ -150,10 +150,20 @@ if ($client['email'] !== '' && !filter_var($client['email'], FILTER_VALIDATE_EMA
 }
 
 // Validate VAT number format if provided
-if ($client['vat_number'] !== null && !fiscalIsValidVat($client['vat_number'])) {
-		echo json_encode(['success' => false, 'message' => 'Partita IVA non valida (deve essere 11 cifre con cifra di controllo corretta)']);
-		exit;
-	}		
+// - P.IVA italiana (paese IT): 11 cifre con cifra di controllo
+// - P.IVA estera: formato alfanumerico secondo lo standard del paese (es. IE 7-9 caratteri, DE 9 cifre)
+if ($client['vat_number'] !== null) {
+    $clientCountry = strtoupper(trim((string) ($client['country'] ?? '')));
+    $isItaly = $clientCountry === '' || $clientCountry === 'IT' || $clientCountry === 'ITALIA' || $clientCountry === 'ITALY';
+    if ($isItaly && !fiscalIsValidVat($client['vat_number'])) {
+        echo json_encode(['success' => false, 'message' => 'Partita IVA non valida (deve essere 11 cifre con cifra di controllo corretta)']);
+        exit;
+    }
+    if (!$isItaly && !preg_match('/^[A-Z0-9]{2,20}$/i', $client['vat_number'])) {
+        echo json_encode(['success' => false, 'message' => 'Partita IVA estera non valida (formato alfanumerico, 2-20 caratteri)']);
+        exit;
+    }
+}	
 
 $params = array_combine(
 	array_map(static fn (string $field): string => ':' . $field, $fields),

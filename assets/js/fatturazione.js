@@ -16,13 +16,23 @@ const initializeFatturazione = () => {
     const currencySelect = document.querySelector('[data-fatturazione-currency-select]');
     const profileForm = document.getElementById('profile-completion-form');
     const clientCompletion = document.getElementById('cliente-completion');
-    const clientForm = document.getElementById('cliente-form');
     const clientSelect = document.getElementById('client-select');
     const clientModeButtons = document.querySelectorAll('[data-client-mode]');
     const clientSelectPanel = document.querySelector('[data-client-panel="select"]');
     const useClientButton = document.getElementById('use-client-button');
+    const newEsteroClientButton = document.getElementById('new-estero-client-button');
+    const esteroModal = document.getElementById('estero-client-modal');
+    const esteroForm = document.getElementById('estero-client-form');
+    const esteroCountrySelect = document.getElementById('estero-country');
+    const clientSelectLabel = document.getElementById('client-select-label');
     const billingForm = document.getElementById('billing-form');
     const regimeSelect = document.getElementById('regime-fiscale');
+    const orderSelectContainer = document.getElementById('order-select-container');
+    const documentTypeContainer = document.getElementById('document-type-container');
+    const documentTypeSelect = document.getElementById('document-type');
+    const invoiceDocumentTypeInput = document.getElementById('invoice-document-type');
+    const invoiceTypeInput = document.getElementById('invoice-type');
+    let currentClientMode = 'select';
     // Le regole del regime (catalogo regimi-fiscali.json) arrivano dal server come attributi data-* dell'input nascosto.
     const regimeWithoutVat = () => regimeSelect?.dataset.appliesVat === '0';
     const regimeFixedNature = () => regimeSelect?.dataset.fixedNature || '';
@@ -524,6 +534,11 @@ const initializeFatturazione = () => {
 
         const roundMoney = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
+        const isSpecialEsteroDoc = () => {
+            const docType = invoiceDocumentTypeInput?.value || documentTypeSelect?.value || '';
+            return currentClientMode === 'estero' && ['TD17', 'TD18', 'TD19'].includes(docType);
+        };
+
         // ---- Natura IVA (catalogo: /assets/data/natura.json) ----
         let natureCatalog = [];
         // Riempie un select con le Nature ammesse. Con restricted=true (regime senza IVA) resta solo la Natura imposta dal regime.
@@ -624,6 +639,19 @@ const initializeFatturazione = () => {
         const updateCassa = () => {
             if (!cassaReady) {
                 cassaContribution = 0;
+                return;
+            }
+            const specialEstero = isSpecialEsteroDoc();
+            if (cassaForm) {
+                cassaForm.hidden = specialEstero;
+            }
+            if (specialEstero) {
+                cassaContribution = 0;
+                if (cassaSelect) cassaSelect.value = '';
+                if (cassaAmount) cassaAmount.value = '';
+                if (cassaTax) cassaTax.value = '';
+                if (cassaRate) cassaRate.value = '';
+                if (cassaDetails) cassaDetails.hidden = true;
                 return;
             }
             const hasCassa = cassaSelect.value !== '';
@@ -747,8 +775,9 @@ const initializeFatturazione = () => {
 
         const updateBolloVisibility = () => {
             if (!bolloContainer || !bolloCheckbox) return;
+            const specialEstero = isSpecialEsteroDoc();
             const noVatRegime = regimeWithoutVat();
-            const showBollo = noVatRegime;
+            const showBollo = noVatRegime && !specialEstero;
             bolloContainer.hidden = !showBollo;
             if (!showBollo) {
                 bolloCheckbox.checked = false;
@@ -785,7 +814,9 @@ const initializeFatturazione = () => {
                 total += expense * (1 + rate / 100);
             });
             summaryList?.querySelectorAll('[name="spese_accessorie_non_imponibili[]"]').forEach((input) => {
-                total += Number(input.value) || 0;
+                if (!isSpecialEsteroDoc()) {
+                    total += Number(input.value) || 0;
+                }
             });
             total += cassaContribution;
             if (cassaTax) total += Number(cassaTax.value) || 0;
@@ -800,6 +831,22 @@ const initializeFatturazione = () => {
 
         const updateInvoiceType = () => {
             if (!invoiceTypeInput || !invoiceTypeStatus) return;
+            const specialDocType = invoiceDocumentTypeInput?.value || '';
+            const specialDocTypes = ['TD16', 'TD17', 'TD18', 'TD19'];
+            if (specialDocTypes.includes(specialDocType)) {
+                invoiceTypeInput.value = 'ordinaria';
+                const labels = {
+                    TD16: 'Integrazione / autofattura per reverse charge interno',
+                    TD17: 'Integrazione / autofattura acquisto servizi dall\u0027estero',
+                    TD18: 'Integrazione acquisto beni intracomunitari',
+                    TD19: 'Integrazione / autofattura acquisto beni ex art. 17 c. 2 DPR 633/72',
+                };
+                invoiceTypeStatus.innerHTML = `<strong>Fattura ordinaria</strong> (${specialDocType} - ${labels[specialDocType]})`;
+                if (ritenutaForm) {
+                    ritenutaForm.hidden = regimeNoWithholding();
+                }
+                return;
+            }
             const hasCassa = Boolean(cassaSelect?.value);
             const hasRitenuta = Boolean(ritenutaType?.value);
             const simplified = getDocumentTotal() <= 400 && !hasCassa && !hasRitenuta;
@@ -813,6 +860,8 @@ const initializeFatturazione = () => {
                 ritenutaForm.hidden = regimeNoWithholding();
             }
         };
+
+        document.addEventListener('invoice:document-type-change', updateInvoiceType);
 
         beniForm.querySelectorAll('[data-beni-row]').forEach((itemRow, index) => {
             itemRow.dataset.vatSummaryId = `item-${index + 1}`;
@@ -1104,21 +1153,28 @@ const initializeFatturazione = () => {
         return;
     }
 
-    if (!clientForm || !clientSelect || !useClientButton || !clientSelectPanel || !billingForm) {
+    if (!clientSelect || !useClientButton || !clientSelectPanel || !billingForm) {
         return;
     }
 
     clientCompletion.dataset.initialized = 'true';
     const clientsUrl = '/invoice/process-client.php';
     const clients = new Map();
+    const allClients = [];
     const orderSelect = document.getElementById('order-select');
     const clientOrders = new Map();
-    const fields = ['id', 'client_type', 'company_name', 'first_name', 'last_name', 'vat_number', 'cf', 'address', 'city', 'state', 'postal_code', 'country', 'email', 'phone', 'crm_status'];
     const modeButton = (mode) => clientCompletion.querySelector(`[data-client-mode="${mode}"]`);
     const setEditButtonDisabled = (disabled) => {
         const editButton = modeButton('edit');
         if (editButton) editButton.disabled = disabled;
     };
+
+    const isItalianVat = (vat) => {
+        const v = String(vat || '').trim().toUpperCase();
+        return /^\d{11}$/.test(v) || /^IT\d{11}$/.test(v);
+    };
+
+    const hasVat = (vat) => String(vat || '').trim() !== '';
 
     const loadOrdersForClient = (clientId) => {
         if (!orderSelect) return;
@@ -1158,60 +1214,53 @@ const initializeFatturazione = () => {
         billingForm.hidden = false;
     };
 
-    const updateClientTypeFields = () => {
-        const isIndividual = clientForm.elements.client_type.value === 'individual';
-        clientCompletion.querySelectorAll('[data-company-field]').forEach((field) => {
-            field.hidden = isIndividual;
-            field.style.display = isIndividual ? 'none' : '';
-        });
-        clientCompletion.querySelectorAll('[data-individual-field]').forEach((field) => {
-            field.hidden = !isIndividual;
-            field.style.display = isIndividual ? '' : 'none';
-        });
-        clientForm.elements.company_name.required = !isIndividual;
-        clientForm.elements.first_name.required = isIndividual;
-        clientForm.elements.last_name.required = isIndividual;
-        clientForm.elements.cf.required = isIndividual;
+    const filterClientsByMode = (client) => {
+        if (currentClientMode === 'estero') {
+            return hasVat(client.vat_number) && !isItalianVat(client.vat_number);
+        }
+        if (currentClientMode === 'autofattura') {
+            return isItalianVat(client.vat_number);
+        }
+        // Seleziona Cliente: comportamento originale, solo customer
+        return client.crm_status === 'customer';
     };
 
-    const fillClientForm = (client) => {
-        fields.forEach((field) => {
-            if (clientForm.elements[field]) {
-                clientForm.elements[field].value = client ? (client[field] || '') : '';
-            }
-        });
-        if (!client) {
-            clientForm.elements.id.value = '';
-            clientForm.elements.client_type.value = 'company';
-            clientForm.elements.country.value = 'Italia';
-            if (clientForm.elements.crm_status) clientForm.elements.crm_status.value = 'lead';
-        }
-        updateClientTypeFields();
+    const updateUseClientButton = () => {
+        if (!useClientButton) return;
+        const hasClient = Boolean(clientSelect.value);
+        const needsDocumentType = currentClientMode === 'estero' && !documentTypeSelect.value;
+        useClientButton.disabled = !hasClient || needsDocumentType;
     };
 
     const setMode = (mode) => {
+        currentClientMode = mode;
         clientModeButtons.forEach((button) => {
             const active = button.dataset.clientMode === mode;
             button.classList.toggle('is-active', active);
             button.setAttribute('aria-selected', active ? 'true' : 'false');
         });
-        clientSelectPanel.hidden = mode !== 'select';
-        clientForm.hidden = mode === 'select';
-
-        if (mode === 'add') {
-            fillClientForm(null);
+        const isEstero = mode === 'estero';
+        const isAutofattura = mode === 'autofattura';
+        orderSelectContainer.hidden = isEstero || isAutofattura;
+        documentTypeContainer.hidden = !isEstero;
+        documentTypeSelect.disabled = !isEstero;
+        if (!isEstero) {
+            documentTypeSelect.value = '';
         }
-        if (mode === 'edit') {
-            const selected = clients.get(clientSelect.value);
-            if (selected) fillClientForm(selected);
+        if (newEsteroClientButton) newEsteroClientButton.hidden = !isEstero;
+        if (clientSelectLabel) {
+            clientSelectLabel.textContent = isEstero ? 'Cliente esistente (estero)' : 'Cliente esistente';
         }
-        updateClientTypeFields();
+        invoiceDocumentTypeInput.value = isAutofattura ? 'TD16' : '';
+        populateClients();
+        updateUseClientButton();
+        updateInvoiceType();
     };
 
-    const populateClients = (clientList) => {
+    const populateClients = (clientList = allClients) => {
         clientSelect.replaceChildren(new Option('Seleziona un cliente', ''));
         clients.clear();
-        clientList.filter((client) => client.crm_status === 'customer').forEach((client) => {
+        clientList.filter(filterClientsByMode).forEach((client) => {
             const name = client.client_type === 'company'
                 ? client.company_name
                 : `${client.first_name} ${client.last_name}`.trim();
@@ -1221,7 +1270,7 @@ const initializeFatturazione = () => {
     };
 
     const persistSelectedClient = (clientId) => {
-        const csrfToken = clientForm.querySelector('[name="csrf_token"]')?.value || '';
+        const csrfToken = invoiceForm.querySelector('[name="csrf_token"]')?.value || '';
         const formData = new FormData();
         formData.append('action', 'select_client');
         formData.append('client_id', String(clientId));
@@ -1246,7 +1295,9 @@ const initializeFatturazione = () => {
         .then((response) => response.json())
         .then((data) => {
             if (!data.success) throw new Error(data.message || 'Impossibile caricare i clienti');
-            populateClients(data.clients);
+            allClients.length = 0;
+            allClients.push(...(data.clients || []));
+            populateClients(allClients);
         })
         .catch((error) => {
             console.error(error);
@@ -1343,7 +1394,7 @@ const initializeFatturazione = () => {
         if (trigger) trigger.click();
     });
 
-    if (!clientForm || !clientSelect || !useClientButton || !clientCompletion || !billingForm) return;
+    if (!clientSelect || !useClientButton || !clientCompletion || !billingForm) return;
 
     loadClients();
     bindDocument('invoice-new-client', 'invoice:new', () => {
@@ -1360,7 +1411,6 @@ const initializeFatturazione = () => {
         }
         clientOrders.clear();
         setEditButtonDisabled(true);
-        fillClientForm(null);
         setMode('select');
         clientSelect.replaceChildren(new Option('Caricamento clienti...', ''));
         loadClients();
@@ -1369,19 +1419,26 @@ const initializeFatturazione = () => {
     clientSelect.addEventListener('change', () => {
         const clientId = clientSelect.value;
         const hasClient = clientId !== '';
-        useClientButton.disabled = !hasClient;
         setEditButtonDisabled(!hasClient);
         if (orderSelect) {
             orderSelect.value = '';
         }
         loadOrdersForClient(clientId);
+        updateUseClientButton();
     });
 
     clientModeButtons.forEach((button) => {
         button.addEventListener('click', () => setMode(button.dataset.clientMode));
     });
 
-    clientForm.elements.client_type.addEventListener('change', updateClientTypeFields);
+    if (documentTypeSelect) {
+        documentTypeSelect.addEventListener('change', () => {
+            invoiceDocumentTypeInput.value = documentTypeSelect.value || '';
+            updateUseClientButton();
+            document.dispatchEvent(new CustomEvent('invoice:document-type-change'));
+        });
+    }
+
     useClientButton.addEventListener('click', () => {
         const selectedClientId = clientSelect.value;
         if (!selectedClientId) {
@@ -1389,6 +1446,9 @@ const initializeFatturazione = () => {
         }
 
         persistSelectedClient(selectedClientId).finally(() => {
+            if (currentClientMode === 'estero' && documentTypeSelect) {
+                invoiceDocumentTypeInput.value = documentTypeSelect.value || '';
+            }
             const selectedOrderId = orderSelect ? orderSelect.value : '';
             if (selectedOrderId && clientOrders.has(selectedOrderId)) {
                 applyOrderToInvoice(clientOrders.get(selectedOrderId));
@@ -1398,30 +1458,99 @@ const initializeFatturazione = () => {
         });
     });
 
-    clientForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const formData = new FormData(clientForm);
-        formData.append('action', 'save');
+    // --- Modale: nuovo soggetto estero (TD17 / TD18 / TD19) ---
+    const updateEsteroClientTypeFields = () => {
+        if (!esteroForm || !esteroModal) return;
+        const isIndividual = esteroForm.elements.client_type.value === 'individual';
+        esteroModal.querySelectorAll('[data-estero-company-field]').forEach((field) => {
+            field.hidden = isIndividual;
+            field.style.display = isIndividual ? 'none' : '';
+        });
+        esteroModal.querySelectorAll('[data-estero-individual-field]').forEach((field) => {
+            field.hidden = !isIndividual;
+            field.style.display = isIndividual ? '' : 'none';
+        });
+        esteroForm.elements.company_name.required = !isIndividual;
+        esteroForm.elements.first_name.required = isIndividual;
+        esteroForm.elements.last_name.required = isIndividual;
+        esteroForm.elements.cf.required = isIndividual;
+    };
 
-        fetch(clientsUrl, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (!data.success) {
-                    alert(data.message || 'Impossibile salvare il cliente');
-                    return;
-                }
+    const resetEsteroForm = () => {
+        if (!esteroForm) return;
+        esteroForm.reset();
+        esteroForm.elements.id.value = '';
+        esteroForm.elements.client_type.value = 'company';
+        updateEsteroClientTypeFields();
+    };
 
-                persistSelectedClient(data.id).finally(() => showBilling());
+    if (esteroCountrySelect && esteroCountrySelect.dataset.initialized !== 'true') {
+        esteroCountrySelect.dataset.initialized = 'true';
+        esteroCountrySelect.disabled = true;
+        fetch('/assets/data/countries.json')
+            .then((response) => {
+                if (!response.ok) throw new Error('Impossibile caricare gli Stati');
+                return response.json();
             })
-            .catch(() => alert('Errore durante il salvataggio del cliente'));
+            .then((countries) => {
+                esteroCountrySelect.replaceChildren(new Option('Seleziona uno Stato', ''));
+                countries
+                    .filter((country) => country.code !== 'IT')
+                    .forEach((country) => esteroCountrySelect.append(new Option(country.name, country.code)));
+                esteroCountrySelect.disabled = false;
+            })
+            .catch((error) => {
+                console.error(error);
+                esteroCountrySelect.replaceChildren(new Option('Impossibile caricare gli Stati', ''));
+            });
+    }
+
+    if (newEsteroClientButton && esteroModal) {
+        newEsteroClientButton.addEventListener('click', () => {
+            resetEsteroForm();
+            esteroModal.showModal();
+        });
+    }
+
+    esteroModal?.querySelector('[data-estero-modal-close]')?.addEventListener('click', () => {
+        esteroModal.close();
     });
 
-    updateClientTypeFields();
+    if (esteroForm) {
+        esteroForm.elements.client_type.addEventListener('change', updateEsteroClientTypeFields);
+        esteroForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const submitButton = esteroForm.querySelector('[type="submit"]');
+            const formData = new FormData(esteroForm);
+            submitButton.disabled = true;
+            fetch(clientsUrl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!data.success) {
+                        alert(data.message || 'Impossibile salvare il cliente');
+                        return;
+                    }
+                    esteroModal.close();
+                    resetEsteroForm();
+                    loadClients().then(() => {
+                        clientSelect.value = String(data.id);
+                        clientSelect.dispatchEvent(new Event('change'));
+                        updateUseClientButton();
+                    });
+                })
+                .catch(() => alert('Errore durante il salvataggio del cliente'))
+                .finally(() => {
+                    submitButton.disabled = false;
+                });
+        });
+        updateEsteroClientTypeFields();
+    }
+
     setMode('select');
 
     if (profileForm && profileForm.dataset.initialized !== 'true') {

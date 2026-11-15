@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS clients (
   cf VARCHAR(16) NULL,
   address VARCHAR(255) NULL,
   city VARCHAR(100) NULL,
-  state VARCHAR(10) NULL,
+  state VARCHAR(50) NULL,
   postal_code VARCHAR(10) NULL,
   country VARCHAR(100) NULL,
   email VARCHAR(255) NULL,
@@ -369,6 +369,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     order_id INT UNSIGNED NULL,
     user_id INT UNSIGNED NOT NULL,
     document_number VARCHAR(50) NOT NULL,
+    document_type VARCHAR(8) NULL,                         -- Codice TipoDocumento FatturaPA (TD01, TD07, TD16, TD17, TD18, TD19); NULL = derivato automaticamente
     issue_date DATE NOT NULL,
     due_date DATE NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
@@ -384,6 +385,7 @@ CREATE TABLE IF NOT EXISTS invoices (
         ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_invoices_document_number (document_number),
     KEY idx_invoices_order (order_id),
+    KEY idx_invoices_document_type (document_type),
     CONSTRAINT fk_invoices_client
         FOREIGN KEY (client_id)
         REFERENCES clients(id),

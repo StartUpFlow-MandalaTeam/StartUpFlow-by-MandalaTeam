@@ -134,6 +134,13 @@ if ($orderId > 0) {
     $_POST['aliquota_iva'] = array_column($orderItems, 'vat_rate');
 }
 
+// Tipo documento: se specificato (TD16/TD17/TD18/TD19), forza fattura ordinaria.
+$documentTypeInput = strtoupper(trim((string) ($_POST['document_type'] ?? '')));
+$specialDocumentTypes = ['TD16', 'TD17', 'TD18', 'TD19'];
+if ($documentTypeInput !== '' && !in_array($documentTypeInput, $specialDocumentTypes, true)) {
+    respond(422, ['success' => false, 'message' => 'Tipo documento non valido. Valori ammessi: TD16, TD17, TD18, TD19.']);
+}
+
 // Controllo esclusione fatture verso PA (Codice destinatario di 6 caratteri o formato FPA12)
 $sdiCode = trim((string) ($client['sdi_code'] ?? ''));
 if (strlen($sdiCode) === 6 || strtolower((string) ($_POST['invoice_format'] ?? '')) === 'pa') {
@@ -520,7 +527,8 @@ try {
         && !$hasDiscount
         && !$bolloRequired
         && !$hasZeroRateLine
-        && $nonTaxableExpensesSum <= 0;
+        && $nonTaxableExpensesSum <= 0
+        && $documentTypeInput === '';
 
     // Controllo limite per fattura semplificata (<= 400 EUR)
     if ($isSimplified && $invoiceTotal > 400.00) {
@@ -625,8 +633,15 @@ try {
 
     // --- Costruzione DigitalDocument Instance ---
     // FSM10 non ammette ImportoTotaleDocumento né Causale in DatiGeneraliDocumento.
+    $documentTypeEnum = match ($documentTypeInput) {
+        'TD16' => DocumentType::TD16(),
+        'TD17' => DocumentType::TD17(),
+        'TD18' => DocumentType::TD18(),
+        'TD19' => DocumentType::TD19(),
+        default => $isSimplified ? DocumentType::TD07() : DocumentType::TD01(),
+    };
     $documentInstance = (new DigitalDocumentInstance())
-        ->setDocumentType($isSimplified ? DocumentType::TD07() : DocumentType::TD01())
+        ->setDocumentType($documentTypeEnum)
         ->setCurrency($currency)
         ->setDocumentDate(new DateTime($issueDate))
         ->setDocumentNumber($documentNumber);
@@ -821,13 +836,14 @@ try {
 
     // Salvataggio nel database
     $pdo->beginTransaction();
-    $insertInvoice = $pdo->prepare('INSERT INTO invoices (client_id, order_id, user_id, document_number, issue_date, due_date, currency, tax_regime, total, bollo, bollo_to_client, cassa_type, cassa_amount, is_paid) VALUES (:client_id, :order_id, :user_id, :document_number, :issue_date, :due_date, :currency, :tax_regime, :total, :bollo, :bollo_to_client, :cassa_type, :cassa_amount, :is_paid)');
+    $insertInvoice = $pdo->prepare('INSERT INTO invoices (client_id, order_id, user_id, document_number, document_type, issue_date, due_date, currency, tax_regime, total, bollo, bollo_to_client, cassa_type, cassa_amount, is_paid) VALUES (:client_id, :order_id, :user_id, :document_number, :document_type, :issue_date, :due_date, :currency, :tax_regime, :total, :bollo, :bollo_to_client, :cassa_type, :cassa_amount, :is_paid)');
     
     $insertInvoice->execute([
         ':client_id' => $clientId,
         ':order_id' => $orderId > 0 ? $orderId : null,
         ':user_id' => $userId,
         ':document_number' => $documentNumber,
+        ':document_type' => $documentTypeInput !== '' ? $documentTypeInput : ($isSimplified ? 'TD07' : 'TD01'),
         ':issue_date' => $issueDate,
         ':due_date' => $dueDate,
         ':currency' => $currency,

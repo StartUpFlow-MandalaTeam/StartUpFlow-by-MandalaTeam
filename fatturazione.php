@@ -87,13 +87,13 @@ $username = $_SESSION['username'] ?? 'Utente';
             <strong>1) Definisci il cliente intestatario della fattura</strong>
             <div class="client-mode-buttons" role="tablist" aria-label="Gestione cliente">
                 <button type="button" class="client-mode-button is-active" data-client-mode="select">Seleziona Cliente</button>
-                <button type="button" class="client-mode-button" data-client-mode="add">Nuovo Cliente</button>
-                <!-- <button type="button" class="client-mode-button" data-client-mode="edit" disabled>Modifica Cliente</button> -->
+                <button type="button" class="client-mode-button" data-client-mode="estero">Estero</button>
+                <button type="button" class="client-mode-button" data-client-mode="autofattura">Autofattura - ITA</button>
             </div>
 
             <div class="client-select-panel" data-client-panel="select">
                 <label class="profile-modal__field">
-                    <span>Cliente esistente</span>
+                    <span id="client-select-label">Cliente esistente</span>
                     <select id="client-select" required>
                         <option value="">Caricamento clienti...</option>
                     </select>
@@ -104,86 +104,106 @@ $username = $_SESSION['username'] ?? 'Utente';
                         <option value="">Seleziona un ordine</option>
                     </select>
                 </label>
+                <label class="profile-modal__field" id="document-type-container" hidden>
+                    <span>Tipo documento</span>
+                    <select id="document-type" name="document_type">
+                        <option value="">Seleziona il tipo...</option>
+                        <option value="TD17">TD17 - Servizi esteri</option>
+                        <option value="TD18">TD18 - Beni intracomunitari</option>
+                        <option value="TD19">TD19 - Beni già in Italia da fornitore estero</option>
+                    </select>
+                </label>
+                <button type="button" class="profile-modal__save" id="new-estero-client-button" hidden>Nuovo soggetto estero</button>
                 <div style="margin-top: 1rem;">
                     <button type="button" class="profile-modal__save" id="use-client-button" disabled>Vai!</button>
                 </div>
             </div>
-
-            <form class="profile-modal__grid" id="cliente-form" data-client-panel="form" hidden>
-                <?php echo csrfInput(); ?>
-                <input type="hidden" name="id" id="client-id" value="">
-                <label class="profile-modal__field">
-                    <span>Tipo cliente</span>
-                    <select name="client_type" id="client-type" required>
-                        <option value="company" selected>Società</option>
-                        <option value="individual">Persona fisica</option>
-                    </select>
-                </label>
-                <label class="profile-modal__field profile-modal__field--full" data-company-field>
-                    <span>Denominazione</span>
-                    <input type="text" name="company_name" id="company-name" placeholder="Inserisci la ragione sociale">
-                </label>
-                <label class="profile-modal__field" data-individual-field hidden>
-                    <span>Nome</span>
-                    <input type="text" name="first_name" placeholder="Inserisci il nome">
-                </label>
-                <label class="profile-modal__field" data-individual-field hidden>
-                    <span>Cognome</span>
-                    <input type="text" name="last_name" placeholder="Inserisci il cognome">
-                </label>
-                <label class="profile-modal__field" data-individual-field hidden>
-                    <span>Codice fiscale</span>
-                    <input type="text" name="cf" placeholder="Inserisci il codice fiscale" maxlength="16">
-                </label>
-                <label class="profile-modal__field" data-company-field>
-                    <span>P.IVA</span>
-                    <input type="text" name="vat_number" placeholder="Inserisci la Partita IVA (11 cifre)" maxlength="11" inputmode="numeric" pattern="[0-9]{11}">
-                </label>
-                <label class="profile-modal__field profile-modal__field--full">
-                    <span>Indirizzo</span>
-                    <input type="text" name="address" placeholder="Inserisci l'indirizzo" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>Città</span>
-                    <input type="text" name="city" placeholder="Inserisci la città" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>Provincia</span>
-                    <input type="text" name="state" maxlength="10" placeholder="Es. MI" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>CAP</span>
-                    <input type="text" name="postal_code" inputmode="numeric" maxlength="10" placeholder="Inserisci il CAP" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>Paese</span>
-                    <input type="text" name="country" value="Italia" placeholder="Inserisci il paese" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>Email</span>
-                    <input type="email" name="email" placeholder="cliente@esempio.it" required>
-                </label>
-                <label class="profile-modal__field">
-                    <span>Telefono</span>
-                    <input type="tel" name="phone" placeholder="Inserisci il telefono" required>
-                </label>
-                <!-- <label class="profile-modal__field">
-                    <span>Status CRM</span>
-                    <select name="crm_status" required>
-                        <option value="lead" selected>Lead</option>
-                        <option value="customer">Cliente</option>
-                    </select>
-                </label> -->
-                <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
-                    <button type="submit" class="profile-modal__save">Salva e continua</button>
-                </footer>
-            </form>
         </section>
+
+        <dialog class="profile-modal" id="estero-client-modal" aria-labelledby="estero-client-modal-title">
+            <form class="profile-modal__panel" id="estero-client-form">
+                <?php echo csrfInput(); ?>
+                <input type="hidden" name="id" id="estero-client-id" value="">
+                <header class="profile-modal__header">
+                    <div>
+                        <p class="profile-modal__eyebrow">Nuovo soggetto</p>
+                        <h2 id="estero-client-modal-title">Cliente estero (TD17 / TD18 / TD19)</h2>
+                    </div>
+                    <button type="button" class="profile-modal__close" data-estero-modal-close aria-label="Chiudi modale">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                </header>
+
+                <div class="profile-modal__grid">
+                    <label class="profile-modal__field">
+                        <span>Tipo soggetto</span>
+                        <select name="client_type" id="estero-client-type" required>
+                            <option value="company" selected>Società</option>
+                            <option value="individual">Persona fisica</option>
+                        </select>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>Paese</span>
+                        <select name="country" id="estero-country" data-estero-countries-select required>
+                            <option value="">Caricamento Stati...</option>
+                        </select>
+                    </label>
+                    <label class="profile-modal__field profile-modal__field--full" data-estero-company-field>
+                        <span>Denominazione</span>
+                        <input type="text" name="company_name" id="estero-company-name" placeholder="Inserisci la ragione sociale" required>
+                    </label>
+                    <label class="profile-modal__field" data-estero-individual-field hidden>
+                        <span>Nome</span>
+                        <input type="text" name="first_name" id="estero-first-name" placeholder="Inserisci il nome" required>
+                    </label>
+                    <label class="profile-modal__field" data-estero-individual-field hidden>
+                        <span>Cognome</span>
+                        <input type="text" name="last_name" id="estero-last-name" placeholder="Inserisci il cognome" required>
+                    </label>
+                    <label class="profile-modal__field" data-estero-individual-field hidden>
+                        <span>Codice fiscale</span>
+                        <input type="text" name="cf" id="estero-cf" placeholder="Inserisci il codice fiscale" maxlength="16">
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>P.IVA estera</span>
+                        <input type="text" name="vat_number" id="estero-vat-number" placeholder="Es. IE1234567AB" maxlength="20" pattern="[A-Za-z0-9]{2,20}" required>
+                    </label>
+                    <label class="profile-modal__field profile-modal__field--full">
+                        <span>Indirizzo</span>
+                        <input type="text" name="address" id="estero-address" placeholder="Inserisci l'indirizzo" required>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>Città</span>
+                        <input type="text" name="city" id="estero-city" placeholder="Inserisci la città" required>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>Provincia / Stato</span>
+                        <input type="text" name="state" id="estero-state" maxlength="50" placeholder="Es. Baviera" required>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>CAP</span>
+                        <input type="text" name="postal_code" id="estero-postal-code" inputmode="numeric" maxlength="10" placeholder="Inserisci il CAP" required>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>Email</span>
+                        <input type="email" name="email" id="estero-email" placeholder="cliente@esempio.com" required>
+                    </label>
+                    <label class="profile-modal__field">
+                        <span>Telefono</span>
+                        <input type="tel" name="phone" id="estero-phone" placeholder="Inserisci il telefono" required>
+                    </label>
+                    <footer class="profile-modal__actions" style="grid-column: 1 / -1;">
+                        <button type="submit" class="profile-modal__save">Salva e seleziona</button>
+                    </footer>
+                </div>
+            </form>
+        </dialog>
 
         <div class="form-fatturazione" id="billing-form" hidden>
             <strong>2) Modulo Fatturazione</strong>
             <form id="invoice-form" method="post" action="/invoice/process-invoice.php">
                 <?php echo csrfInput(); ?>
+                <input type="hidden" id="invoice-document-type" name="document_type" value="">
                 <?php
                 $taxRegimeCode = strtoupper((string) ($fiscalRow['tax_regime'] ?? ''));
                 $regimeInfo = fiscalRegime($taxRegimeCode);
