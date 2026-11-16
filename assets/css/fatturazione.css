@@ -803,6 +803,71 @@ body.dashboard-page {
 	outline-offset: 2px;
 }
 
+/* ===== TD17 / TD18 / TD19 ===== */
+
+/* Blocco "Fattura del fornitore estero da integrare": usa la griglia a 2 colonne di .dati-fattura */
+.dati-fattura__integrazione {
+	margin-top: 1.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid rgba(17, 17, 17, 0.12);
+}
+
+/* display:grid di .dati-fattura annulla l'attributo hidden: va riaffermato */
+.dati-fattura__integrazione[hidden] {
+	display: none !important;
+}
+
+.dati-fattura__integrazione > strong,
+.dati-fattura__integrazione > p {
+	grid-column: 1 / -1;
+}
+
+.dati-fattura__integrazione > strong {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #3f4657;
+}
+
+.dati-fattura__integrazione > p {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: #4a5160;
+}
+
+.dati-fattura__field--full {
+	grid-column: 1 / -1;
+}
+
+.dati-fattura__integrazione input[type="file"] {
+	padding: 10px 14px;
+}
+
+.dati-fattura__integrazione input:disabled {
+	background: #eff2f7;
+	color: #4a5160;
+}
+
+/* Nota sul regime fiscale (visibile solo nelle integrazioni) */
+#integration-regime-note {
+	display: block;
+	font-size: 12px;
+	line-height: 1.4;
+	color: #4a5160;
+}
+
+#integration-regime-note[hidden] {
+	display: none !important;
+}
+
+/* Etichetta/campo "Data Scadenza" nascosti nelle integrazioni:
+   .dati-fattura label ha display:grid, che altrimenti vince su [hidden] e lascia l'etichetta a vuoto */
+.dati-fattura label[hidden],
+.dati-fattura input[hidden],
+.dati-fattura select[hidden] {
+	display: none !important;
+}
+
 @media (max-width: 700px) {
 	.fatturazione .service-header {
 		min-height: 132px;

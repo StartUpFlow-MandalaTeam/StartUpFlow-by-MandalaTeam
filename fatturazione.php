@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/profile-fiscal.php';
+require_once __DIR__ . '/includes/invoice-integration.php';
 
 // Se non è autenticato, reindirizza
 if (!isLoggedIn()) {
@@ -203,7 +204,8 @@ $username = $_SESSION['username'] ?? 'Utente';
             <strong>2) Modulo Fatturazione</strong>
             <form id="invoice-form" method="post" action="/invoice/process-invoice.php">
                 <?php echo csrfInput(); ?>
-                <input type="hidden" id="invoice-document-type" name="document_type" value="">
+                <input type="hidden" id="invoice-document-type" name="document_type" value=""
+                       data-config="<?php echo $escape(json_encode(integrationClientConfig(), JSON_UNESCAPED_UNICODE)); ?>">
                 <?php
                 $taxRegimeCode = strtoupper((string) ($fiscalRow['tax_regime'] ?? ''));
                 $regimeInfo = fiscalRegime($taxRegimeCode);
@@ -222,6 +224,7 @@ $username = $_SESSION['username'] ?? 'Utente';
                         <label for="regime-fiscale-display">Regime fiscale</label>
                         <?php if ($hasRegime): ?>
                             <span id="regime-fiscale-display"><?php echo $escape($taxRegimeLabel); ?></span>
+                            <small id="integration-regime-note" hidden>Per TD17/TD18/TD19 il tuo regime non limita aliquote e natura: l'IVA va sempre integrata. Nel file il cedente estero è indicato con regime RF18.</small>
                             <input type="hidden" id="regime-fiscale" name="tax_regime" value="<?php echo $escape($taxRegimeCode); ?>"
                                    data-applies-vat="<?php echo $regimeInfo['applies_vat'] ? '1' : '0'; ?>"
                                    data-fixed-nature="<?php echo $escape($regimeInfo['fixed_nature']); ?>"
@@ -245,6 +248,22 @@ $username = $_SESSION['username'] ?? 'Utente';
                     </select>
                     <label for="num-doc">Numero Documento:</label>
                     <input id="num-doc" name="document_number" type="text" placeholder="Generazione numero..." readonly required>
+                </div>
+                <div class="dati-fattura dati-fattura__integrazione" id="integration-fields" hidden>
+                    <strong>Fattura del fornitore estero da integrare</strong>
+                    <p id="integration-hint" role="status" aria-live="polite"></p>
+                    <div class="dati-fattura__field">
+                        <label for="orig-invoice-number">Numero fattura del fornitore</label>
+                        <input id="orig-invoice-number" name="orig_invoice_number" type="text" maxlength="20" autocomplete="off" disabled>
+                    </div>
+                    <div class="dati-fattura__field">
+                        <label for="orig-invoice-date">Data fattura del fornitore</label>
+                        <input id="orig-invoice-date" name="orig_invoice_date" type="date" disabled>
+                    </div>
+                    <div class="dati-fattura__field dati-fattura__field--full">
+                        <label for="orig-invoice-file">Copia della fattura ricevuta (PDF, XML, JPG, PNG – max 3 MB)</label>
+                        <input id="orig-invoice-file" name="orig_invoice_file" type="file" accept=".pdf,.xml,.jpg,.jpeg,.png,application/pdf,text/xml,image/jpeg,image/png" disabled>
+                    </div>
                 </div>
                 <div id="pagamento-form">
                     <strong>Pagamento</strong>
@@ -342,8 +361,8 @@ $username = $_SESSION['username'] ?? 'Utente';
                                 <input type="number" name="imponibile[]" step="0.01" data-summary-taxable readonly>
                                 <label data-summary-label="expenses">Spese accessorie imponibili</label>
                                 <input type="number" name="spese_accessorie[]" step="0.01" min="0" value="0.00">
-                                <label data-summary-label="non-taxable-expenses">Spese escluse ex art. 15</label>
-                                <input type="number" name="spese_accessorie_non_imponibili[]" step="0.01" min="0" value="0.00">
+                                <label data-summary-label="non-taxable-expenses" data-integration-hide>Spese escluse ex art. 15</label>
+                                <input type="number" name="spese_accessorie_non_imponibili[]" step="0.01" min="0" value="0.00" data-integration-hide>
                                 <label data-summary-label="reference">Riferimento normativo</label>
                                 <input type="text" name="riferimento_normativo[]" maxlength="100" placeholder="Inserisci riferimento normativo">
                             </div>

@@ -16,6 +16,7 @@ function respond($status, $data) {
 try {
     require_once __DIR__ . '/../includes/auth.php';
     require_once __DIR__ . '/../includes/profile-fiscal.php';
+    require_once __DIR__ . '/../includes/invoice-integration.php';
     require_once __DIR__ . '/../vendor/autoload.php';
 } catch (Throwable $exception) {
     respond(500, ['success' => false, 'message' => 'Errore di avvio del servizio: ' . $exception->getMessage()]);
@@ -53,6 +54,8 @@ if ($userId === null || $clientId === null) {
 }
 
 use FatturaElettronicaPhp\FatturaElettronica\Address;
+use FatturaElettronicaPhp\FatturaElettronica\Attachment;
+use FatturaElettronicaPhp\FatturaElettronica\RelatedDocument;
 use FatturaElettronicaPhp\FatturaElettronica\Customer;
 use FatturaElettronicaPhp\FatturaElettronica\Deduction;
 use FatturaElettronicaPhp\FatturaElettronica\Discount;
@@ -110,7 +113,7 @@ if (!$client) {
     respond(403, ['success' => false, 'message' => 'Il cliente selezionato non è valido']);
 }
 
-$orderId = (int) ($_POST['order_id'] ?? 0);
+$orderId = in_array(strtoupper(trim((string) ($_POST['document_type'] ?? ''))), ['TD17', 'TD18', 'TD19'], true) ? 0 : (int) ($_POST['order_id'] ?? 0);
 if ($orderId > 0) {
     $orderStmt = $pdo->prepare('SELECT id FROM orders WHERE id = :id AND client_id = :client_id AND user_id = :user_id LIMIT 1');
     $orderStmt->execute([':id' => $orderId, ':client_id' => $clientId, ':user_id' => $userId]);
@@ -141,16 +144,21 @@ if ($documentTypeInput !== '' && !in_array($documentTypeInput, $specialDocumentT
     respond(422, ['success' => false, 'message' => 'Tipo documento non valido. Valori ammessi: TD16, TD17, TD18, TD19.']);
 }
 
+// Integrazioni/autofatture TD17, TD18, TD19: cedente = fornitore estero, cessionario = utente.
+$documentTypeCode = $documentTypeInput;
+$isIntegration = integrationIsType($documentTypeCode);
+
 // Controllo esclusione fatture verso PA (Codice destinatario di 6 caratteri o formato FPA12)
 $sdiCode = trim((string) ($client['sdi_code'] ?? ''));
-if (strlen($sdiCode) === 6 || strtolower((string) ($_POST['invoice_format'] ?? '')) === 'pa') {
+if (!$isIntegration && (strlen($sdiCode) === 6 || strtolower((string) ($_POST['invoice_format'] ?? '')) === 'pa')) {
     respond(422, ['success' => false, 'message' => 'Le fatture verso la Pubblica Amministrazione (PA) sono escluse e non supportate da questo sistema.']);
 }
 
 $documentNumber = trim((string) ($_POST['document_number'] ?? ''));
 $causale = trim((string) ($_POST['causale'] ?? ''));
 $currency = strtoupper(trim((string) ($_POST['divisa'] ?? 'EUR')));
-if ($currency === '') {
+if ($currency === '' || $isIntegration) {
+    // Integrazioni: importi sempre in euro (conversione al cambio del giorno di effettuazione).
     $currency = 'EUR';
 }
 
@@ -172,13 +180,21 @@ function normalizeDate(string $date): string {
 $issueDateRaw = (string) ($_POST['issue_date'] ?? '');
 $dueDateRaw = (string) ($_POST['due_date'] ?? '');
 $issueDate = normalizeDate($issueDateRaw);
-$dueDate = normalizeDate($dueDateRaw);
+$dueDate = $isIntegration ? $issueDate : normalizeDate($dueDateRaw);
 
 $paymentStatus = strtolower(trim((string) ($_POST['payment_status'] ?? 'unpaid')));
 $paymentTermsCode = strtoupper(trim((string) ($_POST['payment_terms'] ?? 'TP02')));
 $paymentMethodCode = strtoupper(trim((string) ($_POST['payment_method'] ?? 'MP05')));
 $paymentAmount = round((float) ($_POST['payment_amount'] ?? 0), 2);
 $paymentReference = trim((string) ($_POST['payment_reference'] ?? ''));
+if ($isIntegration) {
+    // Nessun DatiPagamento nelle integrazioni: valori neutri solo per i controlli comuni.
+    $paymentStatus = 'unpaid';
+    $paymentTermsCode = 'TP02';
+    $paymentMethodCode = 'MP05';
+    $paymentAmount = 0.0;
+    $paymentReference = '';
+}
 $validPaymentStatuses = ['unpaid', 'partial', 'paid'];
 $validPaymentTerms = ['TP01', 'TP02', 'TP03'];
 $validPaymentMethods = array_map(
@@ -199,16 +215,17 @@ if (!in_array($paymentStatus, $validPaymentStatuses, true)
 // sconosciuto o non gestito blocca l'emissione invece di essere trattato in silenzio come ordinario.
 $taxRegimeCode = strtoupper(trim((string) ($supplierProfile['tax_regime'] ?? '')));
 $regimeInfo = fiscalRegime($taxRegimeCode);
-if ($regimeInfo === null) {
+if (!$isIntegration && $regimeInfo === null) {
     respond(422, ['success' => false, 'message' => 'Regime fiscale del cedente mancante o non valido. Selezionalo nel profilo.']);
 }
-if (!$regimeInfo['supported']) {
+if (!$isIntegration && !$regimeInfo['supported']) {
     respond(422, ['success' => false, 'message' => 'Il regime fiscale ' . $taxRegimeCode . ' non è ancora gestito per l\'emissione delle fatture.']);
 }
-$appliesVat = $regimeInfo['applies_vat'];              // false: aliquota sempre 0
-$fixedNature = $regimeInfo['fixed_nature'];            // Natura imposta quando l'IVA non si applica
-$defaultReference = $regimeInfo['default_reference'];  // dicitura di legge predefinita
-$enumTaxRegime = new TaxRegime($taxRegimeCode);
+// Integrazioni TD17/18/19: l'IVA si applica sempre (anche per i forfettari), il regime del cedente estero è RF18.
+$appliesVat = $isIntegration ? true : $regimeInfo['applies_vat'];              // false: aliquota sempre 0
+$fixedNature = $isIntegration ? null : $regimeInfo['fixed_nature'];            // Natura imposta quando l'IVA non si applica
+$defaultReference = $isIntegration ? null : $regimeInfo['default_reference'];  // dicitura di legge predefinita
+$enumTaxRegime = new TaxRegime($isIntegration ? 'RF18' : $taxRegimeCode);
 
 $bolloToClient = (int) ($_POST['bollo_to_client'] ?? 0);
 $bolloAmount = 0.0;
@@ -242,6 +259,14 @@ if ($ritenutaTipo !== '' && !isset($ritenuteCatalog[$ritenutaTipo])) {
 }
 if ($ritenutaAliquota < 0 || $ritenutaAliquota > 100) {
     respond(422, ['success' => false, 'message' => 'Aliquota ritenuta non valida']);
+}
+
+if ($isIntegration) {
+    // Bollo, cassa previdenziale e ritenuta non si applicano alle integrazioni.
+    $bolloToClient = 0;
+    $cassaTipo = '';
+    $ritenutaTipo = '';
+    $ritenutaAliquota = 0.0;
 }
 
 function isValidDate(string $date): bool {
@@ -283,14 +308,110 @@ function normalizeCountry(?string $country): string {
     return $countryMap[$cUpper] ?? 'IT';
 }
 
-if (!preg_match('/^[A-Z]+-\d{4}-\d+$/', $documentNumber)) {
+if (!preg_match('/^([A-Z]+)-(\d{4})-(\d+)$/', $documentNumber, $numberParts)) {
     respond(422, ['success' => false, 'message' => 'Numero documento non valido']);
+}
+[, $numberSeries, $numberYear, $numberSequence] = $numberParts;
+$numberYear = (int) $numberYear;
+$numberSequence = (int) $numberSequence;
+// Numerazione distinta: le integrazioni usano solo il sezionale dedicato, le fatture di vendita non possono usarlo.
+if ($isIntegration ? $numberSeries !== INTEGRATION_SERIES : $numberSeries === INTEGRATION_SERIES) {
+    respond(422, ['success' => false, 'message' => 'Il numero documento non appartiene al sezionale previsto per questo tipo di documento. Ricarica il form.']);
 }
 if (!isValidDate($issueDate) || !isValidDate($dueDate) || $dueDate < $issueDate) {
     respond(422, ['success' => false, 'message' => 'Controlla le date del documento e della scadenza']);
 }
+if ($numberYear !== (int) substr($issueDate, 0, 4)) {
+    respond(422, ['success' => false, 'message' => 'L\'anno del numero documento non coincide con la data documento. Ricarica il form.']);
+}
 if (strlen($causale) > 8000) {
     respond(422, ['success' => false, 'message' => 'La causale supera la lunghezza consentita']);
+}
+
+// --- Integrazioni TD17/TD18/TD19: fornitore estero e fattura da integrare ---
+$integrationWarnings = [];
+$foreignCountry = '';
+$foreignVatId = '';
+$foreignName = '';
+$originalNumber = '';
+$originalDate = '';
+$originalBytes = '';
+$originalExtension = '';
+$originalName = '';
+if ($isIntegration) {
+    $typeDefinition = INTEGRATION_DOC_TYPES[$documentTypeCode];
+
+    // Nel file il CedentePrestatore è il fornitore estero: con IdPaese "IT" lo SdI scarta il documento (00473).
+    $foreignCountry = integrationResolveCountry($client['country'] ?? null);
+    if ($foreignCountry === null) {
+        respond(422, ['success' => false, 'message' => 'Paese del fornitore non riconosciuto: verifica l\'anagrafica del fornitore.']);
+    }
+    if ($foreignCountry === 'IT') {
+        respond(422, ['success' => false, 'message' => 'Il fornitore deve avere sede all\'estero: per i fornitori italiani non si emettono TD17/TD18/TD19.']);
+    }
+    if ($typeDefinition['eu_only'] && !in_array($foreignCountry, INTEGRATION_EU_COUNTRIES, true)) {
+        respond(422, ['success' => false, 'message' => 'Il TD18 è riservato agli acquisti da fornitori di altri Stati UE.']);
+    }
+    $foreignName = trim((string) (($client['client_type'] ?? 'company') === 'company'
+        ? ($client['company_name'] ?? '')
+        : trim(($client['first_name'] ?? '') . ' ' . ($client['last_name'] ?? ''))));
+    if ($foreignName === '' || trim((string) ($client['address'] ?? '')) === '' || trim((string) ($client['city'] ?? '')) === '') {
+        respond(422, ['success' => false, 'message' => 'Anagrafica del fornitore incompleta (denominazione, indirizzo, città).']);
+    }
+    $foreignVatId = integrationCleanVatId($client['vat_number'] ?? '', $foreignCountry);
+    if ($foreignVatId === '') {
+        if (in_array($foreignCountry, INTEGRATION_EU_COUNTRIES, true)) {
+            respond(422, ['success' => false, 'message' => 'Per un fornitore UE è obbligatorio il VAT ID.']);
+        }
+        // Fornitore extra-UE privo di identificativo fiscale.
+        $foreignVatId = '0000000';
+    }
+    if (strlen($foreignVatId) > 28 || !preg_match('/^[A-Z0-9+*._\-]+$/', $foreignVatId)) {
+        respond(422, ['success' => false, 'message' => 'Identificativo fiscale del fornitore non valido.']);
+    }
+
+    // Estremi della fattura ricevuta (DatiFattureCollegate).
+    $originalNumber = trim((string) ($_POST['orig_invoice_number'] ?? ''));
+    $originalDate = normalizeDate((string) ($_POST['orig_invoice_date'] ?? ''));
+    if ($originalNumber === '' || mb_strlen($originalNumber) > 20) {
+        respond(422, ['success' => false, 'message' => 'Numero della fattura del fornitore mancante o oltre 20 caratteri.']);
+    }
+    if (!isValidDate($originalDate)) {
+        respond(422, ['success' => false, 'message' => 'Data della fattura del fornitore non valida.']);
+    }
+    if ($originalDate > $issueDate) {
+        // Errore SdI 00418: la data della fattura collegata non può essere successiva a quella del documento.
+        respond(422, ['success' => false, 'message' => 'La data della fattura del fornitore non può essere successiva alla data del documento.']);
+    }
+
+    // Copia della fattura ricevuta: obbligatoria, allegata al file XML (blocco Allegati) e archiviata.
+    $upload = $_FILES['orig_invoice_file'] ?? null;
+    if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) $upload['tmp_name'])) {
+        respond(422, ['success' => false, 'message' => 'Allega la copia della fattura del fornitore estero (caricamento non riuscito).']);
+    }
+    if ((int) $upload['size'] <= 0 || (int) $upload['size'] > INTEGRATION_ATTACHMENT_MAX_BYTES) {
+        respond(422, ['success' => false, 'message' => 'La fattura allegata deve essere di massimo 3 MB.']);
+    }
+    $originalBytes = (string) file_get_contents((string) $upload['tmp_name']);
+    $head = substr($originalBytes, 0, 8);
+    if (str_starts_with($head, '%PDF')) {
+        $originalExtension = 'pdf';
+    } elseif (str_starts_with($head, "\xFF\xD8\xFF")) {
+        $originalExtension = 'jpg';
+    } elseif (str_starts_with($head, "\x89PNG")) {
+        $originalExtension = 'png';
+    } elseif (preg_match('/^(\xEF\xBB\xBF)?\s*<(\?xml|[A-Za-z])/', $originalBytes) === 1) {
+        $originalExtension = 'xml';
+    } else {
+        respond(422, ['success' => false, 'message' => 'Formato dell\'allegato non ammesso (PDF, XML, JPG, PNG).']);
+    }
+    $originalName = substr((string) preg_replace('/[^A-Za-z0-9._-]/', '_', pathinfo((string) $upload['name'], PATHINFO_FILENAME)), 0, 50) . '.' . $originalExtension;
+
+    // Termine di trasmissione: 15 del mese successivo a quello di ricezione/effettuazione (non bloccante).
+    $deadline = integrationDeadline($issueDate);
+    if ($deadline !== null && new DateTimeImmutable('today') > $deadline) {
+        $integrationWarnings[] = 'Il termine ordinario di trasmissione allo SdI (' . $deadline->format('d/m/Y') . ') è già scaduto: trasmetti il documento il prima possibile.';
+    }
 }
 
 $descriptions = $_POST['descrizione'] ?? null;
@@ -360,7 +481,7 @@ try {
             : false;
         $nature = trim((string) $natures[$index]);
         $expenseRaw = (string) $expenses[$index];
-        $nonTaxableExpenseRaw = (string) $nonTaxableExpenses[$index];
+        $nonTaxableExpenseRaw = $isIntegration ? '0' : (string) $nonTaxableExpenses[$index];
         $legalReference = trim((string) $legalReferences[$index]);
 
         $invalidField = null;
@@ -400,15 +521,25 @@ try {
         // Natura: obbligatoria con aliquota 0, da omettere con aliquota > 0 (altrimenti lo SdI scarta il file).
         if ($rate > 0) {
             $nature = null;
+            if ($isIntegration) {
+                $legalReference = '';
+            }
         } elseif (!$appliesVat) {
             $nature = $fixedNature;
             if ($legalReference === '' && $defaultReference !== null) {
                 $legalReference = $defaultReference;
             }
-        } elseif (isset($natureCatalog[$nature])) {
-            // codice valido scelto dall'utente
+        } elseif ($isIntegration
+            ? in_array($nature, INTEGRATION_DOC_TYPES[$documentTypeCode]['natures'], true)
+            : isset($natureCatalog[$nature])) {
+            // codice valido scelto dall'utente; nelle integrazioni il RiferimentoNormativo è obbligatorio con la Natura
+            if ($isIntegration && $legalReference === '') {
+                $legalReference = INTEGRATION_NATURE_REFERENCES[$nature];
+            }
         } else {
-            respond(422, ['success' => false, 'message' => 'Seleziona una Natura IVA valida per le righe con aliquota 0%']);
+            respond(422, ['success' => false, 'message' => $isIntegration
+                ? 'Per il ' . $documentTypeCode . ' le righe con aliquota 0% richiedono una Natura tra: ' . implode(', ', INTEGRATION_DOC_TYPES[$documentTypeCode]['natures'])
+                : 'Seleziona una Natura IVA valida per le righe con aliquota 0%']);
         }
 
         $quantity = round((float) $quantityRaw, 2);
@@ -560,7 +691,8 @@ try {
     }
     ksort($vatSummary);
 
-    // --- Costruzione Supplier (Cedente) ---
+    // --- Costruzione Supplier (Cedente) e Customer (Cessionario) ---
+    if (!$isIntegration) {
     $supplier = (new Supplier())
         ->setCountryCode(normalizeCountry($supplierProfile['vat_country'] ?? 'IT'))
         ->setVatNumber((string) ($supplierProfile['vat_number'] ?? ''))
@@ -630,6 +762,51 @@ try {
         $customerSdi = '0000000';
     }
     $customerPec = trim((string) ($client['pec'] ?? ''));
+    } else {
+        // TD17/18/19: cedente = fornitore estero (client), cessionario/committente = chi emette il documento (utente).
+        $supplier = (new Supplier())
+            ->setCountryCode($foreignCountry)
+            ->setVatNumber($foreignVatId)
+            ->setTaxRegime($enumTaxRegime) // RF18
+            ->setAddress(
+                (new Address())
+                    ->setStreet((string) $client['address'])
+                    ->setZip('00000') // CAP convenzionale per le sedi estere
+                    ->setCity((string) $client['city'])
+                    ->setCountryCode($foreignCountry) // nessuna Provincia per le sedi estere
+            );
+        if (($client['client_type'] ?? 'company') === 'company') {
+            $supplier->setOrganization($foreignName);
+        } else {
+            $supplier->setName((string) ($client['first_name'] ?? ''));
+            $supplier->setSurname((string) ($client['last_name'] ?? ''));
+        }
+
+        $customer = (new Customer())
+            ->setCountryCode('IT')
+            ->setVatNumber(integrationCleanVatId((string) $supplierProfile['vat_number'], 'IT'))
+            ->setFiscalCode((string) ($supplierProfile['cf'] ?? ''))
+            ->setAddress(
+                (new Address())
+                    ->setStreet((string) ($supplierProfile['address'] ?? ''))
+                    ->setStreetNumber((string) ($supplierProfile['street_number'] ?? ''))
+                    ->setZip((string) ($supplierProfile['postal_code'] ?? '00100'))
+                    ->setCity((string) ($supplierProfile['city'] ?? ''))
+                    ->setState((string) ($supplierProfile['province'] ?? ''))
+                    ->setCountryCode('IT')
+            );
+        if (!empty($supplierProfile['company_name'])) {
+            $customer->setOrganization((string) $supplierProfile['company_name']);
+        } else {
+            $customer->setName((string) ($supplierProfile['first_name'] ?? ''));
+            $customer->setSurname((string) ($supplierProfile['last_name'] ?? ''));
+        }
+
+        // Il documento è recapitato solo a chi lo emette: senza canale dedicato si usa 0000000
+        // (il file resta nell'area "Fatture e corrispettivi" del cessionario).
+        $customerSdi = '0000000';
+        $customerPec = '';
+    }
 
     // --- Costruzione DigitalDocument Instance ---
     // FSM10 non ammette ImportoTotaleDocumento né Causale in DatiGeneraliDocumento.
@@ -648,8 +825,17 @@ try {
 
     if (!$isSimplified) {
         $documentInstance
-            ->setDocumentTotal($invoiceTotal)
-            ->addDescription($causale !== '' ? $causale : 'Fattura n. ' . $documentNumber);
+            ->setDocumentTotal($invoiceTotal);
+
+        // Causale: ogni elemento è limitato a 200 caratteri dallo schema.
+        $causaleText = $causale !== ''
+            ? $causale
+            : ($isIntegration
+                ? sprintf('Integrazione della fattura n. %s del %s emessa da %s, ai sensi dell\'art. 17 c.2 DPR 633/72', $originalNumber, (new DateTimeImmutable($originalDate))->format('d/m/Y'), $foreignName)
+                : 'Fattura n. ' . $documentNumber);
+        foreach (mb_str_split($causaleText, 200) as $causaleChunk) {
+            $documentInstance->addDescription($causaleChunk);
+        }
     }
 
     if ($bolloRequired) {
@@ -687,6 +873,23 @@ try {
                 ->setPercentage($ritenutaAliquota)
                 ->setAmount($ritenutaAmount)
                 ->setDescription($ritenutaCausali[$ritenutaTipo] ?? 'A')
+        );
+    }
+
+    if ($isIntegration) {
+        // DatiFattureCollegate: estremi della fattura del fornitore estero.
+        $documentInstance->addRelatedInvoice(
+            (new RelatedDocument())
+                ->setDocumentNumber($originalNumber)
+                ->setDocumentDate(new DateTime($originalDate))
+        );
+        // Allegati: copia della fattura ricevuta (NomeAttachment max 60 caratteri).
+        $documentInstance->addAttachment(
+            (new Attachment())
+                ->setName($originalName)
+                ->setFormat(strtoupper($originalExtension))
+                ->setDescription(mb_substr('Fattura fornitore estero n. ' . $originalNumber, 0, 100))
+                ->setAttachment(base64_encode($originalBytes))
         );
     }
 
@@ -768,7 +971,8 @@ try {
             $documentInstance->addTotal($total);
         }
 
-        // Informazioni di pagamento (DatiPagamento): previste solo dallo schema ordinario (FPR12).
+        // Informazioni di pagamento (DatiPagamento): previste solo dallo schema ordinario (FPR12), assenti in TD17/18/19.
+        if (!$isIntegration) {
         // Lo schema semplificato FSM10 non le contempla, quindi vanno omesse per TD07.
         $ibanToUse = trim((string) ($supplierProfile['iban'] ?? ''));
         $bankMethods = ['MP05', 'MP16', 'MP17', 'MP19', 'MP20', 'MP21'];
@@ -788,11 +992,15 @@ try {
                 ->setTerms(new PaymentTerm($paymentTermsCode))
                 ->addDetails($paymentDetails)
         );
+        }
     }
 
     // --- DigitalDocument (Root) ---
     $transmissionFormat = $isSimplified ? TransmissionFormat::FSM10() : TransmissionFormat::FPR12();
-    $supplierVatNum = (string) $supplierProfile['vat_number'];
+    // IdTrasmittente per soggetti italiani = codice fiscale (errore SdI 00300 se non esiste come CF).
+    $supplierVatNum = $isIntegration && !empty($supplierProfile['cf'])
+        ? (string) $supplierProfile['cf']
+        : (string) $supplierProfile['vat_number'];
 
     $digitalDocument = (new DigitalDocument())
         ->setCountryCode('IT')
@@ -831,29 +1039,63 @@ try {
         respond(409, ['success' => false, 'message' => 'Il file XML per questo numero documento esiste già']);
     }
 
+    $pdo->beginTransaction();
+
+    // Numerazione progressiva senza salti: il numero viene "consumato" solo al salvataggio, e solo se è
+    // esattamente il successivo del sezionale per quell'anno (lo propone generate-invoice-number.php).
+    $pdo->prepare('INSERT IGNORE INTO invoice_counters (series, year, last_number) VALUES (:series, :year, 0)')
+        ->execute([':series' => $numberSeries, ':year' => $numberYear]);
+    $counterStmt = $pdo->prepare('SELECT last_number FROM invoice_counters WHERE series = :series AND year = :year FOR UPDATE');
+    $counterStmt->execute([':series' => $numberSeries, ':year' => $numberYear]);
+    $expectedSequence = (int) $counterStmt->fetchColumn() + 1;
+    if ($numberSequence !== $expectedSequence) {
+        $pdo->rollBack();
+        respond(409, ['success' => false, 'message' => 'Il numero documento non è più disponibile (prossimo: ' . $numberSeries . '-' . $numberYear . '-' . str_pad((string) $expectedSequence, 4, '0', STR_PAD_LEFT) . '). Torna indietro e riapri il modulo per ottenere il numero corretto.']);
+    }
+    $pdo->prepare('UPDATE invoice_counters SET last_number = :n WHERE series = :series AND year = :year')
+        ->execute([':n' => $numberSequence, ':series' => $numberSeries, ':year' => $numberYear]);
+
     // Scrittura file XML tramite la libreria
     $digitalDocument->write($xmlPath, true);
 
+    // Copia della fattura del fornitore estero (già incorporata nell'XML, archiviata anche a parte)
+    $originalRelativePath = null;
+    if ($isIntegration) {
+        $originalDirectory = $storageDirectory . '/originals';
+        if (!is_dir($originalDirectory) && !mkdir($originalDirectory, 0700, true) && !is_dir($originalDirectory)) {
+            throw new RuntimeException('Could not create original invoices directory');
+        }
+        $originalSavedPath = $originalDirectory . '/' . $documentNumber . '_fornitore.' . $originalExtension;
+        if (file_put_contents($originalSavedPath, $originalBytes) === false) {
+            throw new RuntimeException('Could not store the supplier invoice copy');
+        }
+        chmod($originalSavedPath, 0600);
+        $originalRelativePath = 'originals/' . basename($originalSavedPath);
+    }
+
     // Salvataggio nel database
-    $pdo->beginTransaction();
-    $insertInvoice = $pdo->prepare('INSERT INTO invoices (client_id, order_id, user_id, document_number, document_type, issue_date, due_date, currency, tax_regime, total, bollo, bollo_to_client, cassa_type, cassa_amount, is_paid) VALUES (:client_id, :order_id, :user_id, :document_number, :document_type, :issue_date, :due_date, :currency, :tax_regime, :total, :bollo, :bollo_to_client, :cassa_type, :cassa_amount, :is_paid)');
-    
+    $storedDocumentType = $documentTypeInput !== '' ? $documentTypeInput : ($isSimplified ? 'TD07' : 'TD01');
+    $insertInvoice = $pdo->prepare('INSERT INTO invoices (client_id, order_id, user_id, document_number, document_type, issue_date, due_date, currency, tax_regime, total, bollo, bollo_to_client, cassa_type, cassa_amount, is_paid, related_document_number, related_document_date, related_document_file) VALUES (:client_id, :order_id, :user_id, :document_number, :document_type, :issue_date, :due_date, :currency, :tax_regime, :total, :bollo, :bollo_to_client, :cassa_type, :cassa_amount, :is_paid, :related_number, :related_date, :related_file)');
+
     $insertInvoice->execute([
         ':client_id' => $clientId,
         ':order_id' => $orderId > 0 ? $orderId : null,
         ':user_id' => $userId,
         ':document_number' => $documentNumber,
-        ':document_type' => $documentTypeInput !== '' ? $documentTypeInput : ($isSimplified ? 'TD07' : 'TD01'),
+        ':document_type' => $storedDocumentType,
         ':issue_date' => $issueDate,
-        ':due_date' => $dueDate,
+        ':due_date' => $isIntegration ? null : $dueDate,
         ':currency' => $currency,
-        ':tax_regime' => $taxRegimeCode,
+        ':tax_regime' => $taxRegimeCode !== '' ? $taxRegimeCode : 'N/A',
         ':total' => number_format($invoiceTotal, 2, '.', ''),
         ':bollo' => number_format($bolloAmount, 2, '.', ''),
         ':bollo_to_client' => $bolloToClient ? 1 : 0,
         ':cassa_type' => $cassaTipo !== '' ? $cassaTipo : null,
         ':cassa_amount' => $cassaTipo !== '' ? number_format($cassaImporto, 2, '.', '') : 0.00,
-        ':is_paid' => $paymentStatus === 'paid' ? 1 : 0,
+        ':is_paid' => !$isIntegration && $paymentStatus === 'paid' ? 1 : 0,
+        ':related_number' => $isIntegration ? $originalNumber : null,
+        ':related_date' => $isIntegration ? $originalDate : null,
+        ':related_file' => $originalRelativePath,
     ]);
     $invoiceId = (int) $pdo->lastInsertId();
 
@@ -890,6 +1132,8 @@ try {
         'document_number' => $documentNumber,
         'xml_file' => $documentNumber . '.xml',
         'is_simplified' => $isSimplified,
+        'document_type' => $storedDocumentType,
+        'warnings' => $integrationWarnings,
     ]);
 } catch (Throwable $exception) {
     if (isset($pdo) && $pdo->inTransaction()) {
@@ -897,6 +1141,9 @@ try {
     }
     if (isset($xmlPath) && is_file($xmlPath)) {
         @unlink($xmlPath);
+    }
+    if (isset($originalSavedPath) && is_file($originalSavedPath)) {
+        @unlink($originalSavedPath);
     }
     error_log('Invoice save failed: ' . $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine());
     respond(500, ['success' => false, 'message' => 'Errore durante il salvataggio: ' . $exception->getMessage()]);

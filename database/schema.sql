@@ -28,23 +28,6 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB;
 
--- Time tracker entries: work-hour records owned by each user
-CREATE TABLE IF NOT EXISTS time_entries (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id INT UNSIGNED NOT NULL,
-  project_name VARCHAR(255) NOT NULL,
-  description TEXT NULL,
-  hours DECIMAL(10,4) NOT NULL,
-  entry_date DATE NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_time_entries_user_date_created (user_id, entry_date, created_at),
-  CONSTRAINT fk_time_entries_user
-    FOREIGN KEY (user_id) REFERENCES users (id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB;
-
 -- Audit logs: record security-relevant events and support rate-limiting checks
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -191,7 +174,7 @@ CREATE TABLE IF NOT EXISTS clients (
   cf VARCHAR(16) NULL,
   address VARCHAR(255) NULL,
   city VARCHAR(100) NULL,
-  state VARCHAR(50) NULL,
+  state VARCHAR(10) NULL,
   postal_code VARCHAR(10) NULL,
   country VARCHAR(100) NULL,
   email VARCHAR(255) NULL,
@@ -269,7 +252,7 @@ CREATE TABLE IF NOT EXISTS quotes (
   issue_date DATE NOT NULL,
   valid_until DATE NULL,
   currency CHAR(3) NOT NULL DEFAULT 'EUR',
-  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,              -- derivato: calcolato dal servizio
   notes TEXT NULL,
   accepted_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -304,22 +287,22 @@ CREATE TABLE IF NOT EXISTS orders (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id INT UNSIGNED NOT NULL,
   client_id INT UNSIGNED NOT NULL,
-  quote_id INT UNSIGNED NULL,
+  quote_id INT UNSIGNED NULL,                             -- NULL se l'ordine nasce senza preventivo
   order_number VARCHAR(50) NOT NULL,
   status ENUM('draft','confirmed','fulfilled','cancelled') NOT NULL DEFAULT 'draft',
   payment_status ENUM('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
   currency CHAR(3) NOT NULL DEFAULT 'EUR',
-  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,              -- derivato: calcolato dal servizio, non modificare dopo la conferma
   notes TEXT NULL,
   confirmed_at DATETIME NULL,
   fulfilled_at DATETIME NULL,
-  paid_at DATETIME NULL,
+  paid_at DATETIME NULL,                                  -- saldo completo
   cancelled_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_orders_user_number (user_id, order_number),
-  UNIQUE KEY uk_orders_quote (quote_id),
+  UNIQUE KEY uk_orders_quote (quote_id),                  -- un preventivo genera al massimo un ordine
   KEY idx_orders_client_user (client_id, user_id),
   KEY idx_orders_user_status (user_id, status),
   CONSTRAINT fk_orders_client_user
@@ -349,12 +332,14 @@ CREATE TABLE IF NOT EXISTS order_items (
 ) ENGINE=InnoDB;
 
 -- Pagamenti (più rate/acconti per ordine).
+-- orders.payment_status e paid_at si aggiornano dal servizio, nella stessa
+-- transazione dell'inserimento del pagamento (somma pagamenti vs orders.total).
 CREATE TABLE IF NOT EXISTS payments (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   order_id INT UNSIGNED NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
-  method VARCHAR(30) NULL,
-  reference VARCHAR(100) NULL,
+  method VARCHAR(30) NULL,                                -- bonifico, carta, contanti...
+  reference VARCHAR(100) NULL,                            -- CRO, id transazione
   received_at DATETIME NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -368,10 +353,10 @@ CREATE TABLE IF NOT EXISTS invoices (
     client_id INT UNSIGNED NOT NULL,
     order_id INT UNSIGNED NULL,
     user_id INT UNSIGNED NOT NULL,
+    document_type CHAR(4) NOT NULL DEFAULT 'TD01',        -- TipoDocumento: TD01, TD07, TD17, TD18, TD19
     document_number VARCHAR(50) NOT NULL,
-    document_type VARCHAR(8) NULL,                         -- Codice TipoDocumento FatturaPA (TD01, TD07, TD16, TD17, TD18, TD19); NULL = derivato automaticamente
     issue_date DATE NOT NULL,
-    due_date DATE NOT NULL,
+    due_date DATE NULL,                                   -- NULL per le integrazioni TD17/18/19
     currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
     tax_regime VARCHAR(16) NOT NULL,                      -- RegimeFiscale FatturaPA (RF01, RF19...), validato da assets/data/regimi-fiscali.json
     total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -380,12 +365,14 @@ CREATE TABLE IF NOT EXISTS invoices (
     cassa_type CHAR(4) NULL,                              -- TipoCassa FatturaPA (TC01...TC22), NULL = nessuna cassa
     cassa_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,     -- ImportoContributoCassa (IVA sul contributo esclusa)
     is_paid BOOLEAN NOT NULL DEFAULT FALSE,               -- True se la fattura è stata saldata (pagamenti >= total + bollo + cassa_amount)
+    related_document_number VARCHAR(20) NULL,             -- TD17/18/19: numero della fattura del fornitore estero (DatiFattureCollegate)
+    related_document_date DATE NULL,                      -- TD17/18/19: data della fattura del fornitore estero
+    related_document_file VARCHAR(255) NULL,              -- TD17/18/19: copia archiviata in storage/invoices/originals/
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_invoices_document_number (document_number),
     KEY idx_invoices_order (order_id),
-    KEY idx_invoices_document_type (document_type),
     CONSTRAINT fk_invoices_client
         FOREIGN KEY (client_id)
         REFERENCES clients(id),
@@ -398,39 +385,13 @@ CREATE TABLE IF NOT EXISTS invoices (
         REFERENCES users(id)
 ) ENGINE=InnoDB;
 
--- Burn Rate Meter settings and expenses, isolated per user.
-CREATE TABLE IF NOT EXISTS burn_rate_settings (
-  user_id INT UNSIGNED NOT NULL,
-  initial_cash DECIMAL(12,2) NOT NULL DEFAULT 50000.00,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id),
-  CONSTRAINT fk_burn_rate_settings_user
-    FOREIGN KEY (user_id) REFERENCES users (id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS burn_rate_expenses (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id INT UNSIGNED NOT NULL,
-  description VARCHAR(255) NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  expense_date DATE NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_burn_rate_expenses_user_date (user_id, expense_date),
-  CONSTRAINT fk_burn_rate_expenses_user
-    FOREIGN KEY (user_id) REFERENCES users (id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- =====================================================================
 -- STORICO CRM
 -- =====================================================================
 
 -- Timeline: chiamate, email, meeting, note, cambi di stato, prossime azioni.
--- order_id / quote_id collegano l'evento al documento che l'ha causato.
+-- order_id / quote_id collegano l'evento al documento che l'ha causato
+-- (es. la promozione a customer punta all'ordine confermato).
 CREATE TABLE IF NOT EXISTS crm_activities (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   client_id INT UNSIGNED NOT NULL,
@@ -441,7 +402,7 @@ CREATE TABLE IF NOT EXISTS crm_activities (
   subject VARCHAR(255) NULL,
   body TEXT NULL,
   occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  next_action_at DATETIME NULL,
+  next_action_at DATETIME NULL,                           -- promemoria follow-up
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_act_client (client_id, occurred_at),
@@ -449,23 +410,30 @@ CREATE TABLE IF NOT EXISTS crm_activities (
   KEY idx_act_order (order_id),
   KEY idx_act_quote (quote_id),
   CONSTRAINT fk_act_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
-  CONSTRAINT fk_act_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-  CONSTRAINT fk_act_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL,
-  CONSTRAINT fk_act_quote FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE SET NULL
+  CONSTRAINT fk_act_user   FOREIGN KEY (user_id)   REFERENCES users (id)   ON DELETE CASCADE,
+  CONSTRAINT fk_act_order  FOREIGN KEY (order_id)  REFERENCES orders (id)  ON DELETE SET NULL,
+  CONSTRAINT fk_act_quote  FOREIGN KEY (quote_id)  REFERENCES quotes (id)  ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- Current Nota Spese schema, including uploaded receipt paths.
-CREATE TABLE IF NOT EXISTS expenses (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id INT UNSIGNED NOT NULL,
-  expense_date DATE NOT NULL,
-  description VARCHAR(255) NOT NULL,
-  category ENUM('Cibo','Trasporti','Software','Altro') NOT NULL,
-  amount DECIMAL(12,2) NOT NULL,
-  receipt_path VARCHAR(255) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_expenses_user_date (user_id, expense_date),
-  CONSTRAINT fk_expenses_user FOREIGN KEY (user_id) REFERENCES users (id)
-    ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- =====================================================================
+-- RIFERIMENTO: promozione a customer (da eseguire nel servizio, in transazione)
+-- =====================================================================
+-- Chiamata alla conferma manuale dell'ordine. Idempotente: se il cliente è già
+-- 'customer' non tocca nulla (affected rows = 0).
+--
+--   UPDATE clients
+--      SET crm_status = 'customer',
+--          converted_at = NOW(),
+--          lost_reason = NULL
+--    WHERE id = :client_id AND user_id = :user_id
+--      AND crm_status IN ('lead','prospect','lost');
+--
+-- Se affected rows = 1, nella STESSA transazione:
+--
+--   INSERT INTO crm_activities (client_id, order_id, user_id, type, subject, body)
+--   VALUES (:client_id, :order_id, :user_id, 'status_change',
+--           'Promosso a customer', 'Da <stato precedente> a customer (ordine <order_number>)');
+--
+-- Transizioni ammesse: lead->prospect, lead->customer, prospect->customer,
+-- lead|prospect->lost, lost->customer (solo via ordine confermato).
+-- L'annullamento di un ordine NON riporta indietro lo stato del cliente.

@@ -33,11 +33,27 @@ const initializeFatturazione = () => {
     const invoiceDocumentTypeInput = document.getElementById('invoice-document-type');
     const invoiceTypeInput = document.getElementById('invoice-type');
     let currentClientMode = 'select';
+    // Integrazione/autofattura TD17, TD18, TD19: il tipo è in #invoice-document-type (scritto dalla parte 1).
+    // La configurazione (nature ammesse, etichette, riferimenti normativi) arriva dal server in data-config.
+    let integrationConfig = {};
+    try {
+        integrationConfig = JSON.parse(invoiceDocumentTypeInput?.dataset.config || '{}');
+    } catch (error) {
+        console.error(error);
+    }
+    const integrationType = () => {
+        const value = invoiceDocumentTypeInput?.value || '';
+        return integrationConfig.types?.[value] ? value : '';
+    };
+    const isIntegration = () => integrationType() !== '';
+    const allowedIntegrationNatures = () => (isIntegration() ? (integrationConfig.types[integrationType()].natures || []) : null);
     // Le regole del regime (catalogo regimi-fiscali.json) arrivano dal server come attributi data-* dell'input nascosto.
-    const regimeWithoutVat = () => regimeSelect?.dataset.appliesVat === '0';
+    // Nelle integrazioni TD17/18/19 l'IVA va sempre integrata dal cessionario (anche in regime forfettario) e
+    // ritenuta/cassa/bollo non si applicano: le regole del regime del cedente non valgono.
+    const regimeWithoutVat = () => !isIntegration() && regimeSelect?.dataset.appliesVat === '0';
     const regimeFixedNature = () => regimeSelect?.dataset.fixedNature || '';
     const regimeDefaultReference = () => regimeSelect?.dataset.defaultReference || '';
-    const regimeNoWithholding = () => regimeSelect?.dataset.withholding === '0';
+    const regimeNoWithholding = () => isIntegration() || regimeSelect?.dataset.withholding === '0';
     const beniForm = document.getElementById('beni-servizi-form');
     const documentDate = document.getElementById('data-documento');
     const dueDate = document.getElementById('data-scadenza');
@@ -62,6 +78,7 @@ const initializeFatturazione = () => {
     const invoiceWorkflowStatus = document.getElementById('invoice-workflow-status');
     const invoiceTimer = document.getElementById('invoice-timer');
     let invoiceNumberRequest = 0;
+    let numberYear = new Date().getFullYear();
     let invoiceTimerStartedAt = null;
     let invoiceTimerInterval = null;
     let invoiceTimerId = null;
@@ -166,6 +183,7 @@ const initializeFatturazione = () => {
     const generateInvoiceNumber = () => {
         if (!documentNumberInput) return;
         const requestId = ++invoiceNumberRequest;
+        numberYear = Number((documentDate?.value || '').slice(0, 4)) || new Date().getFullYear();
         const csrfToken = invoiceForm?.querySelector('[name="csrf_token"]')?.value || '';
         documentNumberInput.disabled = true;
         documentNumberInput.value = '';
@@ -177,7 +195,11 @@ const initializeFatturazione = () => {
                 'X-Requested-With': 'XMLHttpRequest',
             },
             credentials: 'same-origin',
-            body: new URLSearchParams({ csrf_token: csrfToken })
+            body: new URLSearchParams({
+                csrf_token: csrfToken,
+                document_type: invoiceDocumentTypeInput?.value || 'AUTO',
+                issue_date: documentDate?.value || ''
+            })
         })
             .then((response) => {
                 if (!response.ok) throw new Error('Impossibile generare il numero documento');
@@ -269,10 +291,38 @@ const initializeFatturazione = () => {
                 content.className = 'invoice-entry__details';
                 const metadata = document.createElement('dl');
                 metadata.className = 'invoice-metadata';
-                addDetail(metadata, 'Regime fiscale', invoice.tax_regime_label || invoice.tax_regime);
+                const documentTypeLabels = {
+                    TD01: 'Fattura',
+                    TD07: 'Fattura semplificata',
+                    TD17: 'TD17 – Integrazione/autofattura servizi dall’estero',
+                    TD18: 'TD18 – Integrazione acquisto beni intracomunitari',
+                    TD19: 'TD19 – Integrazione/autofattura acquisto beni (art. 17 c.2)'
+                };
+                const isIntegrationInvoice = ['TD17', 'TD18', 'TD19'].includes(invoice.document_type);
+                if (invoice.document_type) {
+                    addDetail(metadata, 'Tipo documento', documentTypeLabels[invoice.document_type] || invoice.document_type);
+                }
+                if (!isIntegrationInvoice) {
+                    addDetail(metadata, 'Regime fiscale', invoice.tax_regime_label || invoice.tax_regime);
+                }
                 addDetail(metadata, 'Data documento', formatDate(invoice.issue_date));
-                addDetail(metadata, 'Termine pagamento', formatDate(invoice.due_date));
-                addDetail(metadata, 'Stato pagamento', invoice.is_paid ? 'Pagata' : 'Da pagare');
+                if (isIntegrationInvoice) {
+                    addDetail(
+                        metadata,
+                        'Fattura del fornitore estero',
+                        `${invoice.related_document_number || '—'} del ${formatDate(invoice.related_document_date)}`
+                    );
+                    if (invoice.related_document_file) {
+                        addDetail(
+                            metadata,
+                            'Documento allegato',
+                            invoice.related_document_file.split('/').pop() || 'Allegato'
+                        );
+                    }
+                } else {
+                    addDetail(metadata, 'Termine pagamento', formatDate(invoice.due_date));
+                    addDetail(metadata, 'Stato pagamento', invoice.is_paid ? 'Pagata' : 'Da pagare');
+                }
                 if (invoice.bollo_to_client && Number(invoice.bollo) > 0) {
                     addDetail(metadata, 'Marca da bollo addebitata', displayValue(invoice.bollo, invoice.currency));
                 }
@@ -364,6 +414,15 @@ const initializeFatturazione = () => {
                 xmlButton.target = '_blank';
 
                 actionsDiv.append(pdfButton, xmlButton);
+                if (isIntegrationInvoice && invoice.related_document_file) {
+                    const originalButton = document.createElement('a');
+                    originalButton.className = 'profile-modal__save';
+                    originalButton.style.textDecoration = 'none';
+                    originalButton.textContent = 'Scarica allegato fornitore';
+                    originalButton.href = `/invoice/download-invoice.php?id=${invoice.id}&format=original`;
+                    originalButton.target = '_blank';
+                    actionsDiv.append(originalButton);
+                }
                 content.append(actionsDiv);
 
                 entry.append(content);
@@ -393,11 +452,8 @@ const initializeFatturazione = () => {
             if (!button) return;
             if (button.dataset.invoiceAction === 'browse') {
                 showView('browse');
-                if (!invoicesLoaded || button.dataset.refreshInvoices === 'true') {
-                    button.dataset.refreshInvoices = 'false';
-                    invoicesLoaded = false;
-                    loadInvoices();
-                }
+                invoicesLoaded = false;
+                loadInvoices();
                 return;
             }
             if (button.dataset.invoiceAction === 'create') {
@@ -476,6 +532,24 @@ const initializeFatturazione = () => {
         invoiceForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             event.stopPropagation();
+
+            if (isIntegration()) {
+                const originalFile = document.getElementById('orig-invoice-file')?.files?.[0];
+                const maxBytes = Number(integrationConfig.maxBytes) || 3 * 1024 * 1024;
+                let problem = '';
+                if (!originalFile) {
+                    problem = 'Allega la copia della fattura del fornitore estero.';
+                } else if (originalFile.size > maxBytes) {
+                    problem = 'La fattura allegata supera 3 MB.';
+                } else if (!/\.(pdf|xml|jpe?g|png)$/i.test(originalFile.name)) {
+                    problem = 'Formato dell’allegato non ammesso (PDF, XML, JPG, PNG).';
+                }
+                if (problem) {
+                    invoiceSaveStatus.textContent = problem;
+                    return;
+                }
+            }
+
             saveInvoiceButton.disabled = true;
             invoiceSaveStatus.textContent = 'Salvataggio fattura...';
 
@@ -496,7 +570,8 @@ const initializeFatturazione = () => {
 
                 stopInvoiceTimer();
                 invoiceTimerId = null;
-                invoiceSaveStatus.textContent = `Fattura salvata. XML: ${data.xml_file}`;
+                invoiceSaveStatus.textContent = `Fattura salvata. XML: ${data.xml_file}`
+                    + (Array.isArray(data.warnings) && data.warnings.length ? ` – Attenzione: ${data.warnings.join(' ')}` : '');
                 saveInvoiceButton.textContent = 'Fattura salvata';
                 const browseButton = document.querySelector('[data-invoice-action="browse"]');
                 if (browseButton) browseButton.dataset.refreshInvoices = 'true';
@@ -519,6 +594,10 @@ const initializeFatturazione = () => {
 
         documentDate.addEventListener('input', updateDueDateMinimum);
         documentDate.addEventListener('change', updateDueDateMinimum);
+        documentDate.addEventListener('change', () => {
+            const year = Number((documentDate.value || '').slice(0, 4));
+            if (year && year !== numberYear) generateInvoiceNumber();
+        });
         updateDueDateMinimum();
     }
 
@@ -542,12 +621,19 @@ const initializeFatturazione = () => {
         // ---- Natura IVA (catalogo: /assets/data/natura.json) ----
         let natureCatalog = [];
         // Riempie un select con le Nature ammesse. Con restricted=true (regime senza IVA) resta solo la Natura imposta dal regime.
-        const fillNatureOptions = (select, { restricted, placeholder = '' }) => {
+        const fillNatureOptions = (select, { restricted, placeholder = '', only = null }) => {
             const previous = select.value;
             const fixed = regimeFixedNature();
             let entries = restricted ? natureCatalog.filter((entry) => entry.value === fixed) : natureCatalog;
             if (restricted && entries.length === 0 && fixed) {
                 entries = [{ value: fixed, name: fixed }];
+            }
+            if (only) {
+                // Integrazioni TD17/18/19: solo le Nature ammesse per il tipo documento.
+                entries = only.map((code) => ({
+                    value: code,
+                    name: integrationConfig.natureLabels?.[code] || natureCatalog.find((entry) => entry.value === code)?.name || code
+                }));
             }
             const options = entries.map((entry) => new Option(`${entry.value} – ${entry.name}`, entry.value));
             if (!restricted) options.unshift(new Option(placeholder || 'Seleziona la Natura', ''));
@@ -897,6 +983,7 @@ const initializeFatturazione = () => {
                 const natureSelect = row.querySelector('[data-summary-nature]');
                 const natureValue = row.querySelector('[data-summary-nature-value]');
                 const noVatRegime = regimeWithoutVat();
+                const integration = isIntegration();
                 const itemTitle = description || `Beni e Servizi ${index + 1}`;
                 row.dataset.vatSummaryId = summaryId;
                 row.querySelector('[data-vat-summary-title]').textContent = `Riepilogo importi per aliquota - ${itemTitle}`;
@@ -915,15 +1002,27 @@ const initializeFatturazione = () => {
                     natureSelect.value = regimeFixedNature();
                     natureSelect.disabled = true;
                 } else {
-                    fillNatureOptions(natureSelect, { restricted: false });
+                    fillNatureOptions(natureSelect, { restricted: false, only: allowedIntegrationNatures() });
                     natureSelect.value = previous?.nature || '';
                     natureSelect.disabled = false;
+                    natureSelect.required = integration;
                 }
                 natureValue.value = natureSelect.value;
                 row.querySelector('[name="spese_accessorie[]"]').value = previous?.expenses || '0.00';
-                row.querySelector('[name="spese_accessorie_non_imponibili[]"]').value = previous?.nonTaxableExpenses || '0.00';
-                const defaultReference = noVatRegime && rate === 0 ? regimeDefaultReference() : '';
-                const keepPrevious = previous?.reference && previous.reference !== regimeDefaultReference();
+                row.querySelector('[name="spese_accessorie_non_imponibili[]"]').value = integration ? '0.00' : (previous?.nonTaxableExpenses || '0.00');
+                // Spese escluse ex art. 15 (Natura N1): non previste nelle integrazioni.
+                row.querySelectorAll('[data-integration-hide]').forEach((element) => {
+                    element.hidden = integration;
+                    element.style.display = integration ? 'none' : '';
+                    if (element.tagName === 'INPUT') element.disabled = integration;
+                });
+                let defaultReference = noVatRegime && rate === 0 ? regimeDefaultReference() : '';
+                let keepPrevious = previous?.reference && previous.reference !== regimeDefaultReference();
+                if (integration) {
+                    // Il riferimento normativo serve solo con Natura (aliquota 0%): precompilato in base al codice scelto.
+                    defaultReference = rate === 0 ? (integrationConfig.references?.[natureValue.value] || '') : '';
+                    keepPrevious = rate === 0 && Boolean(previous?.reference);
+                }
                 row.querySelector('[name="riferimento_normativo[]"]').value = keepPrevious ? previous.reference : defaultReference;
                 row.querySelectorAll('[data-summary-label]').forEach((label) => {
                     label.htmlFor = `${rowId}-${label.dataset.summaryLabel}`;
@@ -966,8 +1065,15 @@ const initializeFatturazione = () => {
         });
         summaryList?.addEventListener('change', (event) => {
             if (!event.target.matches('[data-summary-nature]')) return;
-            event.target.closest('[data-vat-summary-row]')
-                .querySelector('[data-summary-nature-value]').value = event.target.value;
+            const summaryRow = event.target.closest('[data-vat-summary-row]');
+            summaryRow.querySelector('[data-summary-nature-value]').value = event.target.value;
+            if (isIntegration()) {
+                const referenceInput = summaryRow.querySelector('[name="riferimento_normativo[]"]');
+                const automatic = Object.values(integrationConfig.references || {});
+                if (referenceInput.value === '' || automatic.includes(referenceInput.value)) {
+                    referenceInput.value = integrationConfig.references?.[event.target.value] || '';
+                }
+            }
         });
         const updateTotal = (row) => {
             const quantity = Number(row.querySelector('[name="quantita[]"]').value) || 0;
@@ -986,15 +1092,19 @@ const initializeFatturazione = () => {
 
         const updateIva = () => {
             const noVatRegime = regimeWithoutVat();
+            const integration = isIntegration();
             beniForm.querySelectorAll('select[name="aliquota_iva[]"]').forEach((ivaSelect) => {
                 const row = ivaSelect.closest('[data-beni-row]');
                 ivaSelect.querySelectorAll('option').forEach((option) => {
-                    option.disabled = noVatRegime ? option.value !== '0' : option.value === '0';
-                    option.hidden = !noVatRegime && option.value === '0';
+                    // Fatture di vendita ordinarie: 0% solo nei regimi senza IVA. Integrazioni: tutte le aliquote,
+                    // con Natura obbligatoria se si sceglie 0% (casi particolari: non soggetta, non imponibile, esente).
+                    const zeroBlocked = !noVatRegime && !integration && option.value === '0';
+                    option.disabled = noVatRegime ? option.value !== '0' : zeroBlocked;
+                    option.hidden = zeroBlocked;
                 });
 
                 const preferred = row.dataset.preferredRate;
-                const preferredIsValid = ['4', '5', '10', '22'].includes(preferred);
+                const preferredIsValid = (integration ? ['0', '4', '5', '10', '22'] : ['4', '5', '10', '22']).includes(preferred);
                 ivaSelect.value = noVatRegime ? '0' : (preferredIsValid ? preferred : '22');
                 ivaSelect.disabled = noVatRegime;
 
@@ -1074,10 +1184,112 @@ const initializeFatturazione = () => {
                 updateSummary();
             })
             .catch((error) => console.error(error));
+        // ---- Integrazioni/autofatture TD17, TD18, TD19 ----
+        const integrationFields = document.getElementById('integration-fields');
+        const integrationHint = document.getElementById('integration-hint');
+        const integrationRegimeNote = document.getElementById('integration-regime-note');
+        const paymentBlock = document.getElementById('pagamento-form');
+        const dueDateLabel = document.querySelector('label[for="data-scadenza"]');
+        const originalDate = document.getElementById('orig-invoice-date');
+
+        const updateIntegrationHint = () => {
+            if (!integrationHint) return;
+            const typeCode = integrationType();
+            if (!typeCode) {
+                integrationHint.textContent = '';
+                return;
+            }
+            let text = integrationConfig.types[typeCode].hint || '';
+            const [year, month] = (documentDate?.value || '').split('-').map(Number);
+            if (year && month) {
+                // Trasmissione allo SdI entro il 15 del mese successivo a quello di ricezione/effettuazione.
+                const deadline = new Date(year, month, 15);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                text += ` Da trasmettere allo SdI entro il ${deadline.toLocaleDateString('it-IT')}`
+                    + (today > deadline ? ' (termine scaduto: trasmetti il prima possibile).' : '.');
+            }
+            integrationHint.textContent = text;
+        };
+
+        // La data della fattura estera non può essere successiva alla data del documento (errore SdI 00418).
+        const syncOriginalDateLimits = () => {
+            if (originalDate) originalDate.max = documentDate?.value || '';
+            if (documentDate) {
+                if (isIntegration() && originalDate?.value) documentDate.min = originalDate.value;
+                else documentDate.removeAttribute('min');
+            }
+        };
+
+        const applyDocumentMode = ({ regenerate = true } = {}) => {
+            const integration = isIntegration();
+
+            // Pagamento: nelle integrazioni il documento non contiene DatiPagamento né scadenza.
+            if (paymentBlock) {
+                paymentBlock.hidden = integration;
+                paymentBlock.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.disabled = integration;
+                });
+            }
+            if (dueDate) {
+                dueDate.disabled = integration;
+                dueDate.hidden = integration;
+            }
+            if (dueDateLabel) dueDateLabel.hidden = integration;
+
+            // Cassa previdenziale: non applicabile. Bollo e ritenuta si nascondono da soli (vedi regimeNoWithholding / updateBolloVisibility).
+            if (cassaForm) {
+                cassaForm.hidden = integration;
+                if (integration && cassaSelect) cassaSelect.value = '';
+            }
+
+            // Importi sempre in euro (conversione al cambio del giorno di effettuazione).
+            if (currencySelect) {
+                if (integration) {
+                    currencySelect.value = 'EUR';
+                    currencySelect.disabled = true;
+                } else if (currencySelect.options.length > 1) {
+                    currencySelect.disabled = false;
+                }
+            }
+
+            if (integrationFields) {
+                integrationFields.hidden = !integration;
+                integrationFields.querySelectorAll('input').forEach((field) => {
+                    field.disabled = !integration;
+                    field.required = integration;
+                });
+            }
+            if (integrationRegimeNote) integrationRegimeNote.hidden = !integration;
+
+            // Le aliquote scelte in precedenza non valgono più nel nuovo contesto.
+            beniForm.querySelectorAll('[data-beni-row]').forEach((row) => {
+                delete row.dataset.preferredRate;
+            });
+            syncOriginalDateLimits();
+            updateIntegrationHint();
+            updateIva();
+            updateRitenuta();
+            updateBolloVisibility();
+            updateInvoiceType();
+            if (regenerate) generateInvoiceNumber();
+        };
+
+        // Il tipo documento lo sceglie la parte 1: ricalcola quando cambia e ogni volta che il modulo viene mostrato.
+        bindDocument('invoice-integration-type-change', 'invoice:document-type-change', () => applyDocumentMode());
+        bindDocument('invoice-integration-billing-shown', 'invoice:billing-shown', () => applyDocumentMode());
+        documentDate?.addEventListener('input', () => {
+            updateIntegrationHint();
+            syncOriginalDateLimits();
+        });
+        originalDate?.addEventListener('input', syncOriginalDateLimits);
+        invoiceForm?.addEventListener('reset', () => setTimeout(() => applyDocumentMode(), 0));
+
         regimeSelect.addEventListener('change', updateIva);
         beniForm.querySelectorAll('[data-beni-row]').forEach(updateTotal);
         updateIva();
         updateSummary();
+        applyDocumentMode({ regenerate: false });
         bindDocument('invoice-new-beni', 'invoice:new', () => {
             const rows = [...beniForm.querySelectorAll('[data-beni-row]')];
             rows.slice(1).forEach((row) => row.remove());
@@ -1212,6 +1424,8 @@ const initializeFatturazione = () => {
     const showBilling = () => {
         clientCompletion.hidden = true;
         billingForm.hidden = false;
+        // Il modulo ricalcola regole e numerazione in base al tipo documento scelto nella parte 1.
+        document.dispatchEvent(new CustomEvent('invoice:billing-shown'));
     };
 
     const filterClientsByMode = (client) => {
@@ -1254,7 +1468,8 @@ const initializeFatturazione = () => {
         invoiceDocumentTypeInput.value = isAutofattura ? 'TD16' : '';
         populateClients();
         updateUseClientButton();
-        updateInvoiceType();
+        // updateInvoiceType() vive in un altro blocco (non è visibile qui): si usa l'evento già ascoltato da quel blocco.
+        document.dispatchEvent(new CustomEvent('invoice:document-type-change'));
     };
 
     const populateClients = (clientList = allClients) => {

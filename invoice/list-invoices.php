@@ -34,9 +34,10 @@ if ($userId === null) {
 
 try {
 	$statement = $pdo->prepare(
-		' SELECT i.id, i.document_number, i.issue_date, i.due_date, i.currency,
-		        i.tax_regime, i.total, i.bollo, i.bollo_to_client, i.is_paid, c.client_type, c.company_name,
-		        c.first_name, c.last_name
+		' SELECT i.id, i.document_number, i.document_type, i.issue_date, i.due_date, i.currency,
+		        i.tax_regime, i.total, i.bollo, i.bollo_to_client, i.is_paid,
+		        i.related_document_number, i.related_document_date, i.related_document_file,
+		        c.client_type, c.company_name, c.first_name, c.last_name
 		 FROM invoices i
 		 INNER JOIN clients c ON c.id = i.client_id
 		 WHERE i.user_id = :user_id
@@ -66,6 +67,10 @@ try {
 		$invoice['is_paid'] = (bool) $invoice['is_paid'];
 		$invoice['bollo_to_client'] = (bool) $invoice['bollo_to_client'];
 		$invoice['tax_regime_label'] = fiscalRegimeLabel((string) $invoice['tax_regime']);
+		$invoice['document_type'] = (string) ($invoice['document_type'] ?? 'TD01');
+		$invoice['related_document_number'] = (string) ($invoice['related_document_number'] ?? '');
+		$invoice['related_document_date'] = (string) ($invoice['related_document_date'] ?? '');
+		$invoice['related_document_file'] = (string) ($invoice['related_document_file'] ?? '');
 		
 		// Salvaguardia formato data in gg-mm-aaaa per l'output se utile
 		if (!empty($invoice['issue_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $invoice['issue_date'])) {

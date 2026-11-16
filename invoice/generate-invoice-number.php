@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     require_once __DIR__ . '/../includes/auth.php';
+    require_once __DIR__ . '/../includes/invoice-integration.php';
 } catch (Throwable $exception) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Errore di avvio del servizio: ' . $exception->getMessage()]);
@@ -30,51 +31,41 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
     exit;
 }
 
+// Tipo documento: '' / AUTO / TD01 / TD07 / TD16 = fatture di vendita e TD16 (sezionale FT);
+// TD17 / TD18 / TD19 = integrazioni di acquisti dall'estero (sezionale dedicato INT, numerazione distinta).
+$documentType = strtoupper(trim((string) ($_POST['document_type'] ?? 'AUTO')));
+if (!in_array($documentType, ['', 'AUTO', 'TD01', 'TD07', 'TD16'], true) && !integrationIsType($documentType)) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Tipo documento non valido']);
+    exit;
+}
+
+// La numerazione riparte da 1 a ogni anno solare della DATA DOCUMENTO (se non indicata, l'anno corrente).
+$issueDate = DateTimeImmutable::createFromFormat('!Y-m-d', trim((string) ($_POST['issue_date'] ?? '')));
+$year = $issueDate !== false ? (int) $issueDate->format('Y') : (int) date('Y');
+$series = invoiceSeriesFor($documentType);
+
 try {
-    // Avviamo una transazione per gestire il contatore in modo sicuro e atomico
-    $pdo->beginTransaction();
-
-    $currentYear = (int) date('Y');
-    $series = 'FT'; // Prefisso della serie fatture conforme agli standard
-
-    // Selezioniamo e blocchiamo la riga del contatore per l'anno corrente dalla nuova tabella
-    $stmt = $pdo->prepare('SELECT last_number FROM invoice_counters WHERE series = :series AND year = :year FOR UPDATE');
-    $stmt->execute([':series' => $series, ':year' => $currentYear]);
+    // Il numero viene solo PROPOSTO: il contatore avanza al salvataggio della fattura (process-invoice.php).
+    // Così aprire o cambiare il modulo, o abbandonarlo, non lascia salti nella numerazione.
+    $stmt = $pdo->prepare('SELECT last_number FROM invoice_counters WHERE series = :series AND year = :year');
+    $stmt->execute([':series' => $series, ':year' => $year]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $nextNumber = $row === false ? 1 : (int) $row['last_number'] + 1;
 
-    if ($row === false) {
-        // Se non esiste ancora un contatore per quest'anno, lo inizializziamo a 0
-        $insert = $pdo->prepare('INSERT INTO invoice_counters (series, year, last_number) VALUES (:series, :year, 0)');
-        $insert->execute([':series' => $series, ':year' => $currentYear]);
-        $nextNumber = 1;
-    } else {
-        $nextNumber = (int) $row['last_number'] + 1;
-    }
-
-    // Aggiorniamo il contatore nel database con il nuovo numero progressivo
-    $update = $pdo->prepare('UPDATE invoice_counters SET last_number = :next_number WHERE series = :series AND year = :year');
-    $update->execute([':next_number' => $nextNumber, ':series' => $series, ':year' => $currentYear]);
-
-    // Formato conforme: es. FT-2026-0001 (rispetta i vincoli dello SdI)
-    $documentNumber = sprintf('%s-%d-%04d', $series, $currentYear, $nextNumber);
+    // Formato conforme: es. FT-2026-0001, INT-2026-0001 (rispetta i vincoli dello SdI)
+    $documentNumber = sprintf('%s-%d-%04d', $series, $year, $nextNumber);
 
     $storageDirectory = dirname(__DIR__) . '/storage/invoices';
     if (is_file($storageDirectory . '/' . $documentNumber . '.xml')) {
         throw new RuntimeException('Il file XML per questo numero documento esiste già');
     }
 
-    // Confermiamo la transazione sul database
-    $pdo->commit();
-
     echo json_encode([
         'success' => true,
         'document_number' => $documentNumber,
     ]);
 } catch (Throwable $exception) {
-    // In caso di errore annulliamo la transazione
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
     http_response_code(503);
     echo json_encode(['success' => false, 'message' => 'Impossibile generare un numero progressivo valido: ' . $exception->getMessage()]);
 }

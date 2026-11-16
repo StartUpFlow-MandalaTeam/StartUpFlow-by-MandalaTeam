@@ -16,7 +16,7 @@ $userId = currentUserId();
 $invoiceId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $format = strtolower(trim((string) (filter_input(INPUT_GET, 'format', FILTER_DEFAULT) ?? 'xml')));
 
-if (!$invoiceId || !in_array($format, ['xml', 'pdf'], true)) {
+if (!$invoiceId || !in_array($format, ['xml', 'pdf', 'original'], true)) {
     http_response_code(400);
     exit('Parametri non validi');
 }
@@ -55,6 +55,26 @@ try {
     $documentNumber = (string) $invoice['document_number'];
     $storageDirectory = __DIR__ . '/../storage/invoices';
     $xmlPath = $storageDirectory . '/' . $documentNumber . '.xml';
+
+    if ($format === 'original') {
+        $relativePath = (string) ($invoice['related_document_file'] ?? '');
+        if ($relativePath === '') {
+            http_response_code(404);
+            exit('Documento allegato non disponibile');
+        }
+        $fullPath = $storageDirectory . '/' . $relativePath;
+        if (!is_file($fullPath)) {
+            http_response_code(404);
+            exit('File del documento originale non trovato nello storage');
+        }
+        $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+        $filename = basename($fullPath);
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . (string) filesize($fullPath));
+        readfile($fullPath);
+        exit;
+    }
 
     if ($format === 'xml') {
         if (!is_file($xmlPath)) {
@@ -108,12 +128,21 @@ try {
                 }
             }
         }
+        $documentType = strtoupper(trim((string) ($invoice['document_type'] ?? 'TD01')));
+        $isSimplified = false;
+        $isIntegration = false;
         if (is_file($xmlPath)) {
             $documentXml = new DOMDocument();
             if (@$documentXml->load($xmlPath, LIBXML_NONET | LIBXML_NOBLANKS)) {
                 $documentTypeNode = $documentXml->getElementsByTagName('TipoDocumento')->item(0);
-                $isSimplified = $documentTypeNode instanceof DOMElement
-                    && trim($documentTypeNode->textContent) === 'TD07';
+                if ($documentTypeNode instanceof DOMElement) {
+                    $xmlDocType = trim($documentTypeNode->textContent);
+                    if ($xmlDocType !== '') {
+                        $documentType = $xmlDocType;
+                    }
+                }
+                $isSimplified = ($documentType === 'TD07');
+                $isIntegration = in_array($documentType, ['TD17', 'TD18', 'TD19'], true);
                 $paymentInfoNode = $documentXml->getElementsByTagName('DatiPagamento')->item(0);
                 if ($paymentInfoNode instanceof DOMElement) {
                     $termsNode = $paymentInfoNode->getElementsByTagName('CondizioniPagamento')->item(0);
@@ -411,14 +440,24 @@ try {
 
             <div class="header">
                 <div>
-                    <h1>Fattura <?php echo $isSimplified ? 'semplificata' : 'ordinaria'; ?>
-                        <span class="document-type"><?php echo $isSimplified ? 'TD07' : 'TD01'; ?></span>
+                    <h1><?php echo htmlspecialchars($isIntegration ? 'Integrazione / Autofattura' : ($isSimplified ? 'Fattura semplificata' : 'Fattura ordinaria'), ENT_QUOTES, 'UTF-8'); ?>
+                        <span class="document-type"><?php echo htmlspecialchars($documentType, ENT_QUOTES, 'UTF-8'); ?></span>
                     </h1>
                     <div style="display: flex; flex-direction: row; gap: 1rem;">
                         <p><strong>N. Documento:</strong> <?php echo htmlspecialchars($documentNumber, ENT_QUOTES, 'UTF-8'); ?></p>
                         <p><strong>Data:</strong> <?php echo htmlspecialchars(!empty($invoice['issue_date']) ? date('d-m-Y', strtotime($invoice['issue_date'])) : '', ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><strong>Termine di Pagamento:</strong> <?php echo htmlspecialchars(!empty($invoice['due_date']) ? date('d-m-Y', strtotime($invoice['due_date'])) : '', ENT_QUOTES, 'UTF-8'); ?></p>
+                        <?php if (!$isIntegration): ?>
+                            <p><strong>Termine di Pagamento:</strong> <?php echo htmlspecialchars(!empty($invoice['due_date']) ? date('d-m-Y', strtotime($invoice['due_date'])) : '', ENT_QUOTES, 'UTF-8'); ?></p>
+                        <?php endif; ?>
                     </div>
+                    <?php if ($isIntegration && !empty($invoice['related_document_number'])): ?>
+                        <p style="font-size: 0.78rem; margin: 0.3rem 0;">
+                            <strong>Riferimento fattura estera:</strong> N. <?php echo htmlspecialchars($invoice['related_document_number'], ENT_QUOTES, 'UTF-8'); ?>
+                            <?php if (!empty($invoice['related_document_date'])): ?>
+                                del <?php echo htmlspecialchars(date('d-m-Y', strtotime($invoice['related_document_date'])), ENT_QUOTES, 'UTF-8'); ?>
+                            <?php endif; ?>
+                        </p>
+                    <?php endif; ?>
                     <?php if ($paymentMethod !== '' || $paymentTerms !== ''): ?>
                         <p style="font-size: 0.74rem; margin: 0.2rem 0;">
                             <strong>Pagamento:</strong>
@@ -440,25 +479,47 @@ try {
             <div class="parties">
                 <div>
                     <h3>Cedente (Prestatore):</h3>
-                    <p><strong><?php echo htmlspecialchars($supplierName !== '' ? $supplierName : 'Cedente', ENT_QUOTES, 'UTF-8'); ?></strong><br>
-                    <?php if (!empty($supplierProfile['address'])): ?>
-                        <?php echo htmlspecialchars($supplierProfile['address'] . (!empty($supplierProfile['street_number']) ? ' ' . $supplierProfile['street_number'] : ''), ENT_QUOTES, 'UTF-8'); ?><br>
-                        <?php echo htmlspecialchars(($supplierProfile['postal_code'] ?? '') . ' ' . ($supplierProfile['city'] ?? '') . ' (' . ($supplierProfile['province'] ?? '') . ')', ENT_QUOTES, 'UTF-8'); ?><br>
+                    <?php if ($isIntegration): ?>
+                        <p><strong><?php echo htmlspecialchars($clientName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
+                        <?php if (!empty($invoice['address'])): ?>
+                            <?php echo htmlspecialchars($invoice['address'], ENT_QUOTES, 'UTF-8'); ?><br>
+                            <?php echo htmlspecialchars(($invoice['postal_code'] ?? '') . ' ' . ($invoice['city'] ?? '') . ' (' . ($invoice['state'] ?? '') . ') ' . ($invoice['country'] ?? ''), ENT_QUOTES, 'UTF-8'); ?><br>
+                        <?php endif; ?>
+                        <?php if (!empty($invoice['vat_number'])): ?>P.IVA / Identificativo estero: <?php echo htmlspecialchars($invoice['vat_number'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
+                        <?php if (!empty($invoice['cf'])): ?>C.F.: <?php echo htmlspecialchars($invoice['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
+                        </p>
+                    <?php else: ?>
+                        <p><strong><?php echo htmlspecialchars($supplierName !== '' ? $supplierName : 'Cedente', ENT_QUOTES, 'UTF-8'); ?></strong><br>
+                        <?php if (!empty($supplierProfile['address'])): ?>
+                            <?php echo htmlspecialchars($supplierProfile['address'] . (!empty($supplierProfile['street_number']) ? ' ' . $supplierProfile['street_number'] : ''), ENT_QUOTES, 'UTF-8'); ?><br>
+                            <?php echo htmlspecialchars(($supplierProfile['postal_code'] ?? '') . ' ' . ($supplierProfile['city'] ?? '') . ' (' . ($supplierProfile['province'] ?? '') . ')', ENT_QUOTES, 'UTF-8'); ?><br>
+                        <?php endif; ?>
+                        <?php if (!empty($supplierProfile['cf'])): ?>C.F.: <?php echo htmlspecialchars($supplierProfile['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
+                        <?php if (!empty($supplierProfile['vat_number'])): ?>P.IVA: <?php echo htmlspecialchars($supplierProfile['vat_number'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                        </p>
                     <?php endif; ?>
-                    <?php if (!empty($supplierProfile['cf'])): ?>C.F.: <?php echo htmlspecialchars($supplierProfile['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
-                    <?php if (!empty($supplierProfile['vat_number'])): ?>P.IVA: <?php echo htmlspecialchars($supplierProfile['vat_number'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
-                    </p>
                 </div>
                 <div>
-                    <h3>Cessionario (Cliente):</h3>
-                    <p><strong><?php echo htmlspecialchars($clientName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
-                    <?php if (!empty($invoice['address'])): ?>
-                        <?php echo htmlspecialchars($invoice['address'], ENT_QUOTES, 'UTF-8'); ?><br>
-                        <?php echo htmlspecialchars($invoice['postal_code'] . ' ' . $invoice['city'] . ' (' . ($invoice['state'] ?? '') . ')', ENT_QUOTES, 'UTF-8'); ?><br>
+                    <h3>Cessionario (Committente):</h3>
+                    <?php if ($isIntegration): ?>
+                        <p><strong><?php echo htmlspecialchars($supplierName !== '' ? $supplierName : 'Cessionario', ENT_QUOTES, 'UTF-8'); ?></strong><br>
+                        <?php if (!empty($supplierProfile['address'])): ?>
+                            <?php echo htmlspecialchars($supplierProfile['address'] . (!empty($supplierProfile['street_number']) ? ' ' . $supplierProfile['street_number'] : ''), ENT_QUOTES, 'UTF-8'); ?><br>
+                            <?php echo htmlspecialchars(($supplierProfile['postal_code'] ?? '') . ' ' . ($supplierProfile['city'] ?? '') . ' (' . ($supplierProfile['province'] ?? '') . ')', ENT_QUOTES, 'UTF-8'); ?><br>
+                        <?php endif; ?>
+                        <?php if (!empty($supplierProfile['cf'])): ?>C.F.: <?php echo htmlspecialchars($supplierProfile['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
+                        <?php if (!empty($supplierProfile['vat_number'])): ?>P.IVA: <?php echo htmlspecialchars($supplierProfile['vat_number'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                        </p>
+                    <?php else: ?>
+                        <p><strong><?php echo htmlspecialchars($clientName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
+                        <?php if (!empty($invoice['address'])): ?>
+                            <?php echo htmlspecialchars($invoice['address'], ENT_QUOTES, 'UTF-8'); ?><br>
+                            <?php echo htmlspecialchars($invoice['postal_code'] . ' ' . $invoice['city'] . ' (' . ($invoice['state'] ?? '') . ')', ENT_QUOTES, 'UTF-8'); ?><br>
+                        <?php endif; ?>
+                        <?php if (!empty($invoice['cf'])): ?>C.F.: <?php echo htmlspecialchars($invoice['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
+                        <?php if (!empty($invoice['vat_number'])): ?>P.IVA: <?php echo htmlspecialchars($invoice['vat_number'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                        </p>
                     <?php endif; ?>
-                    <?php if (!empty($invoice['cf'])): ?>C.F.: <?php echo htmlspecialchars($invoice['cf'], ENT_QUOTES, 'UTF-8'); ?><br><?php endif; ?>
-                    <?php if (!empty($invoice['vat_number'])): ?>P.IVA: <?php echo htmlspecialchars($invoice['vat_number'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
-                    </p>
                 </div>
             </div>
 
