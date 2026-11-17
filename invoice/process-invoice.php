@@ -831,7 +831,9 @@ try {
         $causaleText = $causale !== ''
             ? $causale
             : ($isIntegration
-                ? sprintf('Integrazione della fattura n. %s del %s emessa da %s, ai sensi dell\'art. 17 c.2 DPR 633/72', $originalNumber, (new DateTimeImmutable($originalDate))->format('d/m/Y'), $foreignName)
+                ? ($documentTypeInput === 'TD18'
+                    ? sprintf('Integrazione della fattura intracomunitaria n. %s del %s emessa da %s, ai sensi degli artt. 46 e 47 del D.L. 331/93', $originalNumber, (new DateTimeImmutable($originalDate))->format('d/m/Y'), $foreignName)
+                    : sprintf('Integrazione della fattura n. %s del %s emessa da %s, ai sensi dell\'art. 17 c.2 DPR 633/72', $originalNumber, (new DateTimeImmutable($originalDate))->format('d/m/Y'), $foreignName))
                 : 'Fattura n. ' . $documentNumber);
         foreach (mb_str_split($causaleText, 200) as $causaleChunk) {
             $documentInstance->addDescription($causaleChunk);

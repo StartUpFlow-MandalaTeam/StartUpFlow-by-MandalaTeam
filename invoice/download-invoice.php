@@ -440,7 +440,13 @@ try {
 
             <div class="header">
                 <div>
-                    <h1><?php echo htmlspecialchars($isIntegration ? 'Integrazione / Autofattura' : ($isSimplified ? 'Fattura semplificata' : 'Fattura ordinaria'), ENT_QUOTES, 'UTF-8'); ?>
+                    <h1><?php echo htmlspecialchars(
+                        $isIntegration
+                            ? ($documentType === 'TD18' ? 'Integrazione fattura intracomunitaria' : 'Integrazione / Autofattura')
+                            : ($isSimplified ? 'Fattura semplificata' : 'Fattura ordinaria'),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ); ?>
                         <span class="document-type"><?php echo htmlspecialchars($documentType, ENT_QUOTES, 'UTF-8'); ?></span>
                     </h1>
                     <div style="display: flex; flex-direction: row; gap: 1rem;">
@@ -556,12 +562,16 @@ try {
                 <?php endif; ?>
 
                 <p style="font-size: 0.7rem;">
+                    <?php if ($isIntegration): ?>
+                        Copia di cortesia - Documento non valido ai fini fiscali
+                    <?php else: ?>
                     L'invio della copia analogica (PDF) della fattura elettronica è un servizio di cortesia.
                     L’originale della fattura elettronica è disponibile nell’area riservata del sito web
                     Fatture e Corrispettivi dell’Agenzia delle entrate e costituisce l’unico documento
                     affidabile ai fini fiscali. Invitiamo l'utente a verificare il contenuto della copia
                     analogica al fine di escludere il rischio di eventuali inesattezze, imprecisioni e/o
                     manomissioni di terzi. Documento trasmesso tramite Sistema di Interscambio (SdI).
+                    <?php endif; ?>
                 </p>
 
                 <table>
