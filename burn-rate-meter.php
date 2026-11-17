@@ -3,6 +3,92 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/vendor/autoload.php';
+
+use FatturaElettronicaPhp\FatturaElettronica\DigitalDocument;
+
+function getIntUsciteForBurnRate(PDO $pdo, int $userId, ?string $monthStart = null, ?string $nextMonthStart = null): array {
+    $sql = 'SELECT i.id, i.document_number, i.document_type, i.issue_date, i.total,
+                   COALESCE(c.company_name, CONCAT(COALESCE(c.first_name, ""), " ", COALESCE(c.last_name, ""))) AS cliente_nome
+            FROM invoices i
+            LEFT JOIN clients c ON i.client_id = c.id
+            WHERE i.user_id = :user_id';
+    $params = [':user_id' => $userId];
+    if ($monthStart !== null && $nextMonthStart !== null) {
+        $sql .= ' AND i.issue_date >= :month_start AND i.issue_date < :next_month_start';
+        $params[':month_start'] = $monthStart;
+        $params[':next_month_start'] = $nextMonthStart;
+    }
+    $sql .= ' ORDER BY i.issue_date DESC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $rawInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $intUscite = [];
+    $storageDirectory = __DIR__ . '/storage/invoices';
+
+    foreach ($rawInvoices as $inv) {
+        $docNum = (string)($inv['document_number'] ?? '');
+        $docType = strtoupper((string)($inv['document_type'] ?? ''));
+        $isINT = str_starts_with($docNum, 'INT-') || in_array($docType, ['TD17', 'TD18', 'TD19'], true);
+        if (!$isINT) {
+            continue;
+        }
+
+        $taxableAmount = (float)$inv['total'];
+        $xmlPath = $storageDirectory . '/' . $docNum . '.xml';
+        if (is_file($xmlPath)) {
+            try {
+                $eDoc = DigitalDocument::parseFrom($xmlPath);
+                $instances = $eDoc->getDocumentInstances();
+                if (!empty($instances)) {
+                    $instance = $instances[0];
+                    $sum = 0.0;
+                    foreach ($instance->getLines() as $line) {
+                        $sum += (float)$line->getTotal();
+                    }
+                    if ($sum > 0) {
+                        $taxableAmount = $sum;
+                    } else {
+                        foreach ($instance->getTotals() as $summaryTotal) {
+                            $sum += (float)($summaryTotal->getTotal() ?? 0);
+                        }
+                        if ($sum > 0) {
+                            $taxableAmount = $sum;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $xml = new DOMDocument();
+                if (@$xml->load($xmlPath, LIBXML_NONET | LIBXML_NOBLANKS)) {
+                    $sum = 0.0;
+                    foreach ($xml->getElementsByTagName('ImponibileImporto') as $node) {
+                        $sum += (float)$node->textContent;
+                    }
+                    if ($sum > 0) {
+                        $taxableAmount = $sum;
+                    } else {
+                        foreach ($xml->getElementsByTagName('LineTotal') as $node) {
+                            $sum += (float)$node->textContent;
+                        }
+                        if ($sum > 0) {
+                            $taxableAmount = $sum;
+                        }
+                    }
+                }
+            }
+        }
+
+        $intUscite[] = [
+            'id' => (int)$inv['id'],
+            'expense_date' => $inv['issue_date'] ?? date('Y-m-d'),
+            'description' => 'Fattura integrazione estero ' . $docNum . (!empty($inv['cliente_nome']) ? ' (' . $inv['cliente_nome'] . ')' : ''),
+            'amount' => $taxableAmount,
+            'source' => 'int_invoice',
+        ];
+    }
+    return $intUscite;
+}
 
 if (!isLoggedIn()) {
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -151,6 +237,9 @@ try {
     ]);
     $entrateMensili = (float) $incomeStatement->fetchColumn();
 
+    $intUsciteMonth = getIntUsciteForBurnRate($pdo, $userId, $monthStart->format('Y-m-d'), $nextMonthStart->format('Y-m-d'));
+    $intUsciteAll = getIntUsciteForBurnRate($pdo, $userId);
+
     $expenseTotalStatement = $pdo->prepare(
         'SELECT (
             SELECT COALESCE(SUM(amount), 0)
@@ -174,7 +263,14 @@ try {
         ':month_start2' => $monthStart->format('Y-m-d'),
         ':next_month_start2' => $nextMonthStart->format('Y-m-d'),
     ]);
-    $speseMensili = (float) $expenseTotalStatement->fetchColumn();
+    $dbExpensesTotal = (float) $expenseTotalStatement->fetchColumn();
+
+    $intUsciteMonthSum = 0.0;
+    foreach ($intUsciteMonth as $iu) {
+        $intUsciteMonthSum += (float)$iu['amount'];
+    }
+
+    $speseMensili = round($dbExpensesTotal + $intUsciteMonthSum, 2);
 
     $expensesStatement = $pdo->prepare(
         'SELECT id, description, amount, expense_date, source
@@ -184,13 +280,23 @@ try {
              SELECT id, description, amount, expense_date, \'expense\' as source FROM expenses WHERE user_id = :user_id2
          ) combined_expenses
          ORDER BY expense_date DESC, id DESC
-         LIMIT 10'
+         LIMIT 20'
     );
     $expensesStatement->execute([
         ':user_id1' => $userId,
         ':user_id2' => $userId,
     ]);
-    $ultimeSpese = $expensesStatement->fetchAll(PDO::FETCH_ASSOC);
+    $dbExpenses = $expensesStatement->fetchAll(PDO::FETCH_ASSOC);
+
+    $ultimeSpese = array_merge($dbExpenses, $intUsciteAll);
+    usort($ultimeSpese, static function ($a, $b) {
+        $cmp = strcmp($b['expense_date'] ?? '', $a['expense_date'] ?? '');
+        if ($cmp === 0) {
+            return ($b['id'] ?? 0) <=> ($a['id'] ?? 0);
+        }
+        return $cmp;
+    });
+    $ultimeSpese = array_slice($ultimeSpese, 0, 10);
 } catch (PDOException $exception) {
     error_log('Burn rate data load failed: ' . $exception->getMessage());
     $showError(500, 'Non è stato possibile caricare i dati. Verifica che il database sia aggiornato e riprova.');

@@ -2,6 +2,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php'; // Fornisce $pdo
+require_once __DIR__ . '/vendor/autoload.php';
+
+use FatturaElettronicaPhp\FatturaElettronica\DigitalDocument;
 
 if (!isLoggedIn()) {
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -25,7 +28,7 @@ $oggi     = new DateTimeImmutable('today');
 
 // 1. Entrate: fatture clienti
 $stmt = $pdo->prepare(
-    'SELECT i.id, i.document_number, i.due_date, i.total, i.is_paid, o.payment_status,
+    'SELECT i.id, i.document_number, i.document_type, i.due_date, i.issue_date, i.total, i.is_paid, o.payment_status,
             COALESCE(c.company_name, CONCAT(COALESCE(c.first_name, ""), " ", COALESCE(c.last_name, ""))) AS cliente_nome
      FROM invoices i
      LEFT JOIN clients c ON i.client_id = c.id
@@ -34,9 +37,75 @@ $stmt = $pdo->prepare(
      ORDER BY i.due_date ASC'
 );
 $stmt->execute([':user_id' => $userId]);
-$fatture = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$rawInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// 2. Uscite: note spese
+$fatture = [];
+$intUscite = [];
+
+foreach ($rawInvoices as $inv) {
+    $docNum = (string)($inv['document_number'] ?? '');
+    $docType = strtoupper((string)($inv['document_type'] ?? ''));
+    $isINT = str_starts_with($docNum, 'INT-') || in_array($docType, ['TD17', 'TD18', 'TD19'], true);
+
+    if ($isINT) {
+        $taxableAmount = (float)$inv['total'];
+        $xmlPath = __DIR__ . '/storage/invoices/' . $docNum . '.xml';
+        if (is_file($xmlPath)) {
+            try {
+                $eDoc = DigitalDocument::parseFrom($xmlPath);
+                $instances = $eDoc->getDocumentInstances();
+                if (!empty($instances)) {
+                    $instance = $instances[0];
+                    $sum = 0.0;
+                    foreach ($instance->getLines() as $line) {
+                        $sum += (float)$line->getTotal();
+                    }
+                    if ($sum > 0) {
+                        $taxableAmount = $sum;
+                    } else {
+                        foreach ($instance->getTotals() as $summaryTotal) {
+                            $sum += (float)($summaryTotal->getTotal() ?? 0);
+                        }
+                        if ($sum > 0) {
+                            $taxableAmount = $sum;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $xml = new DOMDocument();
+                if (@$xml->load($xmlPath, LIBXML_NONET | LIBXML_NOBLANKS)) {
+                    $sum = 0.0;
+                    foreach ($xml->getElementsByTagName('ImponibileImporto') as $node) {
+                        $sum += (float)$node->textContent;
+                    }
+                    if ($sum > 0) {
+                        $taxableAmount = $sum;
+                    } else {
+                        foreach ($xml->getElementsByTagName('LineTotal') as $node) {
+                            $sum += (float)$node->textContent;
+                        }
+                        if ($sum > 0) {
+                            $taxableAmount = $sum;
+                        }
+                    }
+                }
+            }
+        }
+
+        $intUscite[] = [
+            'id' => $inv['id'],
+            'expense_date' => $inv['issue_date'] ?? date('Y-m-d'),
+            'description' => 'Fattura integrazione estero ' . $docNum . (!empty($inv['cliente_nome']) ? ' (' . $inv['cliente_nome'] . ')' : ''),
+            'category' => 'Integrazione ' . ($inv['document_type'] ?? 'INT'),
+            'amount' => $taxableAmount,
+            'is_paid' => true,
+        ];
+    } else {
+        $fatture[] = $inv;
+    }
+}
+
+// 2. Uscite: note spese + INT uscite
 $stmtSpese = $pdo->prepare(
     'SELECT id, expense_date, description, category, amount
      FROM expenses
@@ -45,6 +114,11 @@ $stmtSpese = $pdo->prepare(
 );
 $stmtSpese->execute([':user_id' => $userId]);
 $spese = $stmtSpese->fetchAll(PDO::FETCH_ASSOC);
+
+$spese = array_merge($spese, $intUscite);
+usort($spese, static function ($a, $b) {
+    return strcmp($b['expense_date'] ?? '', $a['expense_date'] ?? '');
+});
 
 // Riepilogo
 $totaleEntrate = 0.0;
