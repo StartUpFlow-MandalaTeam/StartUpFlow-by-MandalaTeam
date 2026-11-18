@@ -1073,6 +1073,20 @@ const initializeFatturazione = () => {
                 if (referenceInput.value === '' || automatic.includes(referenceInput.value)) {
                     referenceInput.value = integrationConfig.references?.[event.target.value] || '';
                 }
+                // Selezionando una Natura per le integrazioni: aliquota IVA automaticamente a 0%.
+                if (event.target.value !== '') {
+                    const summaryId = summaryRow.dataset.vatSummaryId;
+                    const itemRow = beniForm.querySelector(`[data-vat-summary-id="${summaryId}"]`);
+                    if (itemRow) {
+                        const ivaSelect = itemRow.querySelector('select[name="aliquota_iva[]"]');
+                        const hiddenIvaInput = itemRow.querySelector('[data-aliquota-iva-value]');
+                        ivaSelect.value = '0';
+                        hiddenIvaInput.value = '0';
+                        itemRow.dataset.preferredRate = '0';
+                        updateTotal(itemRow);
+                    }
+                    updateSummary();
+                }
             }
         });
         const updateTotal = (row) => {
@@ -1105,7 +1119,8 @@ const initializeFatturazione = () => {
 
                 const preferred = row.dataset.preferredRate;
                 const preferredIsValid = (integration ? ['0', '4', '5', '10', '22'] : ['4', '5', '10', '22']).includes(preferred);
-                ivaSelect.value = noVatRegime ? '0' : (preferredIsValid ? preferred : '22');
+                // Integrazioni TD17/TD18/TD19: aliquota di default 0% (operazioni non soggette / non imponibili / esenti)
+                ivaSelect.value = noVatRegime ? '0' : (integration ? (preferredIsValid ? preferred : '0') : (preferredIsValid ? preferred : '22'));
                 ivaSelect.disabled = noVatRegime;
 
                 const hiddenIvaInput = row.querySelector('[data-aliquota-iva-value]');

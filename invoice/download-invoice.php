@@ -131,6 +131,16 @@ try {
         $documentType = strtoupper(trim((string) ($invoice['document_type'] ?? 'TD01')));
         $isSimplified = false;
         $isIntegration = false;
+        $natureNames = [];
+        $natureJson = @file_get_contents(__DIR__ . '/../assets/data/natura.json');
+        $natureCatalogData = $natureJson === false ? null : json_decode($natureJson, true);
+        if (is_array($natureCatalogData)) {
+            foreach ($natureCatalogData as $entry) {
+                if (isset($entry['value'], $entry['name'])) {
+                    $natureNames[(string) $entry['value']] = (string) $entry['name'];
+                }
+            }
+        }
         if (is_file($xmlPath)) {
             $documentXml = new DOMDocument();
             if (@$documentXml->load($xmlPath, LIBXML_NONET | LIBXML_NOBLANKS)) {
@@ -189,8 +199,8 @@ try {
                                 $expensesAmount += (float) $summaryTotal->getOtherExpenses();
                             }
                         }
-                        if ($nature !== null) {
-                            $vatNotes[] = [
+                        if ($nature !== null && $natureCode !== '') {
+                            $vatNotes[$natureCode] = [
                                 'nature' => $natureCode,
                                 'reference' => (string) ($summaryTotal->getReference() ?? ''),
                             ];
@@ -219,12 +229,6 @@ try {
                             $lineReference = method_exists($line, 'getReference')
                                 ? trim((string) ($line->getReference() ?? ''))
                                 : '';
-                            if ($lineNature !== '') {
-                                $vatNotes[] = [
-                                    'nature' => $lineNature,
-                                    'reference' => $lineReference,
-                                ];
-                            }
                             if ($lineNature === 'N1') {
                                 $nonTaxableExpensesAmount += $lineTaxable;
                                 continue;
@@ -236,6 +240,8 @@ try {
                                 'UnitPrice' => number_format($lineTaxable, 2, '.', ''),
                                 'Discount' => '',
                                 'VatRate' => (string)($line->getTaxPercentage() ?? 0),
+                                'Nature' => $lineNature,
+                                'Reference' => $lineReference,
                                 'LineTotal' => number_format($lineTaxable, 2, '.', ''),
                                 'TaxAmount' => number_format((float) ($line->getTaxAmount() ?? 0), 2, '.', ''),
                                 'TaxableAmount' => $lineTaxable,
@@ -245,6 +251,12 @@ try {
                         foreach ($instance->getLines() as $line) {
                             $lineTaxable = (float)$line->getTotal();
                             $subtotal += $lineTaxable;
+                            $lineNature = method_exists($line, 'getVatNature') && $line->getVatNature() !== null
+                                ? (string) $line->getVatNature()
+                                : '';
+                            $lineReference = method_exists($line, 'getReference')
+                                ? trim((string) ($line->getReference() ?? ''))
+                                : '';
                             $discountLabel = '';
                             foreach ($line->getDiscounts() as $discount) {
                                 $percentage = $discount->getPercentage();
@@ -262,6 +274,8 @@ try {
                                 'UnitPrice' => number_format((float)$line->getUnitPrice(), 2, '.', ''),
                                 'Discount' => $discountLabel,
                                 'VatRate' => (string)($line->getTaxPercentage() ?? 0),
+                                'Nature' => $lineNature,
+                                'Reference' => $lineReference,
                                 'LineTotal' => number_format(round($lineTaxable * (1 + (float)($line->getTaxPercentage() ?? 0) / 100), 2), 2, '.', ''),
                                 'TaxAmount' => number_format(round($lineTaxable * (float)($line->getTaxPercentage() ?? 0) / 100, 2), 2, '.', ''),
                                 'TaxableAmount' => $lineTaxable,
@@ -537,10 +551,21 @@ try {
             <?php endif; ?>
 
             <?php if (!empty($vatNotes)): ?>
-                <div style="margin-bottom: 0.2rem; font-size: 0.7rem;">
+                <div style="margin-bottom: 0.8rem; font-size: 0.75rem; background: #f8f9fa; padding: 0.5rem 0.6rem; border-radius: 4px; border: 1px solid #e2e8f0; page-break-inside: avoid;">
                     <?php foreach ($vatNotes as $note): ?>
-                        <p><strong>Natura IVA <?php echo htmlspecialchars($note['nature'], ENT_QUOTES, 'UTF-8'); ?>:</strong>
-                            <?php echo htmlspecialchars($note['reference'] !== '' ? $note['reference'] : 'Operazione non soggetta ad IVA', ENT_QUOTES, 'UTF-8'); ?>
+                        <?php 
+                            $natCode = $note['nature'];
+                            $natName = $natureNames[$natCode] ?? '';
+                            $natRef = $note['reference'];
+                        ?>
+                        <p style="margin: 0.2rem 0; line-height: 1.3;">
+                            * <strong><?php echo htmlspecialchars($natCode, ENT_QUOTES, 'UTF-8'); ?></strong>
+                            <?php if ($natName !== ''): ?>
+                                – <?php echo htmlspecialchars($natName, ENT_QUOTES, 'UTF-8'); ?>
+                            <?php endif; ?>
+                            <?php if ($natRef !== ''): ?>
+                                <br><span style="color: #475569; font-style: italic; font-size: 0.7rem; margin-left: 0.8rem;">Rif. normativo: <?php echo htmlspecialchars($natRef, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php endif; ?>
                         </p>
                     <?php endforeach; ?>
                 </div>
@@ -589,7 +614,12 @@ try {
                 <tbody>
                     <?php foreach ($items as $item): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($item['Description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td>
+                                <?php echo htmlspecialchars($item['Description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+                                <?php if (!empty($item['Nature'])): ?>
+                                    <br><small style="color: #475569; font-size: 0.7rem;">Natura: <strong><?php echo htmlspecialchars($item['Nature'], ENT_QUOTES, 'UTF-8'); ?></strong>*</small>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($item['Quantity'] ?? '1', ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo number_format((float) ($item['UnitPrice'] ?? 0), 2, ',', '.'); ?> <?php echo htmlspecialchars($invoice['currency'], ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars($item['Discount'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></td>
